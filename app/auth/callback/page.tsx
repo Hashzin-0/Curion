@@ -11,15 +11,11 @@ export default function AuthCallbackPage() {
     let subscription: any = null;
 
     const handleAuth = async () => {
-      // Supabase client automatically handles the OAuth callback
-      // and sets the session in local storage.
-      // We just need to wait a moment and redirect.
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
         router.push('/profile');
       } else {
-        // If no session is found immediately, we can listen for the state change
         const { data } = supabase.auth.onAuthStateChange((event, session) => {
           if (session) {
             router.push('/profile');
@@ -27,9 +23,9 @@ export default function AuthCallbackPage() {
         });
         subscription = data.subscription;
 
-        // Timeout fallback just in case
+        // Fallback to home if no session found
         setTimeout(() => {
-          router.push('/login');
+          router.push('/');
         }, 3000);
       }
     };

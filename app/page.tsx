@@ -2,17 +2,35 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Briefcase, FileText, QrCode, LogIn } from 'lucide-react';
+import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
   const currentUser = useStore(state => state.currentUser);
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Erro ao iniciar login:', err);
+      setIsLoggingIn(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8 transition-colors duration-300">
@@ -49,13 +67,18 @@ export default function Home() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             ) : (
-              <Link
-                href="/login"
-                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
+              <button
+                onClick={handleGoogleLogin}
+                disabled={isLoggingIn}
+                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl disabled:opacity-70 cursor-pointer"
               >
-                Começar Agora
-                <LogIn className="w-5 h-5" />
-              </Link>
+                {isLoggingIn ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <LogIn className="w-5 h-5" />
+                )}
+                {isLoggingIn ? 'Conectando...' : 'Começar Agora'}
+              </button>
             )}
             <Link
               href="/kardec"

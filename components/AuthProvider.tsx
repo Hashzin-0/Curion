@@ -37,7 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           await handleSync(session.user);
-          if (pathname === '/login') {
+          // Only redirect automatically if on the landing page
+          if (pathname === '/') {
             router.push('/profile');
           }
         } else {
