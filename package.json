@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 5000 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 5000 -H 0.0.0.0",
     "lint": "eslint .",
     "clean": "next clean"
   },
@@ -21,7 +21,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.36.0",
     "genkit": "^1.0.7",
-    "genkitx-openai": "1.0.0",
+    "genkitx-openai": "^0.30.0",
     "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
