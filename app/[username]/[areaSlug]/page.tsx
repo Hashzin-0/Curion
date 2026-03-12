@@ -58,8 +58,9 @@ export default function AreaResume() {
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   return (
-    <div className={`min-h-screen ${theme.bgLight} dark:bg-slate-950 ${theme.pattern} p-4 md:p-12 font-sans transition-colors duration-300`}>
-      <div className="max-w-5xl mx-auto">
+    <div className={`min-h-screen ${theme.bgLight} dark:bg-slate-950 relative font-sans transition-colors duration-300`}>
+      <div className={`absolute inset-0 pointer-events-none ${theme.pattern}`} />
+      <div className="relative z-10 p-4 md:p-12 max-w-5xl mx-auto">
         
         {/* Export Button (Not in PDF) */}
         <div className="flex justify-end mb-6">
