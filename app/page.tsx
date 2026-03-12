@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2 } from 'lucide-react';
+import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2, Wand2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -58,6 +58,13 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/resume"
+              className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-black rounded-full font-black text-lg flex items-center gap-2 hover:from-yellow-300 hover:to-orange-300 transition-all shadow-lg hover:shadow-yellow-400/30 hover:shadow-xl"
+            >
+              <Wand2 className="w-5 h-5" />
+              Criar Currículo com IA
+            </Link>
             {isMounted && currentUser ? (
               <Link
                 href="/profile"
@@ -77,7 +84,7 @@ export default function Home() {
                 ) : (
                   <LogIn className="w-5 h-5" />
                 )}
-                {isLoggingIn ? 'Conectando...' : 'Começar Agora'}
+                {isLoggingIn ? 'Conectando...' : 'Entrar com Google'}
               </button>
             )}
             <Link
