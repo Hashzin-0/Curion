@@ -28,3 +28,14 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_SUPABASE_URL = "https://wvbqektfpuuoqjtwtjbz.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_fZ4JMWPY1JL2mmFCCHatLA_A70fGXAR"
+OPENROUTER_API_KEY = "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"
