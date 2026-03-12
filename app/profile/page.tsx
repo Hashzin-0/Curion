@@ -9,9 +9,11 @@ import * as LucideIcons from 'lucide-react';
 import { getTheme } from '@/styles/themes';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+import { Timeline } from '@/components/Timeline';
+import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
 
 export default function Dashboard() {
-  const { currentUser, areas, addArea, updateUser, isAuthReady } = useStore();
+  const { currentUser, areas, addArea, updateUser, isAuthReady, experiences, skills } = useStore();
   const router = useRouter();
   
   // States for Areas
@@ -23,6 +25,7 @@ export default function Dashboard() {
   // States for Profile Editing
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   useEffect(() => {
     if (isAuthReady && !currentUser) {
@@ -67,6 +70,28 @@ export default function Dashboard() {
     setIsEditingProfile(false);
   };
 
+  const handleGenerateSummary = async () => {
+    if (!currentUser) return;
+    setIsGeneratingSummary(true);
+    try {
+      const userExps = experiences.filter(e => e.user_id === currentUser.id).map(e => `${e.role} na ${e.company_name}`);
+      const userSkills = skills.map(s => s.name);
+      
+      const result = await generateProfessionalSummary({
+        name: editedProfile.name || currentUser.name,
+        headline: editedProfile.headline || currentUser.headline,
+        experiences: userExps,
+        skills: userSkills,
+      });
+      
+      setEditedProfile(prev => ({ ...prev, summary: result.summary }));
+    } catch (error) {
+      console.error('Erro ao gerar resumo:', error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   if (!isAuthReady) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
@@ -82,7 +107,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 transition-colors duration-300">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-12">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
           <div className="flex items-center gap-3">
@@ -106,8 +131,12 @@ export default function Dashboard() {
 
         <ProfileHeader user={currentUser} onEdit={() => setIsEditingProfile(true)} />
 
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Minhas Áreas de Atuação</h2>
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Minhas Áreas de Atuação</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 hidden md:block">Adicione cargos ou áreas para organizar seus currículos</p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {areas.map((area, i) => {
               const theme = getTheme(area.slug);
@@ -129,7 +158,10 @@ export default function Dashboard() {
                           <Icon className="w-7 h-7" />
                         </div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{area.name}</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Gerenciar experiências e currículo</p>
+                        <div className="flex items-center text-sm font-bold text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                          Configurar currículo
+                          <LucideIcons.ChevronRight className="w-4 h-4 ml-1" />
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -144,14 +176,20 @@ export default function Dashboard() {
             >
               <button 
                 onClick={() => setIsAddingArea(true)}
-                className="w-full h-full min-h-[200px] bg-slate-100 dark:bg-slate-900/50 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+                className="w-full h-full min-h-[200px] bg-white dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group"
               >
-                <LucideIcons.Plus className="w-8 h-8 mb-2" />
-                <span className="font-bold">Adicionar Nova Área</span>
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <LucideIcons.Plus className="w-6 h-6" />
+                </div>
+                <span className="font-bold">Nova Área de Atuação</span>
               </button>
             </motion.div>
           </div>
-        </div>
+        </section>
+
+        <section className="pt-12 border-t border-slate-100 dark:border-slate-800">
+          <Timeline userId={currentUser.id} />
+        </section>
       </div>
 
       {/* Edit Profile Modal */}
@@ -167,73 +205,106 @@ export default function Dashboard() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Editar Perfil</h3>
-                <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Editar Perfil Profissional</h3>
+                <button onClick={() => setIsEditingProfile(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                   <LucideIcons.X className="w-6 h-6" />
                 </button>
               </div>
 
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleUpdateProfile} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nome Completo</label>
                     <input
                       type="text"
                       value={editedProfile.name || ''}
                       onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cargo / Headline</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Título (Headline)</label>
                     <input
                       type="text"
+                      placeholder="Ex: Desenvolvedor Senior"
                       value={editedProfile.headline || ''}
                       onChange={(e) => setEditedProfile({ ...editedProfile, headline: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Localização</label>
-                  <input
-                    type="text"
-                    value={editedProfile.location || ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Localização</label>
+                    <div className="relative">
+                      <LucideIcons.MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        value={editedProfile.location || ''}
+                        onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })}
+                        className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Foto de Perfil (URL)</label>
+                    <div className="relative">
+                      <LucideIcons.Image className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        value={editedProfile.photo_url || ''}
+                        onChange={(e) => setEditedProfile({ ...editedProfile, photo_url: e.target.value })}
+                        className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Foto URL</label>
-                  <input
-                    type="text"
-                    value={editedProfile.photo_url || ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, photo_url: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resumo Profissional</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Resumo Profissional</label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateSummary}
+                      disabled={isGeneratingSummary}
+                      className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {isGeneratingSummary ? (
+                        <LucideIcons.Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <LucideIcons.Sparkles className="w-3 h-3" />
+                      )}
+                      {isGeneratingSummary ? 'Gerando...' : 'Melhorar com IA'}
+                    </button>
+                  </div>
                   <textarea
-                    rows={4}
+                    rows={5}
                     value={editedProfile.summary || ''}
                     onChange={(e) => setEditedProfile({ ...editedProfile, summary: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-all"
+                    placeholder="Conte um pouco sobre sua trajetória profissional..."
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors mt-2"
-                >
-                  Salvar Alterações
-                </button>
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingProfile(false)}
+                    className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:shadow-lg transition-all"
+                  >
+                    Salvar Alterações
+                  </button>
+                </div>
               </form>
             </motion.div>
           </motion.div>
@@ -256,7 +327,7 @@ export default function Dashboard() {
               className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Nova Área</h3>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Nova Área Profissional</h3>
                 <button onClick={() => setIsAddingArea(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                   <LucideIcons.X className="w-6 h-6" />
                 </button>
@@ -264,19 +335,19 @@ export default function Dashboard() {
 
               <form onSubmit={handleAddArea} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome da Área</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nome da Área</label>
                   <input
                     type="text"
                     required
                     value={newAreaName}
                     onChange={(e) => setNewAreaName(e.target.value)}
                     placeholder="Ex: Desenvolvedor Frontend"
-                    className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ícone</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ícone Representativo</label>
                   <div className="grid grid-cols-5 gap-2">
                     {availableIcons.map(iconName => {
                       // @ts-ignore
@@ -288,11 +359,11 @@ export default function Dashboard() {
                           onClick={() => setNewAreaIcon(iconName)}
                           className={`p-3 rounded-xl flex items-center justify-center transition-all ${
                             newAreaIcon === iconName 
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 border-2 border-blue-500' 
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 ring-2 ring-blue-500' 
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                           }`}
                         >
-                          <Icon className="w-6 h-6" />
+                          <Icon className="w-5 h-5" />
                         </button>
                       );
                     })}
@@ -300,17 +371,17 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Cor do Tema</label>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Paleta de Cor</label>
                   <div className="grid grid-cols-4 gap-2">
                     {availableThemes.map(themeColor => (
                       <button
                         key={themeColor}
                         type="button"
                         onClick={() => setNewAreaTheme(themeColor)}
-                        className={`py-2 px-3 rounded-xl text-sm font-medium capitalize transition-all ${
+                        className={`py-2 px-1 rounded-lg text-xs font-bold capitalize transition-all ${
                           newAreaTheme === themeColor
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 ring-2 ring-slate-900 dark:ring-white'
+                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
                         {themeColor}
@@ -321,7 +392,7 @@ export default function Dashboard() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
+                  className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:shadow-lg transition-all"
                 >
                   Criar Área
                 </button>
@@ -333,3 +404,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
