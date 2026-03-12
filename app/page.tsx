@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { ArrowRight, Briefcase, FileText, QrCode } from 'lucide-react';
 import { Timeline } from '@/components/Timeline';
+import { Stats } from '@/components/Stats';
 
 export default function Home() {
   return (
@@ -79,6 +80,7 @@ export default function Home() {
           </div>
         </motion.div>
         
+        <Stats />
         <Timeline />
       </div>
     </div>

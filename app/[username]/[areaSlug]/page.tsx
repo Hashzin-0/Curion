@@ -55,7 +55,7 @@ export default function AreaResume() {
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   return (
-    <div className={`min-h-screen ${theme.bgLight} ${theme.pattern} p-4 md:p-12 font-sans`}>
+    <div className={`min-h-screen ${theme.bgLight} dark:bg-slate-950 ${theme.pattern} p-4 md:p-12 font-sans transition-colors duration-300`}>
       <div className="max-w-5xl mx-auto">
         
         {/* Export Button (Not in PDF) */}
@@ -72,7 +72,7 @@ export default function AreaResume() {
         {/* Resume Container (This gets exported) */}
         <div 
           ref={resumeRef} 
-          className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden print:shadow-none print:rounded-none"
+          className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl overflow-hidden print:shadow-none print:rounded-none"
         >
           {/* Header */}
           <div className={`${theme.primary} p-12 text-white relative overflow-hidden`}>
@@ -114,13 +114,13 @@ export default function AreaResume() {
               {/* Experiences */}
               <section>
                 <div className="flex items-center gap-3 mb-8">
-                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} ${theme.text} flex items-center justify-center`}>
+                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} dark:bg-slate-800 ${theme.text} dark:text-slate-200 flex items-center justify-center`}>
                     <LucideIcons.Briefcase className="w-5 h-5" />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900">Experiência Profissional</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Experiência Profissional</h2>
                 </div>
                 
-                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-700 before:to-transparent">
                   {areaExperiences.map((exp, i) => (
                     <motion.div 
                       key={exp.id}
@@ -129,7 +129,7 @@ export default function AreaResume() {
                       transition={{ delay: i * 0.1 }}
                       className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
                     >
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white ${theme.bgLight} ${theme.text} shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10`}>
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-slate-900 ${theme.bgLight} dark:bg-slate-800 ${theme.text} dark:text-slate-200 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10`}>
                         <LucideIcons.CircleDot className="w-4 h-4" />
                       </div>
                       <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4">
@@ -143,18 +143,18 @@ export default function AreaResume() {
               {/* Education */}
               <section>
                 <div className="flex items-center gap-3 mb-8">
-                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} ${theme.text} flex items-center justify-center`}>
+                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} dark:bg-slate-800 ${theme.text} dark:text-slate-200 flex items-center justify-center`}>
                     <LucideIcons.GraduationCap className="w-5 h-5" />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900">Formação Acadêmica</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Formação Acadêmica</h2>
                 </div>
                 
                 <div className="space-y-4">
                   {userEducation.map(edu => (
-                    <div key={edu.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                      <h3 className="text-lg font-bold text-slate-900">{edu.course}</h3>
-                      <div className="text-slate-600 font-medium mb-1">{edu.institution}</div>
-                      <div className="text-sm text-slate-400 capitalize">
+                    <div key={edu.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">{edu.course}</h3>
+                      <div className="text-slate-600 dark:text-slate-400 font-medium mb-1">{edu.institution}</div>
+                      <div className="text-sm text-slate-400 dark:text-slate-500 capitalize">
                         {new Date(edu.start_date).getFullYear()} - {edu.end_date ? new Date(edu.end_date).getFullYear() : 'Atual'}
                       </div>
                     </div>
@@ -170,16 +170,16 @@ export default function AreaResume() {
               {/* Skills */}
               <section>
                 <div className="flex items-center gap-3 mb-8">
-                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} ${theme.text} flex items-center justify-center`}>
+                  <div className={`w-10 h-10 rounded-xl ${theme.bgLight} dark:bg-slate-800 ${theme.text} dark:text-slate-200 flex items-center justify-center`}>
                     <LucideIcons.Star className="w-5 h-5" />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900">Habilidades</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Habilidades</h2>
                 </div>
                 <SkillGraph areaSkills={currentAreaSkills} allSkills={skills} areaSlug={area.slug} />
               </section>
 
               {/* QR Code */}
-              <section className="pt-8 border-t border-slate-100">
+              <section className="pt-8 border-t border-slate-100 dark:border-slate-800">
                 <QRCodeSection url={currentUrl} areaSlug={area.slug} />
               </section>
 

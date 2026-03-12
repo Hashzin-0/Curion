@@ -21,12 +21,12 @@ export default function SkillGraph({ areaSkills, allSkills, areaSlug }: { areaSk
           <div key={as.id} className="relative">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Icon className={`w-5 h-5 ${theme.text}`} />
-                <span className="font-medium text-slate-700">{skill.name}</span>
+                <Icon className={`w-5 h-5 ${theme.text} dark:text-opacity-80`} />
+                <span className="font-medium text-slate-700 dark:text-slate-300">{skill.name}</span>
               </div>
-              <span className="text-sm font-bold text-slate-400">{as.level}%</span>
+              <span className="text-sm font-bold text-slate-400 dark:text-slate-500">{as.level}%</span>
             </div>
-            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${as.level}%` }}

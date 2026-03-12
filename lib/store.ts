@@ -52,6 +52,15 @@ export type Education = {
   end_date: string | null;
 };
 
+export type Achievement = {
+  id: string;
+  user_id: string;
+  title: string;
+  organization: string;
+  date: string;
+  description: string;
+};
+
 interface AppState {
   currentUser: User | null;
   users: User[];
@@ -60,8 +69,13 @@ interface AppState {
   skills: Skill[];
   areaSkills: AreaSkill[];
   education: Education[];
+  achievements: Achievement[];
   login: (username: string) => void;
   logout: () => void;
+  addExperience: (experience: Omit<Experience, 'id'>) => void;
+  addEducation: (education: Omit<Education, 'id'>) => void;
+  addAchievement: (achievement: Omit<Achievement, 'id'>) => void;
+  addArea: (area: Omit<ProfessionalArea, 'id'>) => void;
 }
 
 const mockUsers: User[] = [
@@ -149,6 +163,17 @@ const mockEducation: Education[] = [
   },
 ];
 
+const mockAchievements: Achievement[] = [
+  {
+    id: 'ac1',
+    user_id: '1',
+    title: 'Melhor Atendente do Mês',
+    organization: 'Tech Store',
+    date: '2021-08-01',
+    description: 'Reconhecimento por excelência no atendimento ao cliente e metas de vendas.',
+  }
+];
+
 export const useStore = create<AppState>((set) => ({
   currentUser: mockUsers[0], // Auto-login for prototype
   users: mockUsers,
@@ -157,6 +182,19 @@ export const useStore = create<AppState>((set) => ({
   skills: mockSkills,
   areaSkills: mockAreaSkills,
   education: mockEducation,
+  achievements: mockAchievements,
   login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
   logout: () => set({ currentUser: null }),
+  addExperience: (experience) => set((state) => ({ 
+    experiences: [{ ...experience, id: `e${Date.now()}` }, ...state.experiences] 
+  })),
+  addEducation: (education) => set((state) => ({ 
+    education: [{ ...education, id: `ed${Date.now()}` }, ...state.education] 
+  })),
+  addAchievement: (achievement) => set((state) => ({ 
+    achievements: [{ ...achievement, id: `ac${Date.now()}` }, ...state.achievements] 
+  })),
+  addArea: (area) => set((state) => ({ 
+    areas: [...state.areas, { ...area, id: `a${Date.now()}` }] 
+  })),
 }));
