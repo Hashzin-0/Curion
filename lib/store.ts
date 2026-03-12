@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from './supabase';
 
 export type User = {
   id: string;
@@ -70,12 +71,14 @@ interface AppState {
   areaSkills: AreaSkill[];
   education: Education[];
   achievements: Achievement[];
+  isLoading: boolean;
   login: (username: string) => void;
   logout: () => void;
-  addExperience: (experience: Omit<Experience, 'id'>) => void;
-  addEducation: (education: Omit<Education, 'id'>) => void;
-  addAchievement: (achievement: Omit<Achievement, 'id'>) => void;
-  addArea: (area: Omit<ProfessionalArea, 'id'>) => void;
+  addExperience: (experience: Omit<Experience, 'id'>) => Promise<void>;
+  addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
+  addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
+  addArea: (area: Omit<ProfessionalArea, 'id'>) => Promise<void>;
+  fetchData: () => Promise<void>;
 }
 
 const mockUsers: User[] = [
@@ -174,7 +177,7 @@ const mockAchievements: Achievement[] = [
   }
 ];
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   currentUser: mockUsers[0], // Auto-login for prototype
   users: mockUsers,
   areas: mockAreas,
@@ -183,18 +186,109 @@ export const useStore = create<AppState>((set) => ({
   areaSkills: mockAreaSkills,
   education: mockEducation,
   achievements: mockAchievements,
+  isLoading: false,
+  
   login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
   logout: () => set({ currentUser: null }),
-  addExperience: (experience) => set((state) => ({ 
-    experiences: [{ ...experience, id: `e${Date.now()}` }, ...state.experiences] 
-  })),
-  addEducation: (education) => set((state) => ({ 
-    education: [{ ...education, id: `ed${Date.now()}` }, ...state.education] 
-  })),
-  addAchievement: (achievement) => set((state) => ({ 
-    achievements: [{ ...achievement, id: `ac${Date.now()}` }, ...state.achievements] 
-  })),
-  addArea: (area) => set((state) => ({ 
-    areas: [...state.areas, { ...area, id: `a${Date.now()}` }] 
-  })),
+  
+  fetchData: async () => {
+    set({ isLoading: true });
+    try {
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+        console.log('Supabase not configured, using mock data');
+        set({ isLoading: false });
+        return;
+      }
+
+      const [
+        { data: users },
+        { data: areas },
+        { data: experiences },
+        { data: skills },
+        { data: areaSkills },
+        { data: education },
+        { data: achievements }
+      ] = await Promise.all([
+        supabase.from('users').select('*'),
+        supabase.from('areas').select('*'),
+        supabase.from('experiences').select('*'),
+        supabase.from('skills').select('*'),
+        supabase.from('area_skills').select('*'),
+        supabase.from('education').select('*'),
+        supabase.from('achievements').select('*')
+      ]);
+
+      set({
+        users: users || mockUsers,
+        areas: areas || mockAreas,
+        experiences: experiences || mockExperiences,
+        skills: skills || mockSkills,
+        areaSkills: areaSkills || mockAreaSkills,
+        education: education || mockEducation,
+        achievements: achievements || mockAchievements,
+        currentUser: (users && users.length > 0) ? users[0] : mockUsers[0],
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching data from Supabase:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  addExperience: async (experience) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('experiences').insert([experience]).select().single();
+        if (error) throw error;
+        set((state) => ({ experiences: [data, ...state.experiences] }));
+      } else {
+        set((state) => ({ experiences: [{ ...experience, id: `e${Date.now()}` }, ...state.experiences] }));
+      }
+    } catch (error) {
+      console.error('Error adding experience:', error);
+    }
+  },
+  
+  addEducation: async (education) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('education').insert([education]).select().single();
+        if (error) throw error;
+        set((state) => ({ education: [data, ...state.education] }));
+      } else {
+        set((state) => ({ education: [{ ...education, id: `ed${Date.now()}` }, ...state.education] }));
+      }
+    } catch (error) {
+      console.error('Error adding education:', error);
+    }
+  },
+  
+  addAchievement: async (achievement) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('achievements').insert([achievement]).select().single();
+        if (error) throw error;
+        set((state) => ({ achievements: [data, ...state.achievements] }));
+      } else {
+        set((state) => ({ achievements: [{ ...achievement, id: `ac${Date.now()}` }, ...state.achievements] }));
+      }
+    } catch (error) {
+      console.error('Error adding achievement:', error);
+    }
+  },
+  
+  addArea: async (area) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('areas').insert([area]).select().single();
+        if (error) throw error;
+        set((state) => ({ areas: [...state.areas, data] }));
+      } else {
+        set((state) => ({ areas: [...state.areas, { ...area, id: `a${Date.now()}` }] }));
+      }
+    } catch (error) {
+      console.error('Error adding area:', error);
+    }
+  },
 }));

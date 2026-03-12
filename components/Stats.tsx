@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -17,12 +17,18 @@ import { motion } from 'motion/react';
 import { useTheme } from 'next-themes';
 import { useStore } from '@/lib/store';
 import { differenceInMonths } from 'date-fns';
+import { parseSafeDate } from '@/lib/utils';
 
 const COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#ef4444', '#eab308'];
 
 export function Stats() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const currentUser = useStore((state) => state.currentUser);
   const allSkills = useStore((state) => state.skills);
@@ -59,8 +65,8 @@ export function Stats() {
     const areaDurations: Record<string, number> = {};
     
     userExperiences.forEach(exp => {
-      const start = new Date(exp.start_date);
-      const end = exp.end_date ? new Date(exp.end_date) : new Date();
+      const start = parseSafeDate(exp.start_date);
+      const end = exp.end_date ? parseSafeDate(exp.end_date) : new Date();
       const months = differenceInMonths(end, start) || 1; // At least 1 month
       
       const area = areas.find(a => a.id === exp.area_id);
@@ -75,7 +81,7 @@ export function Stats() {
     }));
   }, [currentUser, experiences, areas]);
 
-  if (!currentUser) return null;
+  if (!isMounted || !currentUser) return null;
 
   return (
     <div className="w-full max-w-6xl mx-auto py-12 px-4">

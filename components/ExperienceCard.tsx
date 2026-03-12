@@ -3,12 +3,21 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getTheme } from '@/styles/themes';
+import { parseSafeDate } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 export default function ExperienceCard({ experience, areaSlug }: { experience: Experience, areaSlug: string }) {
   const theme = getTheme(areaSlug);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
-  const startDate = format(new Date(experience.start_date), 'MMM yyyy', { locale: ptBR });
-  const endDate = experience.end_date ? format(new Date(experience.end_date), 'MMM yyyy', { locale: ptBR }) : 'Atual';
+  const startDate = format(parseSafeDate(experience.start_date), 'MMM yyyy', { locale: ptBR });
+  const endDate = experience.end_date ? format(parseSafeDate(experience.end_date), 'MMM yyyy', { locale: ptBR }) : 'Atual';
+
+  if (!isMounted) return null;
 
   return (
     <div className={`bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border ${theme.border} dark:border-opacity-20 hover:shadow-md transition-shadow relative overflow-hidden`}>

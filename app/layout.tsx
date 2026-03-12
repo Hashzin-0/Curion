@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { StoreInitializer } from '@/components/StoreInitializer';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="en" suppressHydrationWarning>
       <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <StoreInitializer />
           <div className="fixed top-4 right-4 z-50">
             <DarkModeToggle />
           </div>

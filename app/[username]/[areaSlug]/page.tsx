@@ -2,7 +2,7 @@
 
 import { useStore } from '@/lib/store';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { getTheme } from '@/styles/themes';
@@ -11,23 +11,26 @@ import ExperienceCard from '@/components/ExperienceCard';
 import SkillGraph from '@/components/SkillGraph';
 import QRCodeSection from '@/components/QRCodeSection';
 import html2pdf from 'html2pdf.js';
+import { parseSafeDate } from '@/lib/utils';
 
 export default function AreaResume() {
   const { username, areaSlug } = useParams();
   const { users, areas, experiences, skills, areaSkills, education } = useStore();
   const router = useRouter();
   const resumeRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const user = users.find(u => u.username === username);
   const area = areas.find(a => a.slug === areaSlug);
 
   useEffect(() => {
+    setIsMounted(true);
     if (!user || !area) {
       router.push('/');
     }
   }, [user, area, router]);
 
-  if (!user || !area) return null;
+  if (!isMounted || !user || !area) return null;
 
   const theme = getTheme(area.slug);
   const areaExperiences = experiences.filter(e => e.area_id === area.id && e.user_id === user.id);
@@ -155,7 +158,7 @@ export default function AreaResume() {
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white">{edu.course}</h3>
                       <div className="text-slate-600 dark:text-slate-400 font-medium mb-1">{edu.institution}</div>
                       <div className="text-sm text-slate-400 dark:text-slate-500 capitalize">
-                        {new Date(edu.start_date).getFullYear()} - {edu.end_date ? new Date(edu.end_date).getFullYear() : 'Atual'}
+                        {parseSafeDate(edu.start_date).getFullYear()} - {edu.end_date ? parseSafeDate(edu.end_date).getFullYear() : 'Atual'}
                       </div>
                     </div>
                   ))}

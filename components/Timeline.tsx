@@ -39,6 +39,15 @@ const getColorClass = (type: TimelineItem['type']) => {
   }
 };
 
+const parseSafeDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split('T')[0].split('-');
+  if (parts.length >= 3) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+  }
+  return new Date(dateStr);
+};
+
 export function Timeline() {
   const currentUser = useStore(state => state.currentUser);
   const experiences = useStore(state => state.experiences);
@@ -52,6 +61,11 @@ export function Timeline() {
 
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState<Partial<TimelineItem>>({ type: 'work' });
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const timelineData = useMemo(() => {
     if (!currentUser) return [];
@@ -59,8 +73,10 @@ export function Timeline() {
     const items: TimelineItem[] = [];
     
     experiences.filter(e => e.user_id === currentUser.id).forEach(exp => {
-      const startDate = format(new Date(exp.start_date), 'MMM yyyy', { locale: ptBR });
-      const endDate = exp.end_date ? format(new Date(exp.end_date), 'MMM yyyy', { locale: ptBR }) : 'Atual';
+      const start = parseSafeDate(exp.start_date);
+      const startDate = format(start, 'MMM yyyy', { locale: ptBR });
+      const end = exp.end_date ? parseSafeDate(exp.end_date) : null;
+      const endDate = end ? format(end, 'MMM yyyy', { locale: ptBR }) : 'Atual';
       items.push({
         id: exp.id,
         type: 'work',
@@ -68,13 +84,15 @@ export function Timeline() {
         organization: exp.company_name,
         date: `${startDate} - ${endDate}`,
         description: exp.description,
-        sortDate: new Date(exp.start_date)
+        sortDate: start
       });
     });
     
     education.filter(e => e.user_id === currentUser.id).forEach(edu => {
-      const startDate = format(new Date(edu.start_date), 'yyyy');
-      const endDate = edu.end_date ? format(new Date(edu.end_date), 'yyyy') : 'Atual';
+      const start = parseSafeDate(edu.start_date);
+      const startDate = format(start, 'yyyy');
+      const end = edu.end_date ? parseSafeDate(edu.end_date) : null;
+      const endDate = end ? format(end, 'yyyy') : 'Atual';
       items.push({
         id: edu.id,
         type: 'education',
@@ -82,24 +100,29 @@ export function Timeline() {
         organization: edu.institution,
         date: `${startDate} - ${endDate}`,
         description: '',
-        sortDate: new Date(edu.start_date)
+        sortDate: start
       });
     });
     
     achievements.filter(a => a.user_id === currentUser.id).forEach(ach => {
+      const date = parseSafeDate(ach.date);
       items.push({
         id: ach.id,
         type: 'achievement',
         title: ach.title,
         organization: ach.organization,
-        date: format(new Date(ach.date), 'MMM yyyy', { locale: ptBR }),
+        date: format(date, 'MMM yyyy', { locale: ptBR }),
         description: ach.description,
-        sortDate: new Date(ach.date)
+        sortDate: date
       });
     });
     
     return items.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
   }, [currentUser, experiences, education, achievements]);
+
+  if (!isMounted) {
+    return null; // Prevent hydration mismatch
+  }
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
