@@ -32,7 +32,7 @@ export type ResumeTheme = z.infer<typeof ThemeOutputSchema>;
 
 const themePrompt = ai.definePrompt({
   name: 'resumeThemePrompt',
-  model: 'googleai/gemini-2.0-flash',
+  model: 'openai/stepfun/step-3.5-flash:free',
   input: { schema: ThemeInputSchema },
   output: { schema: ThemeOutputSchema },
   prompt: `Você é um designer criativo especialista em currículos temáticos e vibrantes.
