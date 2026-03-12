@@ -8,9 +8,10 @@ import Link from 'next/link';
 import * as LucideIcons from 'lucide-react';
 import { getTheme } from '@/styles/themes';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
-  const { currentUser, areas, addArea } = useStore();
+  const { currentUser, areas, addArea, isAuthReady } = useStore();
   const router = useRouter();
   const [isAddingArea, setIsAddingArea] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
@@ -18,10 +19,10 @@ export default function Dashboard() {
   const [newAreaTheme, setNewAreaTheme] = useState('blue');
 
   useEffect(() => {
-    if (!currentUser) {
+    if (isAuthReady && !currentUser) {
       router.push('/');
     }
-  }, [currentUser, router]);
+  }, [currentUser, isAuthReady, router]);
 
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +43,14 @@ export default function Dashboard() {
     setNewAreaTheme('blue');
   };
 
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   if (!currentUser) return null;
 
   const availableIcons = ['Briefcase', 'ChefHat', 'MessageSquare', 'Package', 'Code', 'PenTool', 'Camera', 'Music', 'HeartPulse'];
@@ -50,14 +59,24 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 transition-colors duration-300">
       <div className="max-w-5xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
-          <Link 
-            href={`/${currentUser.username}`}
-            className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
-          >
-            Ver Perfil Público
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link 
+              href={`/${currentUser.username}`}
+              className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
+            >
+              Ver Perfil Público
+            </Link>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+              }}
+              className="px-6 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+            >
+              Sair
+            </button>
+          </div>
         </div>
 
         <ProfileHeader user={currentUser} />

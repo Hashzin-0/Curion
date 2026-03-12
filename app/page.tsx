@@ -2,11 +2,20 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Briefcase, FileText, QrCode } from 'lucide-react';
+import { ArrowRight, Briefcase, FileText, QrCode, LogIn } from 'lucide-react';
 import { Timeline } from '@/components/Timeline';
 import { Stats } from '@/components/Stats';
+import { useStore } from '@/lib/store';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+  const currentUser = useStore(state => state.currentUser);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8 transition-colors duration-300">
       <div className="max-w-4xl w-full text-center space-y-8 mt-20">
@@ -26,13 +35,23 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/profile"
-              className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
-            >
-              Criar meu CareerCanvas
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+            {isMounted && currentUser ? (
+              <Link
+                href="/profile"
+                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
+              >
+                Meu Perfil
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
+              >
+                Fazer Login
+                <LogIn className="w-5 h-5" />
+              </Link>
+            )}
             <Link
               href="/kardec"
               className="px-8 py-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-full font-bold text-lg flex items-center gap-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"

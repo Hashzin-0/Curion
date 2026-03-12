@@ -72,8 +72,11 @@ interface AppState {
   education: Education[];
   achievements: Achievement[];
   isLoading: boolean;
+  isAuthReady: boolean;
   login: (username: string) => void;
   logout: () => void;
+  setUser: (user: User | null) => void;
+  setAuthReady: (ready: boolean) => void;
   addExperience: (experience: Omit<Experience, 'id'>) => Promise<void>;
   addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
@@ -178,7 +181,7 @@ const mockAchievements: Achievement[] = [
 ];
 
 export const useStore = create<AppState>((set, get) => ({
-  currentUser: mockUsers[0], // Auto-login for prototype
+  currentUser: null, // Start with null, AuthProvider will update
   users: mockUsers,
   areas: mockAreas,
   experiences: mockExperiences,
@@ -187,9 +190,12 @@ export const useStore = create<AppState>((set, get) => ({
   education: mockEducation,
   achievements: mockAchievements,
   isLoading: false,
+  isAuthReady: false,
   
   login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
   logout: () => set({ currentUser: null }),
+  setUser: (user) => set({ currentUser: user }),
+  setAuthReady: (ready) => set({ isAuthReady: ready }),
   
   fetchData: async () => {
     set({ isLoading: true });
