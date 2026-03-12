@@ -2,35 +2,46 @@
 
 import { useStore } from '@/lib/store';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import ProfileHeader from '@/components/ProfileHeader';
 import Link from 'next/link';
 import * as LucideIcons from 'lucide-react';
 import { getTheme } from '@/styles/themes';
 import { motion } from 'motion/react';
+import { Stats } from '@/components/Stats';
+import { Timeline } from '@/components/Timeline';
 
 export default function PublicProfile() {
   const { username } = useParams();
   const { users, areas } = useStore();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
 
   const user = users.find(u => u.username === username);
 
   useEffect(() => {
-    if (!user) {
+    setIsMounted(true);
+    if (isMounted && !user) {
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, router, isMounted]);
 
-  if (!user) return null;
+  if (!isMounted || !user) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-12">
+      <div className="max-w-5xl mx-auto space-y-16">
+        
+        {/* User Info Section */}
         <ProfileHeader user={user} />
 
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8 text-center">Áreas de Atuação</h2>
+        {/* Areas of Expertise */}
+        <section>
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Áreas de Atuação</h2>
+            <p className="text-slate-500 dark:text-slate-400">Selecione uma área para ver o currículo específico</p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {areas.map((area, i) => {
               const theme = getTheme(area.slug);
@@ -63,7 +74,14 @@ export default function PublicProfile() {
               );
             })}
           </div>
-        </div>
+        </section>
+
+        {/* Professional Stats Section */}
+        <Stats userId={user.id} />
+
+        {/* Timeline Section */}
+        <Timeline userId={user.id} readOnly={true} />
+
       </div>
     </div>
   );
