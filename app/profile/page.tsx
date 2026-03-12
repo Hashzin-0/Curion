@@ -2,35 +2,32 @@
 
 import { useStore, User } from '@/lib/store';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import ProfileHeader from '@/components/ProfileHeader';
-import Link from 'next/link';
+import { useEffect, useState, useCallback } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { getTheme } from '@/styles/themes';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { Timeline } from '@/components/Timeline';
 import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
+import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 
 export default function Dashboard() {
   const { currentUser, areas, addArea, updateUser, isAuthReady, experiences, skills } = useStore();
   const router = useRouter();
-  
-  // States for Areas
+
   const [isAddingArea, setIsAddingArea] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaIcon, setNewAreaIcon] = useState('Briefcase');
   const [newAreaTheme, setNewAreaTheme] = useState('blue');
 
-  // States for Profile Editing
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
+  const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
+  const [isLoadingTheme, setIsLoadingTheme] = useState(false);
+
   useEffect(() => {
-    if (isAuthReady && !currentUser) {
-      router.push('/');
-    }
+    if (isAuthReady && !currentUser) router.push('/');
   }, [currentUser, isAuthReady, router]);
 
   useEffect(() => {
@@ -45,29 +42,63 @@ export default function Dashboard() {
     }
   }, [currentUser]);
 
+  const fetchTheme = useCallback(async () => {
+    if (!currentUser) return;
+    const cacheKey = `profile-theme-${currentUser.id}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try { setProfileTheme(JSON.parse(cached)); return; } catch {}
+    }
+    setIsLoadingTheme(true);
+    try {
+      const res = await fetch('/api/profile/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: currentUser.name,
+          headline: currentUser.headline,
+          areas: areas.map(a => a.name),
+        }),
+      });
+      if (res.ok) {
+        const theme = await res.json();
+        setProfileTheme(theme);
+        localStorage.setItem(cacheKey, JSON.stringify(theme));
+      }
+    } catch (e) {
+      console.error('Erro ao gerar tema:', e);
+    } finally {
+      setIsLoadingTheme(false);
+    }
+  }, [currentUser, areas]);
+
+  useEffect(() => {
+    if (isAuthReady && currentUser) fetchTheme();
+  }, [isAuthReady, currentUser, fetchTheme]);
+
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAreaName.trim()) return;
-
     const slug = newAreaName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    
-    addArea({
-      name: newAreaName,
-      slug,
-      icon: newAreaIcon,
-      theme_color: newAreaTheme,
-    });
-
+    addArea({ name: newAreaName, slug, icon: newAreaIcon, theme_color: newAreaTheme });
     setIsAddingArea(false);
     setNewAreaName('');
     setNewAreaIcon('Briefcase');
     setNewAreaTheme('blue');
+    // Invalidate cached theme so it regenerates with new areas
+    if (currentUser) localStorage.removeItem(`profile-theme-${currentUser.id}`);
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateUser(editedProfile);
     setIsEditingProfile(false);
+    // Invalidate cached theme so it regenerates with updated info
+    if (currentUser) {
+      localStorage.removeItem(`profile-theme-${currentUser.id}`);
+      setProfileTheme(null);
+      fetchTheme();
+    }
   };
 
   const handleGenerateSummary = async () => {
@@ -76,14 +107,12 @@ export default function Dashboard() {
     try {
       const userExps = experiences.filter(e => e.user_id === currentUser.id).map(e => `${e.role} na ${e.company_name}`);
       const userSkills = skills.map(s => s.name);
-      
       const result = await generateProfessionalSummary({
         name: editedProfile.name || currentUser.name,
         headline: editedProfile.headline || currentUser.headline,
         experiences: userExps,
         skills: userSkills,
       });
-      
       setEditedProfile(prev => ({ ...prev, summary: result.summary }));
     } catch (error) {
       console.error('Erro ao gerar resumo:', error);
@@ -95,7 +124,7 @@ export default function Dashboard() {
   if (!isAuthReady) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -106,93 +135,35 @@ export default function Dashboard() {
   const availableThemes = ['blue', 'emerald', 'orange', 'purple', 'rose', 'amber', 'cyan', 'indigo'];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 transition-colors duration-300">
-      <div className="max-w-5xl mx-auto space-y-12">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
-          <div className="flex items-center gap-3">
-            <Link 
-              href={`/${currentUser.username}`}
-              className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-medium hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
-            >
-              Ver Perfil Público
-            </Link>
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                router.push('/');
-              }}
-              className="px-6 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-
-        <ProfileHeader user={currentUser} onEdit={() => setIsEditingProfile(true)} />
-
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Minhas Áreas de Atuação</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 hidden md:block">Adicione cargos ou áreas para organizar seus currículos</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {areas.map((area, i) => {
-              const theme = getTheme(area.slug);
-              // @ts-ignore
-              const Icon = LucideIcons[area.icon] || LucideIcons.Briefcase;
-
-              return (
-                <motion.div
-                  key={area.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Link href={`/${currentUser.username}/${area.slug}`}>
-                    <div className={`group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border ${theme.border} dark:border-opacity-20 hover:shadow-md transition-all`}>
-                      <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full ${theme.bgLight} dark:opacity-20 transition-transform group-hover:scale-150 duration-500`} />
-                      <div className="relative z-10">
-                        <div className={`w-14 h-14 rounded-2xl ${theme.primary} text-white flex items-center justify-center mb-6 shadow-sm`}>
-                          <Icon className="w-7 h-7" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{area.name}</h3>
-                        <div className="flex items-center text-sm font-bold text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                          Configurar currículo
-                          <LucideIcons.ChevronRight className="w-4 h-4 ml-1" />
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: areas.length * 0.1 }}
-            >
-              <button 
-                onClick={() => setIsAddingArea(true)}
-                className="w-full h-full min-h-[200px] bg-white dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <LucideIcons.Plus className="w-6 h-6" />
-                </div>
-                <span className="font-bold">Nova Área de Atuação</span>
-              </button>
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="pt-12 border-t border-slate-100 dark:border-slate-800">
-          <Timeline userId={currentUser.id} />
-        </section>
+    <>
+      {/* Top action bar */}
+      <div className="fixed top-4 left-4 z-20 flex items-center gap-2">
+        <a
+          href={`/${currentUser.username}`}
+          className="px-4 py-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-full text-sm font-bold border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-900 transition-all shadow-sm"
+        >
+          Ver Perfil Público
+        </a>
+        <button
+          onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
+          className="px-4 py-2 bg-red-100/90 dark:bg-red-900/30 backdrop-blur-sm text-red-600 dark:text-red-400 rounded-full text-sm font-bold border border-red-200 dark:border-red-800 hover:bg-red-200 transition-all shadow-sm"
+        >
+          Sair
+        </button>
       </div>
 
-      {/* Edit Profile Modal */}
+      <ThemedProfileLayout
+        user={currentUser}
+        areas={areas}
+        isOwner={true}
+        onEditProfile={() => setIsEditingProfile(true)}
+        onAddArea={() => setIsAddingArea(true)}
+        theme={profileTheme}
+        isLoadingTheme={isLoadingTheme}
+        username={currentUser.username}
+      />
+
+      {/* ─── Edit Profile Modal ─── */}
       <AnimatePresence>
         {isEditingProfile && (
           <motion.div
@@ -209,7 +180,7 @@ export default function Dashboard() {
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Editar Perfil Profissional</h3>
-                <button onClick={() => setIsEditingProfile(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <button onClick={() => setIsEditingProfile(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                   <LucideIcons.X className="w-6 h-6" />
                 </button>
               </div>
@@ -311,7 +282,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Add Area Modal */}
+      {/* ─── Add Area Modal ─── */}
       <AnimatePresence>
         {isAddingArea && (
           <motion.div
@@ -358,8 +329,8 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => setNewAreaIcon(iconName)}
                           className={`p-3 rounded-xl flex items-center justify-center transition-all ${
-                            newAreaIcon === iconName 
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 ring-2 ring-blue-500' 
+                            newAreaIcon === iconName
+                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 ring-2 ring-blue-500'
                               : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                           }`}
                         >
@@ -401,7 +372,6 @@ export default function Dashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
-
