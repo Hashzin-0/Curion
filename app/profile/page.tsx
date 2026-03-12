@@ -1,6 +1,6 @@
 'use client';
 
-import { useStore } from '@/lib/store';
+import { useStore, User } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProfileHeader from '@/components/ProfileHeader';
@@ -11,18 +11,36 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
-  const { currentUser, areas, addArea, isAuthReady } = useStore();
+  const { currentUser, areas, addArea, updateUser, isAuthReady } = useStore();
   const router = useRouter();
+  
+  // States for Areas
   const [isAddingArea, setIsAddingArea] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaIcon, setNewAreaIcon] = useState('Briefcase');
   const [newAreaTheme, setNewAreaTheme] = useState('blue');
+
+  // States for Profile Editing
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
 
   useEffect(() => {
     if (isAuthReady && !currentUser) {
       router.push('/');
     }
   }, [currentUser, isAuthReady, router]);
+
+  useEffect(() => {
+    if (currentUser) {
+      setEditedProfile({
+        name: currentUser.name,
+        headline: currentUser.headline,
+        summary: currentUser.summary,
+        location: currentUser.location,
+        photo_url: currentUser.photo_url,
+      });
+    }
+  }, [currentUser]);
 
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +59,12 @@ export default function Dashboard() {
     setNewAreaName('');
     setNewAreaIcon('Briefcase');
     setNewAreaTheme('blue');
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateUser(editedProfile);
+    setIsEditingProfile(false);
   };
 
   if (!isAuthReady) {
@@ -80,7 +104,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <ProfileHeader user={currentUser} />
+        <ProfileHeader user={currentUser} onEdit={() => setIsEditingProfile(true)} />
 
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Minhas Áreas de Atuação</h2>
@@ -130,6 +154,93 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {isEditingProfile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Editar Perfil</h3>
+                <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <LucideIcons.X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                    <input
+                      type="text"
+                      value={editedProfile.name || ''}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cargo / Headline</label>
+                    <input
+                      type="text"
+                      value={editedProfile.headline || ''}
+                      onChange={(e) => setEditedProfile({ ...editedProfile, headline: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Localização</label>
+                  <input
+                    type="text"
+                    value={editedProfile.location || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Foto URL</label>
+                  <input
+                    type="text"
+                    value={editedProfile.photo_url || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, photo_url: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resumo Profissional</label>
+                  <textarea
+                    rows={4}
+                    value={editedProfile.summary || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, summary: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors mt-2"
+                >
+                  Salvar Alterações
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Area Modal */}
       <AnimatePresence>
         {isAddingArea && (
           <motion.div

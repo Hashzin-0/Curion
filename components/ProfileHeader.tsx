@@ -1,13 +1,27 @@
 import { User } from '@/lib/store';
 import Image from 'next/image';
-import { MapPin } from 'lucide-react';
+import { MapPin, Pencil } from 'lucide-react';
 
-export default function ProfileHeader({ user }: { user: User }) {
+interface ProfileHeaderProps {
+  user: User;
+  onEdit?: () => void;
+}
+
+export default function ProfileHeader({ user, onEdit }: ProfileHeaderProps) {
   return (
-    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 relative group">
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
+          title="Editar Perfil"
+        >
+          <Pencil className="w-5 h-5" />
+        </button>
+      )}
       <div className="relative w-32 h-32 rounded-full overflow-hidden shrink-0 border-4 border-white dark:border-slate-800 shadow-md">
         <Image
-          src={user.photo_url}
+          src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
           alt={user.name}
           fill
           className="object-cover"

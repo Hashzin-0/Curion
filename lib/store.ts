@@ -78,6 +78,7 @@ interface AppState {
   setUser: (user: User | null) => void;
   setAuthReady: (ready: boolean) => void;
   syncUserWithDatabase: (userData: Partial<User>) => Promise<User | null>;
+  updateUser: (userData: Partial<User>) => Promise<void>;
   addExperience: (experience: Omit<Experience, 'id'>) => Promise<void>;
   addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
@@ -202,7 +203,6 @@ export const useStore = create<AppState>((set, get) => ({
     if (!userData.id) return null;
 
     try {
-      // Upsert user into Supabase
       const { data, error } = await supabase
         .from('users')
         .upsert({
@@ -218,8 +218,6 @@ export const useStore = create<AppState>((set, get) => ({
         .single();
 
       if (error) {
-        // If the error is just that we can't upsert (e.g. table doesn't exist yet),
-        // we at least set the local state
         console.warn('Could not sync with DB, using local state:', error.message);
         return userData as User;
       }
@@ -229,6 +227,25 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error('Error syncing user:', err);
       return userData as User;
+    }
+  },
+
+  updateUser: async (userData) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update(userData)
+        .eq('id', currentUser.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      set({ currentUser: data });
+    } catch (err) {
+      console.error('Error updating user:', err);
     }
   },
   
