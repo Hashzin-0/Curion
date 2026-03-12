@@ -77,6 +77,7 @@ interface AppState {
   logout: () => void;
   setUser: (user: User | null) => void;
   setAuthReady: (ready: boolean) => void;
+  syncUserWithDatabase: (userData: Partial<User>) => Promise<User | null>;
   addExperience: (experience: Omit<Experience, 'id'>) => Promise<void>;
   addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
@@ -181,7 +182,7 @@ const mockAchievements: Achievement[] = [
 ];
 
 export const useStore = create<AppState>((set, get) => ({
-  currentUser: null, // Start with null, AuthProvider will update
+  currentUser: null,
   users: mockUsers,
   areas: mockAreas,
   experiences: mockExperiences,
@@ -196,13 +197,45 @@ export const useStore = create<AppState>((set, get) => ({
   logout: () => set({ currentUser: null }),
   setUser: (user) => set({ currentUser: user }),
   setAuthReady: (ready) => set({ isAuthReady: ready }),
+
+  syncUserWithDatabase: async (userData) => {
+    if (!userData.id) return null;
+
+    try {
+      // Upsert user into Supabase
+      const { data, error } = await supabase
+        .from('users')
+        .upsert({
+          id: userData.id,
+          username: userData.username,
+          name: userData.name,
+          photo_url: userData.photo_url,
+          headline: userData.headline || 'Profissional',
+          summary: userData.summary || 'Bem-vindo ao meu perfil.',
+          location: userData.location || 'Brasil',
+        }, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        // If the error is just that we can't upsert (e.g. table doesn't exist yet),
+        // we at least set the local state
+        console.warn('Could not sync with DB, using local state:', error.message);
+        return userData as User;
+      }
+
+      set((state) => ({ currentUser: data }));
+      return data;
+    } catch (err) {
+      console.error('Error syncing user:', err);
+      return userData as User;
+    }
+  },
   
   fetchData: async () => {
     set({ isLoading: true });
     try {
-      // Check if Supabase is configured
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-        console.log('Supabase not configured, using mock data');
         set({ isLoading: false });
         return;
       }
@@ -233,7 +266,6 @@ export const useStore = create<AppState>((set, get) => ({
         areaSkills: areaSkills || mockAreaSkills,
         education: education || mockEducation,
         achievements: achievements || mockAchievements,
-        currentUser: (users && users.length > 0) ? users[0] : mockUsers[0],
         isLoading: false
       });
     } catch (error) {
