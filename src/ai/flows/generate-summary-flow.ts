@@ -1,11 +1,12 @@
+
 'use server';
 /**
- * @fileOverview Fluxo de IA para geração de resumo profissional.
+ * @fileOverview Fluxo de IA para geração de resumo profissional usando OpenRouter.
  * 
  * - generateProfessionalSummary - Gera um resumo impactante baseado nas experiências do usuário.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '@/src/ai/genkit';
 import { z } from 'genkit';
 
 const SummaryInputSchema = z.object({
@@ -24,6 +25,7 @@ export type SummaryOutput = z.infer<typeof SummaryOutputSchema>;
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
+  model: 'openai/stepfun/step-3.5-flash:free',
   input: { schema: SummaryInputSchema },
   output: { schema: SummaryOutputSchema },
   prompt: `Você é um especialista em recrutamento e branding pessoal.
