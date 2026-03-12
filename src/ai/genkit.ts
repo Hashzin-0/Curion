@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Configuração do Genkit com suporte ao OpenRouter via plugin OpenAI.
  */
