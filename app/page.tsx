@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2, Wand2 } from 'lucide-react';
+import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2, Sparkles } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -41,11 +41,8 @@ export default function Home() {
           transition={{ duration: 0.5 }}
         >
           <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-full text-sm font-bold mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-            Novo: Exportação PDF com QR Code
+            <Sparkles className="w-4 h-4" />
+            Exportação PDF Temática com IA
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">
             Seu currículo, <br className="hidden md:block" />
@@ -58,13 +55,6 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/resume"
-              className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-black rounded-full font-black text-lg flex items-center gap-2 hover:from-yellow-300 hover:to-orange-300 transition-all shadow-lg hover:shadow-yellow-400/30 hover:shadow-xl"
-            >
-              <Wand2 className="w-5 h-5" />
-              Criar Currículo com IA
-            </Link>
             {isMounted && currentUser ? (
               <Link
                 href="/profile"
