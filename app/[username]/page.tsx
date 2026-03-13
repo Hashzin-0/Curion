@@ -43,7 +43,36 @@ const AREA_COLORS: Record<string, { hex: string; hexSecondary: string; hexDark: 
 
 export default function PublicProfile() {
   const { username } = useParams();
-  const { users, areas, experiences, education } = useStore();
+  const { users, areas, experiences, education, currentUser, updateArea, removeArea } = useStore();
+    // Estado para edição e exclusão de área
+    const [editingArea, setEditingArea] = useState<any>(null);
+    const [areaForm, setAreaForm] = useState<any>({});
+    const [deletingArea, setDeletingArea] = useState<any>(null);
+    const [isProcessingArea, setIsProcessingArea] = useState(false);
+
+    const isOwner = currentUser && user && currentUser.username === user.username;
+
+    const handleEditArea = (area: any) => {
+      setEditingArea(area);
+      setAreaForm({ ...area });
+    };
+    const handleAreaFormChange = (field: string, value: string) => {
+      setAreaForm((prev: any) => ({ ...prev, [field]: value }));
+    };
+    const handleSaveArea = async () => {
+      if (!editingArea || !areaForm.name || !areaForm.slug) return;
+      setIsProcessingArea(true);
+      await updateArea({ ...editingArea, ...areaForm });
+      setIsProcessingArea(false);
+      setEditingArea(null);
+    };
+    const handleDeleteArea = async () => {
+      if (!deletingArea) return;
+      setIsProcessingArea(true);
+      await removeArea(deletingArea.id);
+      setIsProcessingArea(false);
+      setDeletingArea(null);
+    };
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -309,25 +338,75 @@ export default function PublicProfile() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleExportArea(slug, areaName, colors, exps)}
-                  disabled={exporting !== null}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '10px 20px',
-                    background: exporting === slug ? '#ccc' : colors.hex,
-                    color: '#fff', border: 'none', borderRadius: 999,
-                    fontWeight: 900, fontSize: 13, cursor: exporting ? 'not-allowed' : 'pointer',
-                    boxShadow: `0 4px 14px ${colors.hex}55`, transition: 'all .2s',
-                  }}
-                >
-                  {exporting === slug ? (
-                    <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Gerando...</>
-                  ) : (
-                    <><Sparkles size={14} /> Exportar PDF</>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleExportArea(slug, areaName, colors, exps)}
+                    disabled={exporting !== null}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 20px',
+                      background: exporting === slug ? '#ccc' : colors.hex,
+                      color: '#fff', border: 'none', borderRadius: 999,
+                      fontWeight: 900, fontSize: 13, cursor: exporting ? 'not-allowed' : 'pointer',
+                      boxShadow: `0 4px 14px ${colors.hex}55`, transition: 'all .2s',
+                    }}
+                  >
+                    {exporting === slug ? (
+                      <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Gerando...</>
+                    ) : (
+                      <><Sparkles size={14} /> Exportar PDF</>
+                    )}
+                  </button>
+                  {isOwner && (
+                    <>
+                      <button
+                        onClick={() => handleEditArea(areas.find(a => a.slug === slug))}
+                        style={{
+                          padding: '10px 16px', background: '#fbbf24', color: '#fff', border: 'none', borderRadius: 999, fontWeight: 900, fontSize: 13, cursor: 'pointer',
+                        }}
+                      >Editar</button>
+                      <button
+                        onClick={() => setDeletingArea(areas.find(a => a.slug === slug))}
+                        style={{
+                          padding: '10px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 999, fontWeight: 900, fontSize: 13, cursor: 'pointer',
+                        }}
+                      >Remover</button>
+                    </>
                   )}
-                </button>
+                </div>
               </div>
+      {/* Modal de edição de área */}
+      {editingArea && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <h3 style={{ fontWeight: 900, fontSize: 20, marginBottom: 18 }}>Editar Área</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input value={areaForm.name || ''} onChange={e => handleAreaFormChange('name', e.target.value)} placeholder="Nome" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
+              <input value={areaForm.slug || ''} onChange={e => handleAreaFormChange('slug', e.target.value)} placeholder="Slug" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
+              <input value={areaForm.theme_color || ''} onChange={e => handleAreaFormChange('theme_color', e.target.value)} placeholder="Cor (ex: orange, #ff9900)" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
+              <input value={areaForm.icon || ''} onChange={e => handleAreaFormChange('icon', e.target.value)} placeholder="Ícone (ex: ChefHat)" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button onClick={() => setEditingArea(null)} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#eee', fontWeight: 700, border: 'none' }}>Cancelar</button>
+              <button onClick={handleSaveArea} disabled={isProcessingArea} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 900, border: 'none', opacity: isProcessingArea ? 0.6 : 1 }}>{isProcessingArea ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      {deletingArea && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <h3 style={{ fontWeight: 900, fontSize: 20, marginBottom: 18 }}>Remover Área</h3>
+            <div style={{ marginBottom: 18 }}>Tem certeza que deseja remover a área <b>{deletingArea.name}</b>? Esta ação não pode ser desfeita.</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setDeletingArea(null)} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#eee', fontWeight: 700, border: 'none' }}>Cancelar</button>
+              <button onClick={handleDeleteArea} disabled={isProcessingArea} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 900, border: 'none', opacity: isProcessingArea ? 0.6 : 1 }}>{isProcessingArea ? 'Removendo...' : 'Remover'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
               {/* Experiences */}
               <div style={{ padding: '16px 24px' }}>
