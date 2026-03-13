@@ -30,7 +30,7 @@ export type ProfileTheme = z.infer<typeof ProfileThemeOutputSchema>;
 
 const profileThemePrompt = ai.definePrompt({
   name: 'profileThemePrompt',
-  model: 'openai/stepfun/step-3.5-flash:free',
+  model: 'stepfun/step-3.5-flash:free',
   input: { schema: ProfileThemeInputSchema },
   output: { schema: ProfileThemeOutputSchema },
   prompt: `Você é um designer criativo que cria identidades visuais vibrantes para profissionais.

@@ -25,7 +25,7 @@ export type SummaryOutput = z.infer<typeof SummaryOutputSchema>;
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
-  model: 'openai/stepfun/step-3.5-flash:free',
+  model: 'stepfun/step-3.5-flash:free',
   input: { schema: SummaryInputSchema },
   output: { schema: SummaryOutputSchema },
   prompt: `Você é um especialista em recrutamento e branding pessoal.

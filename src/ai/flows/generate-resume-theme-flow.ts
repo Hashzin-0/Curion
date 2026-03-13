@@ -40,7 +40,7 @@ export type ResumeTheme = z.infer<typeof ThemeOutputSchema>;
 
 const themePrompt = ai.definePrompt({
   name: 'resumeThemePrompt',
-  model: 'openai/stepfun/step-3.5-flash:free',
+  model: 'stepfun/step-3.5-flash:free',
   input: { schema: ThemeInputSchema },
   output: { schema: ThemeOutputSchema },
   prompt: `Você é um designer gráfico CRIATIVO e OUSADO especializado em currículos com identidade visual forte.
