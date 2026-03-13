@@ -1,5 +1,16 @@
 
+
 'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useStore, User, ProfessionalArea } from '@/lib/store';
+import * as LucideIcons from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { supabase } from '@/lib/supabase';
+import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
+import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
+import { AddContentModal } from '@/components/AddContentModal';
 import { useState } from 'react';
 import { useStore, ProfessionalArea } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
@@ -8,7 +19,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 export default function Dashboard() {
   const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea } = useStore();
-  const router = useRouter();
+  // const router = useRouter(); // Removido: declaração duplicada
   // Área de trabalho: edição e exclusão
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
