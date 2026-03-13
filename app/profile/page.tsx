@@ -1,18 +1,106 @@
 'use client';
 
-import { useStore, User } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import * as LucideIcons from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '@/lib/supabase';
-import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
-import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
-import { AddContentModal } from '@/components/AddContentModal';
 
 export default function Dashboard() {
-  const { currentUser, areas, updateUser, isAuthReady, experiences, skills } = useStore();
+  const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea } = useStore();
+  // Área de trabalho: edição e exclusão
+  const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
+  const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
+  const [deletingArea, setDeletingArea] = useState<ProfessionalArea | null>(null);
+  const [isProcessingArea, setIsProcessingArea] = useState(false);
+  // Handlers para editar/excluir área
+  const handleEditArea = (area: ProfessionalArea) => {
+    setEditingArea(area);
+    setAreaForm({ ...area });
+  };
+  const handleAreaFormChange = (field: keyof ProfessionalArea, value: string) => {
+    setAreaForm((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleSaveArea = async () => {
+    if (!editingArea || !areaForm.name || !areaForm.slug) return;
+    setIsProcessingArea(true);
+    await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea);
+    setIsProcessingArea(false);
+    setEditingArea(null);
+  };
+  const handleDeleteArea = async () => {
+    if (!deletingArea) return;
+    setIsProcessingArea(true);
+    await removeArea(deletingArea.id);
+    setIsProcessingArea(false);
+    setDeletingArea(null);
+  };
+        {/* ─── Áreas de Trabalho ─── */}
+        <div className="max-w-2xl mx-auto mt-10 mb-8 bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-100 dark:border-slate-800 p-6">
+          <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white flex items-center gap-2">
+            <LucideIcons.Layers className="w-5 h-5" /> Áreas de Trabalho
+          </h2>
+          <ul className="space-y-3">
+            {areas.map((area) => (
+              <li key={area.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-slate-700 dark:text-white">{area.name}</span>
+                  <span className="text-xs text-slate-400">({area.slug})</span>
+                  <span className="text-xs rounded px-2 py-0.5" style={{ background: area.theme_color, color: '#fff' }}>{area.theme_color}</span>
+                  <span className="text-xs text-slate-400">{area.icon}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEditArea(area)} className="px-3 py-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">Editar</button>
+                  <button onClick={() => setDeletingArea(area)} className="px-3 py-1 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-bold hover:bg-red-200 dark:hover:bg-red-800 transition-colors">Excluir</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Modal de edição de área */}
+        <AnimatePresence>
+          {editingArea && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+                <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Editar Área de Trabalho</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Nome</label>
+                    <input value={areaForm.name || ''} onChange={e => handleAreaFormChange('name', e.target.value)} className="w-full p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Slug</label>
+                    <input value={areaForm.slug || ''} onChange={e => handleAreaFormChange('slug', e.target.value)} className="w-full p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Cor (ex: orange, #ff9900)</label>
+                    <input value={areaForm.theme_color || ''} onChange={e => handleAreaFormChange('theme_color', e.target.value)} className="w-full p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Ícone (ex: ChefHat)</label>
+                    <input value={areaForm.icon || ''} onChange={e => handleAreaFormChange('icon', e.target.value)} className="w-full p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button onClick={() => setEditingArea(null)} className="flex-1 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancelar</button>
+                  <button onClick={handleSaveArea} disabled={isProcessingArea} className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-60">{isProcessingArea ? 'Salvando...' : 'Salvar'}</button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal de confirmação de exclusão */}
+        <AnimatePresence>
+          {deletingArea && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 text-center">
+                <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Excluir Área de Trabalho</h3>
+                <p className="mb-6 text-slate-600 dark:text-slate-300">Tem certeza que deseja excluir a área <span className="font-bold">{deletingArea.name}</span>? Esta ação não pode ser desfeita.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setDeletingArea(null)} className="flex-1 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancelar</button>
+                  <button onClick={handleDeleteArea} disabled={isProcessingArea} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all disabled:opacity-60">{isProcessingArea ? 'Excluindo...' : 'Excluir'}</button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
   const router = useRouter();
 
   const [isAddingContent, setIsAddingContent] = useState(false);

@@ -122,6 +122,8 @@ interface AppState {
   addPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => Promise<void>;
   addRecommendation: (recommendation: Omit<RecommendationLetter, 'id'>) => Promise<void>;
   addArea: (area: Omit<ProfessionalArea, 'id'>) => Promise<void>;
+  updateArea: (area: ProfessionalArea) => Promise<void>;
+  removeArea: (areaId: string) => Promise<void>;
   fetchData: () => Promise<void>;
 }
 
@@ -412,6 +414,34 @@ export const useStore = create<AppState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error adding area:', error);
+    }
+  },
+
+  updateArea: async (area) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('areas').update(area).eq('id', area.id).select().single();
+        if (error) throw error;
+        set((state) => ({ areas: state.areas.map(a => a.id === area.id ? data : a) }));
+      } else {
+        set((state) => ({ areas: state.areas.map(a => a.id === area.id ? area : a) }));
+      }
+    } catch (error) {
+      console.error('Error updating area:', error);
+    }
+  },
+
+  removeArea: async (areaId) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { error } = await supabase.from('areas').delete().eq('id', areaId);
+        if (error) throw error;
+        set((state) => ({ areas: state.areas.filter(a => a.id !== areaId) }));
+      } else {
+        set((state) => ({ areas: state.areas.filter(a => a.id !== areaId) }));
+      }
+    } catch (error) {
+      console.error('Error removing area:', error);
     }
   },
 
