@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
@@ -39,8 +40,21 @@ export default function Dashboard() {
         location: currentUser.location,
         photo_url: currentUser.photo_url,
       });
+      setPhotoPreview(currentUser.photo_url || '');
     }
   }, [currentUser]);
+
+  const handlePhotoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setPhotoPreview(result);
+      setEditedProfile((prev) => ({ ...prev, photo_url: result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const fetchTheme = useCallback(async () => {
     if (!currentUser) return;
@@ -222,16 +236,23 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Foto de Perfil (URL)</label>
-                    <div className="relative">
-                      <LucideIcons.Image className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        type="text"
-                        value={editedProfile.photo_url || ''}
-                        onChange={(e) => setEditedProfile({ ...editedProfile, photo_url: e.target.value })}
-                        className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      />
-                    </div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Foto de Perfil (PNG/JPG)</label>
+                    <label className="flex flex-col items-center justify-center gap-2 w-full h-28 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-blue-400 transition-colors bg-slate-50 dark:bg-slate-800 relative overflow-hidden">
+                      {photoPreview ? (
+                        <>
+                          <img src={photoPreview} alt="preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
+                            <span className="text-xs font-bold text-white">Trocar foto</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <LucideIcons.Image className="w-6 h-6 text-slate-400" />
+                          <span className="text-xs text-slate-400 font-bold">Clique para enviar foto</span>
+                        </>
+                      )}
+                      <input type="file" accept="image/png,image/jpeg,image/jpg" className="sr-only" onChange={handlePhotoFile} />
+                    </label>
                   </div>
                 </div>
 

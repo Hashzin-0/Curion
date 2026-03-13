@@ -19,6 +19,16 @@ export type ResumeData = {
     role: string;
     duration: string;
   }[];
+  education?: {
+    institution: string;
+    course: string;
+    period: string;
+  }[];
+  courses?: {
+    name: string;
+    institution: string;
+    year: string;
+  }[];
   skills: {
     name: string;
     description: string;
@@ -53,6 +63,47 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
   const firstName = nameParts[0] || '';
   const restName = nameParts.slice(1).join(' ') || '';
 
+  const sectionHeader = (emoji: string, title: string) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        margin: '24px 0 16px',
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: theme.secondaryColor,
+          borderRadius: '10px',
+          width: '52px',
+          height: '52px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '28px',
+          flexShrink: 0,
+        }}
+      >
+        {emoji}
+      </div>
+      <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
+      <h2
+        style={{
+          fontSize: '36px',
+          fontWeight: '900',
+          color: '#1a1a1a',
+          margin: 0,
+          letterSpacing: '1px',
+          textTransform: 'uppercase',
+        }}
+      >
+        {title}
+      </h2>
+      <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
+    </div>
+  );
+
   return (
     <div
       ref={ref}
@@ -81,7 +132,6 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
           position: 'relative',
         }}
       >
-        {/* Photo */}
         {data.photoUrl && (
           <div
             style={{
@@ -102,7 +152,6 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
           </div>
         )}
 
-        {/* Name block */}
         <div style={{ flex: 1 }}>
           <div
             style={{
@@ -129,7 +178,6 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
           </div>
         </div>
 
-        {/* Header emoji */}
         <div
           style={{
             fontSize: '64px',
@@ -153,16 +201,21 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
           alignItems: 'center',
           gap: '24px',
           borderBottom: `2px solid ${theme.primaryColor}`,
+          flexWrap: 'wrap',
         }}
       >
         <div style={{ fontWeight: '700', fontSize: '13px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase' }}>
           {data.profession}
         </div>
-        <div style={{ width: '1px', height: '20px', backgroundColor: '#ddd' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '700' }}>
-          <span style={{ fontSize: '20px' }}>{theme.summaryEmoji}</span>
-          <span>{data.availableSince}</span>
-        </div>
+        {data.availableSince && (
+          <>
+            <div style={{ width: '1px', height: '20px', backgroundColor: '#ddd' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '700' }}>
+              <span style={{ fontSize: '20px' }}>{theme.summaryEmoji}</span>
+              <span>{data.availableSince}</span>
+            </div>
+          </>
+        )}
         {data.phone && (
           <>
             <div style={{ width: '1px', height: '20px', backgroundColor: '#ddd' }} />
@@ -172,205 +225,238 @@ const ResumeTemplate = forwardRef<HTMLDivElement, Props>(function ResumeTemplate
       </div>
 
       {/* Summary section */}
-      <div
-        style={{
-          padding: '20px 32px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '16px',
-          backgroundColor: '#fafafa',
-          borderBottom: `3px solid ${theme.primaryColor}`,
-        }}
-      >
-        <div style={{ fontSize: '48px', lineHeight: 1, flexShrink: 0 }}>{theme.summaryEmoji}</div>
-        <p
+      {data.summary && (
+        <div
           style={{
-            fontSize: '12px',
-            fontWeight: '700',
-            lineHeight: 1.6,
-            color: '#222',
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            margin: 0,
+            padding: '20px 32px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '16px',
+            backgroundColor: '#fafafa',
+            borderBottom: `3px solid ${theme.primaryColor}`,
           }}
         >
-          {data.summary}
-        </p>
-      </div>
+          <div style={{ fontSize: '48px', lineHeight: 1, flexShrink: 0 }}>{theme.summaryEmoji}</div>
+          <p
+            style={{
+              fontSize: '12px',
+              fontWeight: '700',
+              lineHeight: 1.6,
+              color: '#222',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px',
+              margin: 0,
+            }}
+          >
+            {data.summary}
+          </p>
+        </div>
+      )}
 
       {/* Experiences section */}
-      <div style={{ padding: '0 32px' }}>
-        {/* Section header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            margin: '24px 0 16px',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: theme.secondaryColor,
-              borderRadius: '10px',
-              width: '52px',
-              height: '52px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '28px',
-              flexShrink: 0,
-            }}
-          >
-            {theme.experienceEmoji}
-          </div>
-          <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
-          <h2
-            style={{
-              fontSize: '36px',
-              fontWeight: '900',
-              color: '#1a1a1a',
-              margin: 0,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-            }}
-          >
-            EXPERIÊNCIAS
-          </h2>
-          <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
-        </div>
-
-        {/* Experience items */}
-        <div style={{ marginBottom: '8px' }}>
-          {data.experiences.map((exp, i) => (
-            <div key={i} style={{ marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span
-                  style={{
-                    fontWeight: '900',
-                    fontSize: '13px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {exp.company}
-                </span>
-                <span style={{ fontSize: '14px', color: theme.secondaryColor, margin: '0 4px' }}>
-                  {theme.bulletEmoji}
-                </span>
-                <DottedLine color={theme.accentColor} />
-                <span
-                  style={{
-                    fontWeight: '900',
-                    fontSize: '13px',
-                    letterSpacing: '3px',
-                    whiteSpace: 'nowrap',
-                    color: '#222',
-                  }}
-                >
-                  {exp.duration.toUpperCase()}
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: '11px',
-                  color: '#555',
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  paddingLeft: '8px',
-                  marginTop: '2px',
-                }}
-              >
-                {exp.role}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Skills section */}
-      <div style={{ padding: '0 32px' }}>
-        {/* Section header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            margin: '24px 0 16px',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: theme.secondaryColor,
-              borderRadius: '10px',
-              width: '52px',
-              height: '52px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '28px',
-              flexShrink: 0,
-            }}
-          >
-            {theme.skillEmoji}
-          </div>
-          <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
-          <h2
-            style={{
-              fontSize: '36px',
-              fontWeight: '900',
-              color: '#1a1a1a',
-              margin: 0,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-            }}
-          >
-            COMPETÊNCIAS
-          </h2>
-          <div style={{ flex: 1, height: '3px', backgroundColor: '#ddd' }} />
-        </div>
-
-        {/* Skill items */}
-        <div style={{ marginBottom: '8px' }}>
-          {data.skills.map((skill, i) => (
-            <div key={i} style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '14px', color: theme.secondaryColor }}>{theme.bulletEmoji}</span>
-                <DottedLine color={theme.accentColor} />
-                <span
-                  style={{
-                    fontWeight: '900',
-                    fontSize: '13px',
-                    letterSpacing: '3px',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    color: '#1a1a1a',
-                  }}
-                >
-                  {skill.name}
-                </span>
-              </div>
-              {skill.description && (
+      {data.experiences.length > 0 && (
+        <div style={{ padding: '0 32px' }}>
+          {sectionHeader(theme.experienceEmoji, 'EXPERIÊNCIAS')}
+          <div style={{ marginBottom: '8px' }}>
+            {data.experiences.map((exp, i) => (
+              <div key={i} style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {exp.company}
+                  </span>
+                  <span style={{ fontSize: '14px', color: theme.secondaryColor, margin: '0 4px' }}>
+                    {theme.bulletEmoji}
+                  </span>
+                  <DottedLine color={theme.accentColor} />
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      letterSpacing: '3px',
+                      whiteSpace: 'nowrap',
+                      color: '#222',
+                    }}
+                  >
+                    {exp.duration.toUpperCase()}
+                  </span>
+                </div>
                 <div
                   style={{
-                    fontSize: '10px',
-                    color: '#666',
+                    fontSize: '11px',
+                    color: '#555',
                     fontWeight: '700',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
-                    paddingLeft: '24px',
+                    paddingLeft: '8px',
                     marginTop: '2px',
                   }}
                 >
-                  ({skill.description})
+                  {exp.role}
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Education section */}
+      {data.education && data.education.length > 0 && (
+        <div style={{ padding: '0 32px' }}>
+          {sectionHeader('🎓', 'ESCOLARIDADE')}
+          <div style={{ marginBottom: '8px' }}>
+            {data.education.map((ed, i) => (
+              <div key={i} style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {ed.institution}
+                  </span>
+                  <span style={{ fontSize: '14px', color: theme.secondaryColor, margin: '0 4px' }}>
+                    {theme.bulletEmoji}
+                  </span>
+                  <DottedLine color={theme.accentColor} />
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      letterSpacing: '2px',
+                      whiteSpace: 'nowrap',
+                      color: '#222',
+                    }}
+                  >
+                    {ed.period.toUpperCase()}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: '#555',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    paddingLeft: '8px',
+                    marginTop: '2px',
+                  }}
+                >
+                  {ed.course}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Courses section */}
+      {data.courses && data.courses.length > 0 && (
+        <div style={{ padding: '0 32px' }}>
+          {sectionHeader('📚', 'CURSOS')}
+          <div style={{ marginBottom: '8px' }}>
+            {data.courses.map((c, i) => (
+              <div key={i} style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '14px', color: theme.secondaryColor }}>{theme.bulletEmoji}</span>
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    {c.name}
+                  </span>
+                  <DottedLine color={theme.accentColor} />
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '12px',
+                      letterSpacing: '2px',
+                      whiteSpace: 'nowrap',
+                      color: '#555',
+                    }}
+                  >
+                    {c.year}
+                  </span>
+                </div>
+                {c.institution && (
+                  <div
+                    style={{
+                      fontSize: '10px',
+                      color: '#666',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      paddingLeft: '24px',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {c.institution}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Skills section */}
+      {data.skills.length > 0 && (
+        <div style={{ padding: '0 32px' }}>
+          {sectionHeader(theme.skillEmoji, 'COMPETÊNCIAS')}
+          <div style={{ marginBottom: '8px' }}>
+            {data.skills.map((skill, i) => (
+              <div key={i} style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '14px', color: theme.secondaryColor }}>{theme.bulletEmoji}</span>
+                  <DottedLine color={theme.accentColor} />
+                  <span
+                    style={{
+                      fontWeight: '900',
+                      fontSize: '13px',
+                      letterSpacing: '3px',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    {skill.name}
+                  </span>
+                </div>
+                {skill.description && (
+                  <div
+                    style={{
+                      fontSize: '10px',
+                      color: '#666',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      paddingLeft: '24px',
+                      marginTop: '2px',
+                    }}
+                  >
+                    ({skill.description})
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom stripe */}
       <div style={{ height: '6px', backgroundColor: theme.primaryColor, marginTop: '16px' }} />
