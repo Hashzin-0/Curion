@@ -9,15 +9,13 @@ import { supabase } from '@/lib/supabase';
 import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
+import { AddContentModal } from '@/components/AddContentModal';
 
 export default function Dashboard() {
-  const { currentUser, areas, addArea, updateUser, isAuthReady, experiences, skills } = useStore();
+  const { currentUser, areas, updateUser, isAuthReady, experiences, skills } = useStore();
   const router = useRouter();
 
-  const [isAddingArea, setIsAddingArea] = useState(false);
-  const [newAreaName, setNewAreaName] = useState('');
-  const [newAreaIcon, setNewAreaIcon] = useState('Briefcase');
-  const [newAreaTheme, setNewAreaTheme] = useState('blue');
+  const [isAddingContent, setIsAddingContent] = useState(false);
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
@@ -90,19 +88,6 @@ export default function Dashboard() {
     if (isAuthReady && currentUser) fetchTheme();
   }, [isAuthReady, currentUser, fetchTheme]);
 
-  const handleAddArea = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAreaName.trim()) return;
-    const slug = newAreaName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    addArea({ name: newAreaName, slug, icon: newAreaIcon, theme_color: newAreaTheme });
-    setIsAddingArea(false);
-    setNewAreaName('');
-    setNewAreaIcon('Briefcase');
-    setNewAreaTheme('blue');
-    // Invalidate cached theme so it regenerates with new areas
-    if (currentUser) localStorage.removeItem(`profile-theme-${currentUser.id}`);
-  };
-
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateUser(editedProfile);
@@ -145,9 +130,6 @@ export default function Dashboard() {
 
   if (!currentUser) return null;
 
-  const availableIcons = ['Briefcase', 'ChefHat', 'MessageSquare', 'Package', 'Code', 'PenTool', 'Camera', 'Music', 'HeartPulse'];
-  const availableThemes = ['blue', 'emerald', 'orange', 'purple', 'rose', 'amber', 'cyan', 'indigo'];
-
   return (
     <>
       {/* Top action bar */}
@@ -171,11 +153,13 @@ export default function Dashboard() {
         areas={areas}
         isOwner={true}
         onEditProfile={() => setIsEditingProfile(true)}
-        onAddArea={() => setIsAddingArea(true)}
+        onAddContent={() => setIsAddingContent(true)}
         theme={profileTheme}
         isLoadingTheme={isLoadingTheme}
         username={currentUser.username}
       />
+
+      <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
 
       {/* ─── Edit Profile Modal ─── */}
       <AnimatePresence>
@@ -297,97 +281,6 @@ export default function Dashboard() {
                     Salvar Alterações
                   </button>
                 </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ─── Add Area Modal ─── */}
-      <AnimatePresence>
-        {isAddingArea && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Nova Área Profissional</h3>
-                <button onClick={() => setIsAddingArea(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                  <LucideIcons.X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddArea} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nome da Área</label>
-                  <input
-                    type="text"
-                    required
-                    value={newAreaName}
-                    onChange={(e) => setNewAreaName(e.target.value)}
-                    placeholder="Ex: Desenvolvedor Frontend"
-                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ícone Representativo</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {availableIcons.map(iconName => {
-                      // @ts-ignore
-                      const Icon = LucideIcons[iconName];
-                      return (
-                        <button
-                          key={iconName}
-                          type="button"
-                          onClick={() => setNewAreaIcon(iconName)}
-                          className={`p-3 rounded-xl flex items-center justify-center transition-all ${
-                            newAreaIcon === iconName
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 ring-2 ring-blue-500'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Paleta de Cor</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {availableThemes.map(themeColor => (
-                      <button
-                        key={themeColor}
-                        type="button"
-                        onClick={() => setNewAreaTheme(themeColor)}
-                        className={`py-2 px-1 rounded-lg text-xs font-bold capitalize transition-all ${
-                          newAreaTheme === themeColor
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 ring-2 ring-slate-900 dark:ring-white'
-                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        {themeColor}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:shadow-lg transition-all"
-                >
-                  Criar Área
-                </button>
               </form>
             </motion.div>
           </motion.div>

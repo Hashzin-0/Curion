@@ -63,6 +63,37 @@ export type Achievement = {
   description: string;
 };
 
+export type Certificate = {
+  id: string;
+  user_id: string;
+  title: string;
+  institution: string;
+  date: string;
+  file_url?: string;
+  description?: string;
+};
+
+export type PortfolioItem = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  file_url?: string;
+  link_url?: string;
+  tags?: string[];
+};
+
+export type RecommendationLetter = {
+  id: string;
+  user_id: string;
+  author_name: string;
+  author_position: string;
+  author_company: string;
+  content: string;
+  date: string;
+  file_url?: string;
+};
+
 interface AppState {
   currentUser: User | null;
   users: User[];
@@ -72,6 +103,9 @@ interface AppState {
   areaSkills: AreaSkill[];
   education: Education[];
   achievements: Achievement[];
+  certificates: Certificate[];
+  portfolio: PortfolioItem[];
+  recommendations: RecommendationLetter[];
   isLoading: boolean;
   isAuthReady: boolean;
   login: (username: string) => void;
@@ -84,6 +118,9 @@ interface AppState {
   addExperienceWithAutoArea: (exp: Omit<Experience, 'id' | 'area_id'>) => Promise<void>;
   addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
+  addCertificate: (certificate: Omit<Certificate, 'id'>) => Promise<void>;
+  addPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => Promise<void>;
+  addRecommendation: (recommendation: Omit<RecommendationLetter, 'id'>) => Promise<void>;
   addArea: (area: Omit<ProfessionalArea, 'id'>) => Promise<void>;
   fetchData: () => Promise<void>;
 }
@@ -193,6 +230,9 @@ export const useStore = create<AppState>((set, get) => ({
   areaSkills: mockAreaSkills,
   education: mockEducation,
   achievements: mockAchievements,
+  certificates: [],
+  portfolio: [],
+  recommendations: [],
   isLoading: false,
   isAuthReady: false,
   
@@ -266,7 +306,10 @@ export const useStore = create<AppState>((set, get) => ({
         { data: skills },
         { data: areaSkills },
         { data: education },
-        { data: achievements }
+        { data: achievements },
+        { data: certificates },
+        { data: portfolio },
+        { data: recommendations }
       ] = await Promise.all([
         supabase.from('users').select('*'),
         supabase.from('areas').select('*'),
@@ -274,7 +317,10 @@ export const useStore = create<AppState>((set, get) => ({
         supabase.from('skills').select('*'),
         supabase.from('area_skills').select('*'),
         supabase.from('education').select('*'),
-        supabase.from('achievements').select('*')
+        supabase.from('achievements').select('*'),
+        supabase.from('certificates').select('*'),
+        supabase.from('portfolio').select('*'),
+        supabase.from('recommendations').select('*')
       ]);
 
       set({
@@ -285,6 +331,9 @@ export const useStore = create<AppState>((set, get) => ({
         areaSkills: areaSkills || mockAreaSkills,
         education: education || mockEducation,
         achievements: achievements || mockAchievements,
+        certificates: certificates || [],
+        portfolio: portfolio || [],
+        recommendations: recommendations || [],
         isLoading: false
       });
     } catch (error) {
@@ -363,6 +412,48 @@ export const useStore = create<AppState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error adding area:', error);
+    }
+  },
+
+  addCertificate: async (certificate) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('certificates').insert([certificate]).select().single();
+        if (error) throw error;
+        set((state) => ({ certificates: [data, ...state.certificates] }));
+      } else {
+        set((state) => ({ certificates: [{ ...certificate, id: `c${Date.now()}` }, ...state.certificates] }));
+      }
+    } catch (error) {
+      console.error('Error adding certificate:', error);
+    }
+  },
+
+  addPortfolioItem: async (item) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('portfolio').insert([item]).select().single();
+        if (error) throw error;
+        set((state) => ({ portfolio: [data, ...state.portfolio] }));
+      } else {
+        set((state) => ({ portfolio: [{ ...item, id: `p${Date.now()}` }, ...state.portfolio] }));
+      }
+    } catch (error) {
+      console.error('Error adding portfolio item:', error);
+    }
+  },
+
+  addRecommendation: async (recommendation) => {
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        const { data, error } = await supabase.from('recommendations').insert([recommendation]).select().single();
+        if (error) throw error;
+        set((state) => ({ recommendations: [data, ...state.recommendations] }));
+      } else {
+        set((state) => ({ recommendations: [{ ...recommendation, id: `r${Date.now()}` }, ...state.recommendations] }));
+      }
+    } catch (error) {
+      console.error('Error adding recommendation:', error);
     }
   },
 }));

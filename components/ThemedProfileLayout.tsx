@@ -16,7 +16,7 @@ type Props = {
   areas: ProfessionalArea[];
   isOwner?: boolean;
   onEditProfile?: () => void;
-  onAddArea?: () => void;
+  onAddContent?: () => void;
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
@@ -63,7 +63,7 @@ export function ThemedProfileLayout({
   areas,
   isOwner,
   onEditProfile,
-  onAddArea,
+  onAddContent,
   theme,
   isLoadingTheme,
   username,
@@ -284,12 +284,12 @@ export function ThemedProfileLayout({
             </div>
             {isOwner && (
               <button
-                onClick={onAddArea}
+                onClick={onAddContent}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-all hover:scale-105 shadow-lg"
                 style={{ backgroundColor: accentColor }}
               >
                 <Plus className="w-4 h-4" />
-                Nova Área
+                Adicionar Conteúdo
               </button>
             )}
           </div>
@@ -297,14 +297,15 @@ export function ThemedProfileLayout({
           {areas.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
               <div className="text-5xl mb-4">📋</div>
-              <p className="text-slate-500 dark:text-slate-400 font-bold">Nenhuma área adicionada ainda</p>
+              <p className="text-slate-500 dark:text-slate-400 font-bold">Nenhuma experiência adicionada ainda</p>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mt-2">Adicione suas experiências profissionais para começar</p>
               {isOwner && (
                 <button
-                  onClick={onAddArea}
+                  onClick={onAddContent}
                   className="mt-4 px-6 py-2 rounded-full text-sm font-bold text-white"
                   style={{ backgroundColor: accentColor }}
                 >
-                  Adicionar Área
+                  Adicionar Experiência
                 </button>
               )}
             </div>
