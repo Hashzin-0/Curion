@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useStore, ProfessionalArea } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 
 
 export default function Dashboard() {
