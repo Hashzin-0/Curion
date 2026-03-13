@@ -1,4 +1,8 @@
+
 'use client';
+import { useState } from 'react';
+import { useStore, ProfessionalArea } from '@/lib/store';
+import * as LucideIcons from 'lucide-react';
 
 
 export default function Dashboard() {
