@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 export default function Dashboard() {
   const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea } = useStore();
+  const router = useRouter();
   // Área de trabalho: edição e exclusão
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
