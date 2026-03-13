@@ -163,7 +163,7 @@ export default function ResumeBuilderPage() {
           margin: 0,
           filename: `curriculo-${name.toLowerCase().replace(/\s+/g, '-')}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, imageTimeout: 0 },
           jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' },
         })
         .from(element)

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from './supabase';
+import { detectAreaFromRole } from './utils';
 
 export type User = {
   id: string;
@@ -80,6 +81,7 @@ interface AppState {
   syncUserWithDatabase: (userData: Partial<User>) => Promise<User | null>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   addExperience: (experience: Omit<Experience, 'id'>) => Promise<void>;
+  addExperienceWithAutoArea: (exp: Omit<Experience, 'id' | 'area_id'>) => Promise<void>;
   addEducation: (education: Omit<Education, 'id'>) => Promise<void>;
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
   addArea: (area: Omit<ProfessionalArea, 'id'>) => Promise<void>;
@@ -303,6 +305,23 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (error) {
       console.error('Error adding experience:', error);
     }
+  },
+
+  addExperienceWithAutoArea: async (exp) => {
+    const { areas, addArea, addExperience } = get();
+    const detected = detectAreaFromRole(exp.role);
+    let area = areas.find(a => a.slug === detected.slug);
+    if (!area) {
+      await addArea({
+        name: detected.name,
+        slug: detected.slug,
+        icon: detected.icon,
+        theme_color: detected.themeColor,
+      });
+      area = get().areas.find(a => a.slug === detected.slug);
+    }
+    if (!area) return;
+    await addExperience({ ...exp, area_id: area.id });
   },
   
   addEducation: async (education) => {

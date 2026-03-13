@@ -47,6 +47,7 @@ export default function AreaResume() {
   const [exportTheme, setExportTheme] = useState<ResumeTheme | null>(null);
   const [exportData, setExportData] = useState<ResumeData | null>(null);
   const [exportError, setExportError] = useState('');
+  const [shouldExport, setShouldExport] = useState(false);
 
   const user = users.find(u => u.username === username);
   const area = areas.find(a => a.slug === areaSlug);
@@ -55,6 +56,30 @@ export default function AreaResume() {
     setIsMounted(true);
     if (!user || !area) router.push('/');
   }, [user, area, router]);
+
+  useEffect(() => {
+    if (!shouldExport || !exportTheme || !exportData || !pdfRef.current || !user || !area) return;
+    const run = async () => {
+      try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        const element = pdfRef.current!;
+        await html2pdf().set({
+          margin: 0,
+          filename: `curriculo-${user.name.toLowerCase().replace(/\s+/g, '-')}-${area.slug}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, imageTimeout: 0 },
+          jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' },
+        }).from(element).save();
+      } catch (err) {
+        console.error(err);
+        setExportError('Erro ao gerar o PDF. Tente novamente.');
+      } finally {
+        setShouldExport(false);
+        setExporting(false);
+      }
+    };
+    run();
+  }, [shouldExport, exportTheme, exportData]);
 
   if (!isMounted || !user || !area) return null;
 
@@ -119,25 +144,10 @@ export default function AreaResume() {
 
       setExportTheme(aiTheme);
       setExportData(resumeData);
-
-      await new Promise(r => setTimeout(r, 300));
-
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = pdfRef.current;
-      if (!element) throw new Error('Template não encontrado');
-
-      await html2pdf().set({
-        margin: 0,
-        filename: `curriculo-${user.name.toLowerCase().replace(/\s+/g, '-')}-${area.slug}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      }).from(element).save();
-
+      setShouldExport(true);
     } catch (err) {
       console.error(err);
       setExportError('Erro ao gerar currículo temático. Tente novamente.');
-    } finally {
       setExporting(false);
     }
   };
