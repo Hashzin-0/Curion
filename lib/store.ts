@@ -275,7 +275,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateUser: async (userData) => {
-    const { currentUser } = get();
+    const { currentUser, users } = get();
     if (!currentUser) return;
 
     try {
@@ -287,7 +287,11 @@ export const useStore = create<AppState>((set, get) => ({
         .single();
 
       if (error) throw error;
-      set({ currentUser: data });
+      // Atualiza currentUser e também o array de users
+      set((state) => ({
+        currentUser: data,
+        users: state.users.map(u => u.id === data.id ? data : u),
+      }));
     } catch (err) {
       console.error('Error updating user:', err);
     }

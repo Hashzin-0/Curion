@@ -40,6 +40,7 @@ const AREA_COLORS: Record<string, { hex: string; hexSecondary: string; hexDark: 
   teal:    { hex: '#14b8a6', hexSecondary: '#5eead4', hexDark: '#0f766e', emoji: '📋' },
 };
 
+
 export default function PublicProfile() {
   const { username } = useParams();
   const { users, areas, experiences, education } = useStore();
@@ -49,14 +50,42 @@ export default function PublicProfile() {
   const [exportTheme, setExportTheme] = useState<ResumeTheme | null>(null);
   const [exportData, setExportData] = useState<ResumeData | null>(null);
   const [shouldExport, setShouldExport] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const pdfRef = useRef<HTMLDivElement>(null);
 
-  const user = users.find(u => u.username === username);
-
-  useEffect(() => { setIsMounted(true); }, []);
   useEffect(() => {
-    if (isMounted && !user) router.push('/');
-  }, [user, router, isMounted]);
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    async function fetchUser() {
+      setLoadingUser(true);
+      // Primeiro tenta encontrar no estado global
+      let found = users.find(u => u.username === username);
+      if (!found) {
+        // Busca no Supabase
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .single();
+          if (data) {
+            found = data;
+          }
+        } catch (e) {
+          // erro silencioso
+        }
+      }
+      setUser(found || null);
+      setLoadingUser(false);
+      if (isMounted && !found) router.push('/');
+    }
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, users, isMounted]);
 
   useEffect(() => {
     if (!shouldExport || !exportTheme || !exportData || !pdfRef.current) return;
@@ -81,9 +110,10 @@ export default function PublicProfile() {
       }
     };
     run();
-  }, [shouldExport, exportTheme, exportData]);
+  }, [shouldExport, exportTheme, exportData, user]);
 
-  if (!isMounted || !user) return null;
+  if (!isMounted || loadingUser) return null;
+  if (!user) return null;
 
   const userExperiences = experiences.filter(e => e.user_id === user.id);
   const userEducation = education.filter(e => e.user_id === user.id);
