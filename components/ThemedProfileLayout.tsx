@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { MapPin, ArrowRight, Wand2, Loader2, Plus } from 'lucide-react';
+import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { User, ProfessionalArea } from '@/lib/store';
 import { Stats } from '@/components/Stats';
