@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, Loader2, MapPin, Mail, Phone, QrCode } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, MapPin, Mail, Phone } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { parseSafeDate, detectAreaFromRole } from '@/lib/utils';
@@ -40,39 +40,9 @@ const AREA_COLORS: Record<string, { hex: string; hexSecondary: string; hexDark: 
   teal:    { hex: '#14b8a6', hexSecondary: '#5eead4', hexDark: '#0f766e', emoji: '📋' },
 };
 
-
 export default function PublicProfile() {
   const { username } = useParams();
-  const { users, areas, experiences, education, currentUser, updateArea, removeArea } = useStore();
-    // Estado para edição e exclusão de área
-    const [editingArea, setEditingArea] = useState<any>(null);
-    const [areaForm, setAreaForm] = useState<any>({});
-    const [deletingArea, setDeletingArea] = useState<any>(null);
-    const [isProcessingArea, setIsProcessingArea] = useState(false);
-
-    const isOwner = currentUser && user && currentUser.username === user.username;
-
-    const handleEditArea = (area: any) => {
-      setEditingArea(area);
-      setAreaForm({ ...area });
-    };
-    const handleAreaFormChange = (field: string, value: string) => {
-      setAreaForm((prev: any) => ({ ...prev, [field]: value }));
-    };
-    const handleSaveArea = async () => {
-      if (!editingArea || !areaForm.name || !areaForm.slug) return;
-      setIsProcessingArea(true);
-      await updateArea({ ...editingArea, ...areaForm });
-      setIsProcessingArea(false);
-      setEditingArea(null);
-    };
-    const handleDeleteArea = async () => {
-      if (!deletingArea) return;
-      setIsProcessingArea(true);
-      await removeArea(deletingArea.id);
-      setIsProcessingArea(false);
-      setDeletingArea(null);
-    };
+  const { users, areas, experiences, education, currentUser, isLoading } = useStore();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -89,11 +59,12 @@ export default function PublicProfile() {
 
   useEffect(() => {
     async function fetchUser() {
+      if (!username) return;
       setLoadingUser(true);
-      // Primeiro tenta encontrar no estado global
+      
       let found = users.find(u => u.username === username);
+      
       if (!found) {
-        // Busca no Supabase
         try {
           const { supabase } = await import('@/lib/supabase');
           const { data, error } = await supabase
@@ -101,20 +72,22 @@ export default function PublicProfile() {
             .select('*')
             .eq('username', username)
             .single();
-          if (data) {
-            found = data;
-          }
+          if (data) found = data;
         } catch (e) {
-          // erro silencioso
+          console.error(e);
         }
       }
+      
       setUser(found || null);
       setLoadingUser(false);
-      if (isMounted && !found) router.push('/');
+      
+      // Só redireciona se tivermos certeza que não encontramos o usuário após o carregamento inicial da store
+      if (!found && !isLoading && isMounted) {
+        router.push('/');
+      }
     }
     fetchUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, users, isMounted]);
+  }, [username, users, isMounted, isLoading, router]);
 
   useEffect(() => {
     if (!shouldExport || !exportTheme || !exportData || !pdfRef.current) return;
@@ -139,9 +112,17 @@ export default function PublicProfile() {
       }
     };
     run();
-  }, [shouldExport, exportTheme, exportData, user]);
+  }, [shouldExport, exportTheme, exportData, user, exporting]);
 
-  if (!isMounted || loadingUser) return null;
+  if (!isMounted || loadingUser || (isLoading && !user)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Carregando perfil...</p>
+      </div>
+    );
+  }
+
   if (!user) return null;
 
   const userExperiences = experiences.filter(e => e.user_id === user.id);
@@ -223,7 +204,6 @@ export default function PublicProfile() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: "'Arial Black', Arial, sans-serif" }}>
-
       {/* Toolbar */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 50,
@@ -302,7 +282,7 @@ export default function PublicProfile() {
           <>
             <div style={{ width: 1, height: 20, background: '#ddd' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#555' }}>
-              <Mail size={14} color={mainColors.hex} />
+              <LucideIcons.Mail size={14} color={mainColors.hex} />
               {(user as any).email}
             </div>
           </>
@@ -357,56 +337,8 @@ export default function PublicProfile() {
                       <><Sparkles size={14} /> Exportar PDF</>
                     )}
                   </button>
-                  {isOwner && (
-                    <>
-                      <button
-                        onClick={() => handleEditArea(areas.find(a => a.slug === slug))}
-                        style={{
-                          padding: '10px 16px', background: '#fbbf24', color: '#fff', border: 'none', borderRadius: 999, fontWeight: 900, fontSize: 13, cursor: 'pointer',
-                        }}
-                      >Editar</button>
-                      <button
-                        onClick={() => setDeletingArea(areas.find(a => a.slug === slug))}
-                        style={{
-                          padding: '10px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 999, fontWeight: 900, fontSize: 13, cursor: 'pointer',
-                        }}
-                      >Remover</button>
-                    </>
-                  )}
                 </div>
               </div>
-      {/* Modal de edição de área */}
-      {editingArea && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <h3 style={{ fontWeight: 900, fontSize: 20, marginBottom: 18 }}>Editar Área</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input value={areaForm.name || ''} onChange={e => handleAreaFormChange('name', e.target.value)} placeholder="Nome" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-              <input value={areaForm.slug || ''} onChange={e => handleAreaFormChange('slug', e.target.value)} placeholder="Slug" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-              <input value={areaForm.theme_color || ''} onChange={e => handleAreaFormChange('theme_color', e.target.value)} placeholder="Cor (ex: orange, #ff9900)" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-              <input value={areaForm.icon || ''} onChange={e => handleAreaFormChange('icon', e.target.value)} placeholder="Ícone (ex: ChefHat)" style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-            </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-              <button onClick={() => setEditingArea(null)} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#eee', fontWeight: 700, border: 'none' }}>Cancelar</button>
-              <button onClick={handleSaveArea} disabled={isProcessingArea} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 900, border: 'none', opacity: isProcessingArea ? 0.6 : 1 }}>{isProcessingArea ? 'Salvando...' : 'Salvar'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmação de exclusão */}
-      {deletingArea && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <h3 style={{ fontWeight: 900, fontSize: 20, marginBottom: 18 }}>Remover Área</h3>
-            <div style={{ marginBottom: 18 }}>Tem certeza que deseja remover a área <b>{deletingArea.name}</b>? Esta ação não pode ser desfeita.</div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setDeletingArea(null)} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#eee', fontWeight: 700, border: 'none' }}>Cancelar</button>
-              <button onClick={handleDeleteArea} disabled={isProcessingArea} style={{ flex: 1, padding: 12, borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 900, border: 'none', opacity: isProcessingArea ? 0.6 : 1 }}>{isProcessingArea ? 'Removendo...' : 'Remover'}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
               {/* Experiences */}
               <div style={{ padding: '16px 24px' }}>

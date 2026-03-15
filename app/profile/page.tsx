@@ -12,7 +12,7 @@ import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
 
 export default function Dashboard() {
-  const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea } = useStore();
+  const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea, isLoading } = useStore();
   const router = useRouter();
 
   // Estados para edição/exclusão de áreas
@@ -26,13 +26,15 @@ export default function Dashboard() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState('');
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
 
   useEffect(() => {
-    if (isAuthReady && !currentUser) router.push('/');
-  }, [currentUser, isAuthReady, router]);
+    // Só redireciona se a autenticação já foi verificada e o usuário definitivamente não existe
+    if (isAuthReady && !currentUser && !isLoading) {
+      router.push('/');
+    }
+  }, [currentUser, isAuthReady, isLoading, router]);
 
   useEffect(() => {
     if (currentUser) {
@@ -43,7 +45,6 @@ export default function Dashboard() {
         location: currentUser.location,
         photo_url: currentUser.photo_url,
       });
-      setPhotoPreview(currentUser.photo_url || '');
     }
   }, [currentUser]);
 
@@ -132,10 +133,11 @@ export default function Dashboard() {
     setDeletingArea(null);
   };
 
-  if (!isAuthReady) {
+  if (!isAuthReady || (isLoading && !currentUser)) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <LucideIcons.Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Autenticando...</p>
       </div>
     );
   }
@@ -178,28 +180,39 @@ export default function Dashboard() {
             Configurações das Áreas
           </h2>
           <div className="space-y-4">
-            {areas.map((area) => (
-              <div key={area.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: area.theme_color }}>
-                    {/* @ts-ignore */}
-                    {LucideIcons[area.icon] ? <LucideIcons.Briefcase className="w-5 h-5" /> : <LucideIcons.Briefcase className="w-5 h-5" />}
+            {areas.length === 0 ? (
+              <p className="text-slate-500 text-sm italic">Nenhuma área cadastrada. Elas serão criadas automaticamente ao adicionar experiências.</p>
+            ) : (
+              areas.map((area) => (
+                <div key={area.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: area.theme_color }}>
+                      {/* @ts-ignore */}
+                      {LucideIcons[area.icon] ? (
+                        (() => {
+                          const Icon = (LucideIcons as any)[area.icon];
+                          return <Icon className="w-5 h-5" />;
+                        })()
+                      ) : (
+                        <LucideIcons.Briefcase className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white">{area.name}</div>
+                      <div className="text-xs text-slate-500 uppercase tracking-widest">{area.slug}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white">{area.name}</div>
-                    <div className="text-xs text-slate-500 uppercase tracking-widest">{area.slug}</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEditArea(area)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                      <LucideIcons.Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeletingArea(area)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                      <LucideIcons.Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleEditArea(area)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
-                    <LucideIcons.Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setDeletingArea(area)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                    <LucideIcons.Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

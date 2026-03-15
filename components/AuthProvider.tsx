@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
 import { useRouter, usePathname } from 'next/navigation';
@@ -11,6 +11,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuthReady = useStore((state) => state.setAuthReady);
   const router = useRouter();
   const pathname = usePathname();
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     const handleSync = async (user: any) => {
@@ -29,7 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSync(session?.user);
+      handleSync(session?.user).then(() => {
+        isInitialLoad.current = false;
+      });
     });
 
     // Listen for auth changes
@@ -37,12 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           await handleSync(session.user);
-          // Only redirect automatically if on the landing page
-          if (pathname === '/') {
+          // Only redirect automatically if on the landing page during a login event
+          if (pathname === '/' && event === 'SIGNED_IN') {
             router.push('/profile');
           }
         } else {
           setUser(null);
+          setAuthReady(true);
         }
       }
     );

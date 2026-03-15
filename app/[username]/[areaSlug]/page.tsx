@@ -39,7 +39,7 @@ function DottedSeparator({ color }: { color: string }) {
 
 export default function AreaResume() {
   const { username, areaSlug } = useParams();
-  const { users, areas, experiences, skills, areaSkills, education } = useStore();
+  const { users, areas, experiences, skills, areaSkills, education, isLoading } = useStore();
   const router = useRouter();
   const pdfRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -49,23 +49,55 @@ export default function AreaResume() {
   const [exportError, setExportError] = useState('');
   const [shouldExport, setShouldExport] = useState(false);
 
-  const user = users.find(u => u.username === username);
-  const area = areas.find(a => a.slug === areaSlug);
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
     setIsMounted(true);
-    if (!user || !area) router.push('/');
-  }, [user, area, router]);
+  }, []);
 
   useEffect(() => {
-    if (!shouldExport || !exportTheme || !exportData || !pdfRef.current || !user || !area) return;
+    async function fetchUser() {
+      if (!username) return;
+      setLoadingUser(true);
+      
+      let found = users.find(u => u.username === username);
+      
+      if (!found) {
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .single();
+          if (data) found = data;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      
+      setUser(found || null);
+      setLoadingUser(false);
+      
+      // Só redireciona se tivermos certeza absoluta que não existe
+      if (!found && !isLoading && isMounted) {
+        router.push('/');
+      }
+    }
+    fetchUser();
+  }, [username, users, isMounted, isLoading, router]);
+
+  useEffect(() => {
+    if (!shouldExport || !exportTheme || !exportData || !pdfRef.current || !user) return;
     const run = async () => {
       try {
         const html2pdf = (await import('html2pdf.js')).default;
         const element = pdfRef.current!;
+        const area = areas.find(a => a.slug === areaSlug);
         await html2pdf().set({
           margin: 0,
-          filename: `curriculo-${user.name.toLowerCase().replace(/\s+/g, '-')}-${area.slug}.pdf`,
+          filename: `curriculo-${user.name.toLowerCase().replace(/\s+/g, '-')}-${area?.slug || 'area'}.pdf`,
           image: { type: 'jpeg', quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, imageTimeout: 0 },
           jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' },
@@ -79,9 +111,19 @@ export default function AreaResume() {
       }
     };
     run();
-  }, [shouldExport, exportTheme, exportData]);
+  }, [shouldExport, exportTheme, exportData, user, areas, areaSlug]);
 
-  if (!isMounted || !user || !area) return null;
+  if (!isMounted || loadingUser || (isLoading && !user)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <LucideIcons.Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+        <p className="text-slate-600 dark:text-slate-400 font-medium">Carregando currículo...</p>
+      </div>
+    );
+  }
+
+  const area = areas.find(a => a.slug === areaSlug);
+  if (!user || !area) return null;
 
   const theme = getTheme(area.slug);
   const areaExperiences = experiences.filter(e => e.area_id === area.id && e.user_id === user.id);
