@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { supabase } from './supabase';
 import { detectAreaFromRole } from './utils';
@@ -182,36 +183,72 @@ export const useStore = create<AppState>((set, get) => ({
   syncUserWithDatabase: async (userData) => {
     if (!userData.id) return null;
     
-    // Garantir que temos um objeto completo para o fallback no estado
-    const fullUserData: User = {
-      id: userData.id,
-      username: userData.username || 'user',
-      name: userData.name || 'Usuário',
-      photo_url: userData.photo_url || `https://picsum.photos/seed/${userData.id}/200/200`,
-      headline: userData.headline || 'Profissional',
-      summary: userData.summary || 'Bem-vindo ao meu perfil.',
-      location: userData.location || 'Brasil',
-    };
-
     try {
+      // 1. Tenta buscar se o usuário já existe pelo ID
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userData.id)
+        .maybeSingle();
+
+      if (existingUser) {
+        set({ currentUser: existingUser });
+        return existingUser;
+      }
+
+      // 2. Se não existe, vamos criar um novo
+      // Primeiro, garante que o username sugerido não está tomado por outro ID
+      let finalUsername = userData.username || 'user';
+      const { data: usernameTaken } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', finalUsername)
+        .maybeSingle();
+
+      if (usernameTaken) {
+        // Se o username está tomado, anexa os primeiros caracteres do ID para torná-lo único
+        finalUsername = `${finalUsername}-${userData.id.substring(0, 5)}`;
+      }
+
+      const newUser: User = {
+        id: userData.id,
+        username: finalUsername,
+        name: userData.name || 'Usuário',
+        photo_url: userData.photo_url || `https://picsum.photos/seed/${userData.id}/200/200`,
+        headline: userData.headline || 'Profissional',
+        summary: userData.summary || 'Bem-vindo ao meu perfil.',
+        location: userData.location || 'Brasil',
+      };
+
       const { data, error } = await supabase
         .from('users')
-        .upsert(fullUserData, { onConflict: 'id' })
+        .upsert(newUser, { onConflict: 'id' })
         .select()
         .single();
 
       if (error) {
         console.error('Error syncing user:', error.message, error.details);
-        // Fallback para o estado local para evitar o logout imediato
-        set({ currentUser: fullUserData });
-        return fullUserData;
+        // Fallback local se falhar por RLS ou outro motivo, mas evitar travar o app
+        set({ currentUser: newUser });
+        return newUser;
       }
+
       set({ currentUser: data });
       return data;
     } catch (err: any) {
       console.error('Sync try/catch error:', err.message || err);
-      set({ currentUser: fullUserData });
-      return fullUserData;
+      // Fallback mínimo
+      const fallbackUser: User = {
+        id: userData.id,
+        username: userData.username || 'user',
+        name: userData.name || 'Usuário',
+        photo_url: userData.photo_url || '',
+        headline: 'Profissional',
+        summary: '',
+        location: '',
+      };
+      set({ currentUser: fallbackUser });
+      return fallbackUser;
     }
   },
 
