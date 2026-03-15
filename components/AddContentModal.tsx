@@ -44,6 +44,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: '', end_date: '', description: '', company_logo: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: '', end_date: '' });
@@ -69,13 +70,14 @@ export function AddContentModal({ isOpen, onClose }: Props) {
     e.preventDefault();
     if (!currentUser) return;
     setIsSaving(true);
+    setError(null);
 
     try {
       if (selectedType === 'experience') {
         await addExperienceWithAutoArea({
           user_id: currentUser.id,
           company_name: expForm.company_name,
-          company_logo: expForm.company_logo || 'https://picsum.photos/seed/company/100/100',
+          company_logo: expForm.company_logo || `https://picsum.photos/seed/${Math.random()}/100/100`,
           role: expForm.role,
           start_date: expForm.start_date,
           end_date: expForm.end_date || null,
@@ -119,6 +121,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
         });
       }
 
+      // Sucesso
       setSelectedType(null);
       setExpForm({ company_name: '', role: '', start_date: '', end_date: '', description: '', company_logo: '' });
       setEduForm({ institution: '', course: '', start_date: '', end_date: '' });
@@ -126,8 +129,9 @@ export function AddContentModal({ isOpen, onClose }: Props) {
       setPortForm({ title: '', description: '', file_url: '', link_url: '', tags: '' });
       setRecForm({ author_name: '', author_position: '', author_company: '', content: '', date: '', file_url: '' });
       onClose();
-    } catch (err) {
-      console.error('Erro ao salvar:', err);
+    } catch (err: any) {
+      console.error('Erro detalhado:', err);
+      setError(err?.message || 'Erro inesperado ao salvar. Verifique se todos os campos obrigatórios estão preenchidos.');
     } finally {
       setIsSaving(false);
     }
@@ -144,7 +148,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => { setSelectedType(null); onClose(); }}
+          onClick={() => { setSelectedType(null); setError(null); onClose(); }}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -153,6 +157,12 @@ export function AddContentModal({ isOpen, onClose }: Props) {
             className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold border border-red-100 dark:border-red-900/30">
+                ⚠️ {error}
+              </div>
+            )}
+
             {!selectedType ? (
               <>
                 <div className="flex justify-between items-center mb-8">
@@ -171,7 +181,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     return (
                       <button
                         key={option.type}
-                        onClick={() => setSelectedType(option.type)}
+                        onClick={() => { setSelectedType(option.type); setError(null); }}
                         className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}
                       >
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/50 dark:bg-slate-800/50">
@@ -190,7 +200,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="flex justify-between items-center mb-6">
-                  <button type="button" onClick={() => setSelectedType(null)} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                  <button type="button" onClick={() => { setSelectedType(null); setError(null); }} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
                     <LucideIcons.ArrowLeft className="w-4 h-4" />
                     Voltar
                   </button>
@@ -258,7 +268,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                 )}
 
                 <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  <button type="button" onClick={() => { setSelectedType(null); setError(null); }} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     Cancelar
                   </button>
                   <button type="submit" disabled={isSaving} className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">

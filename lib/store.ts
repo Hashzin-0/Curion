@@ -171,7 +171,7 @@ export const useStore = create<AppState>((set, get) => ({
   certificates: [],
   portfolio: [],
   recommendations: [],
-  isLoading: true, // Começa como true para evitar redirecionamentos falsos-negativos
+  isLoading: true,
   isAuthReady: false,
   
   login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
@@ -227,6 +227,7 @@ export const useStore = create<AppState>((set, get) => ({
       }));
     } catch (err) {
       console.error('Error updating user:', err);
+      throw err;
     }
   },
   
@@ -295,6 +296,7 @@ export const useStore = create<AppState>((set, get) => ({
     const { areas, addArea, addExperience } = get();
     const detected = detectAreaFromRole(exp.role);
     let area = areas.find(a => a.slug === detected.slug);
+    
     if (!area) {
       await addArea({
         name: detected.name,
@@ -302,9 +304,11 @@ export const useStore = create<AppState>((set, get) => ({
         icon: detected.icon,
         theme_color: detected.themeColor,
       });
+      // Busca a área recém criada no estado atualizado
       area = get().areas.find(a => a.slug === detected.slug);
     }
-    if (!area) return;
+    
+    if (!area) throw new Error('Não foi possível identificar ou criar a área de atuação.');
     await addExperience({ ...exp, area_id: area.id });
   },
   
