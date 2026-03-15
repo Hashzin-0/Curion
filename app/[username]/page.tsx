@@ -42,7 +42,7 @@ const AREA_COLORS: Record<string, { hex: string; hexSecondary: string; hexDark: 
 
 export default function PublicProfile() {
   const { username } = useParams();
-  const { users, areas, experiences, education, currentUser, isLoading } = useStore();
+  const { users, areas, experiences, education, isLoading } = useStore();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -62,8 +62,10 @@ export default function PublicProfile() {
       if (!username) return;
       setLoadingUser(true);
       
+      // Tenta encontrar na store primeiro
       let found = users.find(u => u.username === username);
       
+      // Se não encontrou na store, tenta buscar direto no banco
       if (!found) {
         try {
           const { supabase } = await import('@/lib/supabase');
@@ -74,19 +76,24 @@ export default function PublicProfile() {
             .single();
           if (data) found = data;
         } catch (e) {
-          console.error(e);
+          console.error('User search error:', e);
         }
       }
       
       setUser(found || null);
       setLoadingUser(false);
       
-      // Só redireciona se tivermos certeza que não encontramos o usuário após o carregamento inicial da store
+      // SÓ redireciona se o carregamento global ACABOU e o usuário CONTINUA não sendo encontrado
       if (!found && !isLoading && isMounted) {
+        console.log('User not found, redirecting to home...');
         router.push('/');
       }
     }
-    fetchUser();
+    
+    // Aguarda a montagem e o carregamento inicial da store
+    if (isMounted) {
+      fetchUser();
+    }
   }, [username, users, isMounted, isLoading, router]);
 
   useEffect(() => {

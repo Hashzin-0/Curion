@@ -30,8 +30,10 @@ export default function Dashboard() {
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
 
   useEffect(() => {
-    // Só redireciona se a autenticação já foi verificada e o usuário definitivamente não existe
+    // Só redireciona se a autenticação já foi verificada e o usuário DEFINITIVAMENTE não existe
+    // E esperamos o carregamento global terminar
     if (isAuthReady && !currentUser && !isLoading) {
+      console.log('User not authenticated, redirecting to login...');
       router.push('/');
     }
   }, [currentUser, isAuthReady, isLoading, router]);

@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
       }
+      // Marca como pronto SOMENTE após a sincronização terminar
       setAuthReady(true);
     };
 
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           await handleSync(session.user);
-          // Only redirect automatically if on the landing page during a login event
+          // Redireciona para o profile se o login acabou de acontecer na home
           if (pathname === '/' && event === 'SIGNED_IN') {
             router.push('/profile');
           }

@@ -171,7 +171,7 @@ export const useStore = create<AppState>((set, get) => ({
   certificates: [],
   portfolio: [],
   recommendations: [],
-  isLoading: false,
+  isLoading: true, // Começa como true para evitar redirecionamentos falsos-negativos
   isAuthReady: false,
   
   login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
@@ -196,10 +196,16 @@ export const useStore = create<AppState>((set, get) => ({
         .select()
         .single();
 
-      if (error) return userData as User;
+      if (error) {
+        console.error('Error syncing user:', error);
+        set((state) => ({ currentUser: userData as User }));
+        return userData as User;
+      }
       set((state) => ({ currentUser: data }));
       return data;
     } catch (err) {
+      console.error('Sync try/catch error:', err);
+      set((state) => ({ currentUser: userData as User }));
       return userData as User;
     }
   },
@@ -318,6 +324,22 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({ education: state.education.filter(e => e.id !== id) }));
   },
   
+  addArea: async (area) => {
+    const { data, error } = await supabase.from('areas').insert([area]).select().single();
+    if (error) throw error;
+    set((state) => ({ areas: [...state.areas, data] }));
+  },
+  updateArea: async (area) => {
+    const { data, error } = await supabase.from('areas').update(area).eq('id', area.id).select().single();
+    if (error) throw error;
+    set((state) => ({ areas: state.areas.map(a => a.id === area.id ? data : a) }));
+  },
+  removeArea: async (areaId) => {
+    const { error } = await supabase.from('areas').delete().eq('id', areaId);
+    if (error) throw error;
+    set((state) => ({ areas: state.areas.filter(a => a.id !== areaId) }));
+  },
+  
   addAchievement: async (achievement) => {
     const { data, error } = await supabase.from('achievements').insert([achievement]).select().single();
     if (error) throw error;
@@ -380,21 +402,5 @@ export const useStore = create<AppState>((set, get) => ({
     const { error } = await supabase.from('recommendations').delete().eq('id', id);
     if (error) throw error;
     set((state) => ({ recommendations: state.recommendations.filter(r => r.id !== id) }));
-  },
-  
-  addArea: async (area) => {
-    const { data, error } = await supabase.from('areas').insert([area]).select().single();
-    if (error) throw error;
-    set((state) => ({ areas: [...state.areas, data] }));
-  },
-  updateArea: async (area) => {
-    const { data, error } = await supabase.from('areas').update(area).eq('id', area.id).select().single();
-    if (error) throw error;
-    set((state) => ({ areas: state.areas.map(a => a.id === area.id ? data : a) }));
-  },
-  removeArea: async (areaId) => {
-    const { error } = await supabase.from('areas').delete().eq('id', areaId);
-    if (error) throw error;
-    set((state) => ({ areas: state.areas.filter(a => a.id !== areaId) }));
   },
 }));
