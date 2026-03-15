@@ -16,12 +16,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleSync = async (user: any) => {
       if (user) {
-        await syncUserWithDatabase({
-          id: user.id,
-          username: user.email?.split('@')[0] || 'user',
-          name: user.user_metadata?.full_name || user.email || 'Usuário',
-          photo_url: user.user_metadata?.avatar_url || `https://picsum.photos/seed/${user.id}/200/200`,
-        });
+        try {
+          await syncUserWithDatabase({
+            id: user.id,
+            username: user.email?.split('@')[0] || 'user',
+            name: user.user_metadata?.full_name || user.email || 'Usuário',
+            photo_url: user.user_metadata?.avatar_url || `https://picsum.photos/seed/${user.id}/200/200`,
+          });
+        } catch (e) {
+          console.error('Falha na sincronização inicial:', e);
+        }
       } else {
         setUser(null);
       }
@@ -31,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSync(session?.user).then(() => {
+      handleSync(session?.user).finally(() => {
         isInitialLoad.current = false;
       });
     });

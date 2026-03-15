@@ -130,8 +130,9 @@ export function AddContentModal({ isOpen, onClose }: Props) {
       setRecForm({ author_name: '', author_position: '', author_company: '', content: '', date: '', file_url: '' });
       onClose();
     } catch (err: any) {
-      console.error('Erro detalhado:', err);
-      setError(err?.message || 'Erro inesperado ao salvar. Verifique se todos os campos obrigatórios estão preenchidos.');
+      const errorMsg = err?.message || err?.details || 'Erro inesperado ao salvar.';
+      console.error('Erro ao salvar:', errorMsg, err);
+      setError(errorMsg);
     } finally {
       setIsSaving(false);
     }

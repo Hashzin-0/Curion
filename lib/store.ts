@@ -181,32 +181,37 @@ export const useStore = create<AppState>((set, get) => ({
 
   syncUserWithDatabase: async (userData) => {
     if (!userData.id) return null;
+    
+    // Garantir que temos um objeto completo para o fallback no estado
+    const fullUserData: User = {
+      id: userData.id,
+      username: userData.username || 'user',
+      name: userData.name || 'Usuário',
+      photo_url: userData.photo_url || `https://picsum.photos/seed/${userData.id}/200/200`,
+      headline: userData.headline || 'Profissional',
+      summary: userData.summary || 'Bem-vindo ao meu perfil.',
+      location: userData.location || 'Brasil',
+    };
+
     try {
       const { data, error } = await supabase
         .from('users')
-        .upsert({
-          id: userData.id,
-          username: userData.username,
-          name: userData.name,
-          photo_url: userData.photo_url,
-          headline: userData.headline || 'Profissional',
-          summary: userData.summary || 'Bem-vindo ao meu perfil.',
-          location: userData.location || 'Brasil',
-        }, { onConflict: 'id' })
+        .upsert(fullUserData, { onConflict: 'id' })
         .select()
         .single();
 
       if (error) {
-        console.error('Error syncing user:', error);
-        set((state) => ({ currentUser: userData as User }));
-        return userData as User;
+        console.error('Error syncing user:', error.message, error.details);
+        // Fallback para o estado local para evitar o logout imediato
+        set({ currentUser: fullUserData });
+        return fullUserData;
       }
-      set((state) => ({ currentUser: data }));
+      set({ currentUser: data });
       return data;
-    } catch (err) {
-      console.error('Sync try/catch error:', err);
-      set((state) => ({ currentUser: userData as User }));
-      return userData as User;
+    } catch (err: any) {
+      console.error('Sync try/catch error:', err.message || err);
+      set({ currentUser: fullUserData });
+      return fullUserData;
     }
   },
 
@@ -225,8 +230,8 @@ export const useStore = create<AppState>((set, get) => ({
         currentUser: data,
         users: state.users.map(u => u.id === data.id ? data : u),
       }));
-    } catch (err) {
-      console.error('Error updating user:', err);
+    } catch (err: any) {
+      console.error('Error updating user:', err.message || err);
       throw err;
     }
   },
@@ -271,8 +276,8 @@ export const useStore = create<AppState>((set, get) => ({
         recommendations: recommendations || [],
         isLoading: false
       });
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (error: any) {
+      console.error('Error fetching data:', error.message || error);
       set({ isLoading: false });
     }
   },
