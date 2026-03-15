@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isAuthReady && !currentUser && !isLoading) {
@@ -112,6 +113,14 @@ export default function Dashboard() {
     }
   };
 
+  const copyProfileLink = () => {
+    if (!currentUser) return;
+    const url = `${window.location.origin}/${currentUser.username}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   // Handlers para áreas
   const handleEditArea = (area: ProfessionalArea) => {
     setEditingArea(area);
@@ -152,6 +161,17 @@ export default function Dashboard() {
         >
           Ver Perfil Público
         </a>
+        <button
+          onClick={copyProfileLink}
+          className={`px-4 py-2 backdrop-blur-sm rounded-full text-sm font-bold border transition-all shadow-sm flex items-center gap-2 ${
+            copied 
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' 
+              : 'bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-white'
+          }`}
+        >
+          {copied ? <LucideIcons.Check className="w-4 h-4" /> : <LucideIcons.Copy className="w-4 h-4" />}
+          {copied ? 'Copiado!' : 'Copiar Link'}
+        </button>
         <button
           onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
           className="px-4 py-2 bg-red-100/90 dark:bg-red-900/30 backdrop-blur-sm text-red-600 dark:text-red-400 rounded-full text-sm font-bold border border-red-200 dark:border-red-800 hover:bg-red-200 transition-all shadow-sm"
