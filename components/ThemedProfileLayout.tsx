@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus } from 'lucide-react';
+import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { User, ProfessionalArea } from '@/lib/store';
 import { Stats } from '@/components/Stats';
@@ -17,6 +17,8 @@ type Props = {
   isOwner?: boolean;
   onEditProfile?: () => void;
   onAddContent?: () => void;
+  onEditArea?: (area: ProfessionalArea) => void;
+  onDeleteArea?: (area: ProfessionalArea) => void;
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
@@ -64,6 +66,8 @@ export function ThemedProfileLayout({
   isOwner,
   onEditProfile,
   onAddContent,
+  onEditArea,
+  onDeleteArea,
   theme,
   isLoadingTheme,
   username,
@@ -325,9 +329,9 @@ export function ThemedProfileLayout({
                     transition={{ delay: i * 0.08 }}
                     whileHover={{ y: -6, scale: 1.02 }}
                   >
-                    <Link href={`/${username}/${area.slug}`}>
+                    <Link href={`/${username}/${area.slug}`} className="block relative group">
                       <div
-                        className="group relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl"
+                        className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl"
                         style={{
                           borderTop: `4px solid ${accentColor}`,
                         }}
@@ -337,6 +341,32 @@ export function ThemedProfileLayout({
                           className="absolute top-0 right-0 w-28 h-28 -mr-10 -mt-10 rounded-full opacity-10 group-hover:opacity-20 group-hover:scale-150 transition-all duration-500"
                           style={{ backgroundColor: accentColor }}
                         />
+
+                        {/* Management Buttons (Only for Owner) */}
+                        {isOwner && (
+                          <div className="absolute top-4 right-4 flex gap-2 z-20">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEditArea?.(area);
+                              }}
+                              className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-xl text-blue-600 dark:text-blue-400 shadow-sm hover:scale-110 transition-all"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onDeleteArea?.(area);
+                              }}
+                              className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-xl text-red-600 dark:text-red-400 shadow-sm hover:scale-110 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
 
                         <div className="relative z-10">
                           {/* Icon + emoji */}

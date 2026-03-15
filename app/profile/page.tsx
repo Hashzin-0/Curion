@@ -30,10 +30,7 @@ export default function Dashboard() {
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
 
   useEffect(() => {
-    // Só redireciona se a autenticação já foi verificada e o usuário DEFINITIVAMENTE não existe
-    // E esperamos o carregamento global terminar
     if (isAuthReady && !currentUser && !isLoading) {
-      console.log('User not authenticated, redirecting to login...');
       router.push('/');
     }
   }, [currentUser, isAuthReady, isLoading, router]);
@@ -169,55 +166,12 @@ export default function Dashboard() {
         isOwner={true}
         onEditProfile={() => setIsEditingProfile(true)}
         onAddContent={() => setIsAddingContent(true)}
+        onEditArea={handleEditArea}
+        onDeleteArea={setDeletingArea}
         theme={profileTheme}
         isLoadingTheme={isLoadingTheme}
         username={currentUser.username}
       />
-
-      {/* Gerenciamento de Áreas */}
-      <div className="max-w-5xl mx-auto px-6 pb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3">
-            <LucideIcons.Settings className="w-5 h-5 text-blue-500" />
-            Configurações das Áreas
-          </h2>
-          <div className="space-y-4">
-            {areas.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">Nenhuma área cadastrada. Elas serão criadas automaticamente ao adicionar experiências.</p>
-            ) : (
-              areas.map((area) => (
-                <div key={area.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: area.theme_color }}>
-                      {/* @ts-ignore */}
-                      {LucideIcons[area.icon] ? (
-                        (() => {
-                          const Icon = (LucideIcons as any)[area.icon];
-                          return <Icon className="w-5 h-5" />;
-                        })()
-                      ) : (
-                        <LucideIcons.Briefcase className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">{area.name}</div>
-                      <div className="text-xs text-slate-500 uppercase tracking-widest">{area.slug}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEditArea(area)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
-                      <LucideIcons.Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeletingArea(area)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                      <LucideIcons.Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
 
       <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
 
