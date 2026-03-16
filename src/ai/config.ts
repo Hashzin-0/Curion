@@ -1,17 +1,16 @@
+
 /**
- * @fileOverview Configuração centralizada de modelos de IA e chaves com suporte a namespaces do Genkit.
+ * @fileOverview Configuração centralizada de modelos de IA para uso com o SDK do OpenRouter.
  */
 
 export const AI_CONFIG = {
   /**
-   * Modelo principal. 
-   * IMPORTANTE: O Genkit exige o prefixo do plugin (openai/ para OpenRouter).
+   * Modelo principal padrão.
    */
-  primaryModel: process.env.NEXT_PUBLIC_AI_MODEL || 'openai/stepfun/step-3.5-flash:free',
+  primaryModel: process.env.NEXT_PUBLIC_AI_MODEL || 'stepfun/step-3.5-flash:free',
   
   /**
-   * Lista de fallbacks. 
-   * Modelos devem incluir o namespace do plugin: 'googleai/' ou 'openai/'.
+   * Lista de fallbacks ordenada por preferência.
    */
-  fallbackModels: (process.env.NEXT_PUBLIC_AI_FALLBACK_MODELS || 'googleai/gemini-2.0-flash-exp,googleai/gemini-1.5-flash,openai/google/gemini-2.0-flash-001').split(','),
+  fallbackModels: (process.env.NEXT_PUBLIC_AI_FALLBACK_MODELS || 'google/gemini-2.0-flash-001,google/gemini-flash-1.5,openai/gpt-4o-mini').split(','),
 };
