@@ -32,3 +32,13 @@
   --color-black: #000000;
   --color-transparent: transparent;
 }
+
+@keyframes float-premium {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-25px) rotate(5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float-premium {
+  animation: float-premium 6s ease-in-out infinite;
+}
