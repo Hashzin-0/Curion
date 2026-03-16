@@ -1,13 +1,11 @@
-
 'use server';
 /**
- * @fileOverview Fluxo de IA para geração de resumo profissional usando OpenRouter.
- * 
- * - generateProfessionalSummary - Gera um resumo impactante baseado nas experiências do usuário.
+ * @fileOverview Fluxo de IA para geração de resumo profissional com fallback de modelos.
  */
 
 import { ai } from '@/src/ai/genkit';
 import { z } from 'genkit';
+import { AI_CONFIG } from '../config';
 
 const SummaryInputSchema = z.object({
   name: z.string(),
@@ -25,22 +23,31 @@ export type SummaryOutput = z.infer<typeof SummaryOutputSchema>;
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
-  model: 'stepfun/step-3.5-flash:free',
+  model: AI_CONFIG.primaryModel,
   input: { schema: SummaryInputSchema },
   output: { schema: SummaryOutputSchema },
-  prompt: `Você é um especialista em recrutamento e branding pessoal.
-Gere um resumo profissional curto e impactante (máximo 4 linhas) para o seguinte perfil:
-
+  prompt: `Você é um especialista em recrutamento. Gere um resumo profissional curto e impactante (máximo 4 linhas) para:
 Nome: {{{name}}}
 Atuação: {{{headline}}}
-Experiências principais: {{#each experiences}} - {{{this}}} {{/each}}
-Habilidades: {{#each skills}} - {{{this}}} {{/each}}
-
-O tom deve ser profissional, direto e focado em resultados. Escreva em português do Brasil.`,
+Experiências: {{#each experiences}}{{{this}}}, {{/each}}
+Habilidades: {{#each skills}}{{{this}}}, {{/each}}
+O tom deve ser profissional e focado em resultados.`,
 });
 
 export async function generateProfessionalSummary(input: SummaryInput): Promise<SummaryOutput> {
-  const { output } = await summaryPrompt(input);
-  if (!output) throw new Error('Falha ao gerar resumo');
-  return output;
+  const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      console.log(`Tentando gerar resumo com modelo: ${model}`);
+      const { output } = await summaryPrompt(input, { model });
+      if (output) return output;
+    } catch (e) {
+      console.warn(`Modelo ${model} falhou. Tentando fallback...`);
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error('Não foi possível gerar o resumo com nenhum dos modelos disponíveis.');
 }

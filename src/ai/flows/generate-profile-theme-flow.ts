@@ -1,10 +1,11 @@
 'use server';
 /**
- * @fileOverview Fluxo de IA para gerar tema visual completo para páginas de perfil.
+ * @fileOverview Fluxo de IA para gerar tema visual completo para páginas de perfil com fallback.
  */
 
 import { ai } from '@/src/ai/genkit';
 import { z } from 'genkit';
+import { AI_CONFIG } from '../config';
 
 const ProfileThemeInputSchema = z.object({
   name: z.string(),
@@ -30,7 +31,7 @@ export type ProfileTheme = z.infer<typeof ProfileThemeOutputSchema>;
 
 const profileThemePrompt = ai.definePrompt({
   name: 'profileThemePrompt',
-  model: 'stepfun/step-3.5-flash:free',
+  model: AI_CONFIG.primaryModel,
   input: { schema: ProfileThemeInputSchema },
   output: { schema: ProfileThemeOutputSchema },
   prompt: `Você é um designer criativo que cria identidades visuais vibrantes para profissionais.
@@ -42,25 +43,36 @@ Nome: {{{name}}}
 {{#if areas}}Áreas de atuação: {{#each areas}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}
 
 REGRAS DE TEMA POR ÁREA:
-- Gastronomia/Cozinha/Alimentação: tons quentes (laranja/vermelho/amarelo), emojis de comida 🍕🍔🍳🔥👨‍🍳🌶️🍽️🥘
-- Tecnologia/Programação/TI: tons de neon azul/roxo/verde, emojis tech 💻⚡🚀🤖🔧⌨️🖥️🌐
-- Saúde/Medicina/Enfermagem: verde/azul claro/branco, emojis saúde ❤️🏥💊🩺🌿🫀💉🩻
-- Educação/Professor: azul royal/dourado, emojis academia 📚🎓✏️🏫📐🔬🎯📖
-- Construção/Obras/Elétrica: laranja forte/cinza/preto, emojis obra 🔨🏗️⚙️🔌🪛🔩🏠🪚
-- Beleza/Estética/Cabelereiro: rosa/roxo/dourado, emojis beleza 💅✨💄💇‍♀️🌸💋🪞👑
-- Logística/Estoque/Transporte: azul escuro/laranja, emojis logística 📦🚚⚙️🏭📋🔄🗂️🚛
-- Vendas/Comercial: verde/dourado/preto, emojis negócios 💰🤝📊💼🏆📈🎯💡
-- Limpeza/Serviços Gerais: azul claro/verde/branco, emojis limpeza 🧹✨🫧🧽🌊🏡🫙✅
-- Segurança: cinza escuro/vermelho, emojis proteção 🛡️🔒👮🚨🔐💪🏋️🦅
-- Arte/Design/Criativo: multicolorido vibrante, emojis arte 🎨🖌️✨🌈🎭💫🖼️🎬
-- Agricultura/Campo: verde escuro/marrom, emojis natureza 🌱🚜🌾🌻🌿🐄🍃🌍
+- Gastronomia/Cozinha: laranja/vermelho/amarelo, emojis 🍕🍳🔥
+- Tecnologia: azul/roxo/verde neon, emojis 💻⚡🚀
+- Saúde: verde/azul claro, emojis ❤️🏥💊
+- Educação: azul royal/dourado, emojis 📚🎓✏️
+- Construção/Obras: laranja forte/cinza, emojis 🔨🏗️⚙️
+- Beleza/Estética: rosa/roxo, emojis 💅✨💄
+- Logística/Estoque: azul escuro/laranja, emojis 📦🚚⚙️
+- Vendas/Comercial: verde/dourado, emojis 💰🤝📊
+- Limpeza: azul claro/verde, emojis 🧹✨🫧
+- Segurança: cinza escuro/vermelho, emojis 🛡️🔒👮
+- Arte/Design: multicolorido, emojis 🎨🖌️✨
+- Agricultura: verde escuro/marrom, emojis 🌱🚜🌾
 
-Seja MUITO criativo! A tagline deve ser inspiradora. Os emojis devem ser temáticos e variados.
-Para gradiente, escolha cores que combinem entre si e criem um visual impactante.`,
+Seja MUITO criativo! A tagline deve ser inspiradora. Os emojis devem ser temáticos e variados.`,
 });
 
 export async function generateProfileTheme(input: ProfileThemeInput): Promise<ProfileTheme> {
-  const { output } = await profileThemePrompt(input);
-  if (!output) throw new Error('Falha ao gerar tema de perfil');
-  return output;
+  const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      console.log(`Tentando gerar tema de perfil com modelo: ${model}`);
+      const { output } = await profileThemePrompt(input, { model });
+      if (output) return output;
+    } catch (e) {
+      console.warn(`Modelo ${model} falhou ou está offline. Tentando próximo...`);
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error('Todos os modelos de IA falharam na geração do tema de perfil.');
 }
