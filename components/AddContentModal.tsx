@@ -7,6 +7,10 @@ import * as LucideIcons from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { toast } from 'sonner';
+import { DayPicker } from 'react-day-picker';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import 'react-day-picker/dist/style.css';
 
 type ContentType = 'experience' | 'education' | 'certificate' | 'portfolio' | 'recommendation';
 
@@ -41,103 +45,55 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const currentUser = useStore(state => state.currentUser);
   const addExperienceWithAutoArea = useStore(state => state.addExperienceWithAutoArea);
   const addEducation = useStore(state => state.addEducation);
-  const addCertificate = useStore(state => state.addCertificate);
-  const addPortfolioItem = useStore(state => state.addPortfolioItem);
-  const addRecommendation = useStore(state => state.addRecommendation);
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState<'start' | 'end' | null>(null);
   const [formParent] = useAutoAnimate();
 
-  const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: '', end_date: '', description: '', company_logo: '' });
-  const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: '', end_date: '' });
-  const [certForm, setCertForm] = useState({ title: '', institution: '', date: '', description: '', file_url: '' });
-  const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '', tags: '' });
-  const [recForm, setRecForm] = useState({ author_name: '', author_position: '', author_company: '', content: '', date: '', file_url: '' });
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      if (selectedType === 'certificate') setCertForm(prev => ({ ...prev, [field]: result }));
-      if (selectedType === 'portfolio') setPortForm(prev => ({ ...prev, [field]: result }));
-      if (selectedType === 'recommendation') setRecForm(prev => ({ ...prev, [field]: result }));
-      if (selectedType === 'experience') setExpForm(prev => ({ ...prev, [field]: result }));
-    };
-    reader.readAsDataURL(file);
-  };
+  const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '', company_logo: '' });
+  const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     setIsSaving(true);
-    setError(null);
 
     try {
       if (selectedType === 'experience') {
+        if (!expForm.start_date) throw new Error('Data de início é obrigatória');
         await addExperienceWithAutoArea({
           user_id: currentUser.id,
           company_name: expForm.company_name,
           company_logo: expForm.company_logo || `https://picsum.photos/seed/${Math.random()}/100/100`,
           role: expForm.role,
-          start_date: expForm.start_date,
-          end_date: expForm.end_date || null,
+          start_date: expForm.start_date.toISOString(),
+          end_date: expForm.end_date ? expForm.end_date.toISOString() : null,
           description: expForm.description,
         });
       } else if (selectedType === 'education') {
+        if (!eduForm.start_date) throw new Error('Data de início é obrigatória');
         await addEducation({
           user_id: currentUser.id,
           institution: eduForm.institution,
           course: eduForm.course,
-          start_date: eduForm.start_date,
-          end_date: eduForm.end_date || null,
-        });
-      } else if (selectedType === 'certificate') {
-        await addCertificate({
-          user_id: currentUser.id,
-          title: certForm.title,
-          institution: certForm.institution,
-          date: certForm.date,
-          description: certForm.description,
-          file_url: certForm.file_url,
-        });
-      } else if (selectedType === 'portfolio') {
-        await addPortfolioItem({
-          user_id: currentUser.id,
-          title: portForm.title,
-          description: portForm.description,
-          file_url: portForm.file_url,
-          link_url: portForm.link_url,
-          tags: portForm.tags ? portForm.tags.split(',').map(t => t.trim()) : [],
-        });
-      } else if (selectedType === 'recommendation') {
-        await addRecommendation({
-          user_id: currentUser.id,
-          author_name: recForm.author_name,
-          author_position: recForm.author_position,
-          author_company: recForm.author_company,
-          content: recForm.content,
-          date: recForm.date,
-          file_url: recForm.file_url,
+          start_date: eduForm.start_date.toISOString(),
+          end_date: eduForm.end_date ? eduForm.end_date.toISOString() : null,
         });
       }
 
-      toast.success('Conteúdo adicionado com sucesso!');
+      toast.success('Conteúdo adicionado!');
       setSelectedType(null);
       onClose();
     } catch (err: any) {
-      toast.error('Erro ao salvar. Tente novamente.');
-      setError(err?.message || 'Erro inesperado.');
+      toast.error(err.message || 'Erro ao salvar.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const inputCls = 'w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all';
-  const labelCls = 'block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2';
+  const inputCls = 'w-full p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium';
+  const labelCls = 'block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2';
 
   return (
     <AnimatePresence>
@@ -147,45 +103,32 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => { setSelectedType(null); setError(null); onClose(); }}
+          onClick={() => { setSelectedType(null); onClose(); }}
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
-            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]"
+            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div ref={formParent}>
               {!selectedType ? (
                 <>
                   <div className="flex justify-between items-center mb-8">
-                    <div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white">Adicionar Conteúdo</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Escolha o tipo de conteúdo</p>
-                    </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-                      <LucideIcons.X className="w-6 h-6" />
-                    </button>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Adicionar Conteúdo</h3>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><LucideIcons.X /></button>
                   </div>
-
                   <div className="grid grid-cols-1 gap-4">
                     {CONTENT_OPTIONS.map((option) => {
                       const Icon = option.icon;
                       return (
-                        <button
-                          key={option.type}
-                          onClick={() => { setSelectedType(option.type); setError(null); }}
-                          className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}
-                        >
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/50 dark:bg-slate-800/50">
-                            <Icon className="w-6 h-6" />
-                          </div>
+                        <button key={option.type} onClick={() => setSelectedType(option.type)} className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}>
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/50 dark:bg-slate-800/50"><Icon /></div>
                           <div className="flex-1">
-                            <div className="font-black text-slate-900 dark:text-white text-base">{option.label}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{option.description}</div>
+                            <div className="font-black text-slate-900 dark:text-white">{option.label}</div>
+                            <div className="text-xs opacity-70">{option.description}</div>
                           </div>
-                          <LucideIcons.ChevronRight className="w-5 h-5 opacity-50" />
                         </button>
                       );
                     })}
@@ -194,53 +137,67 @@ export function AddContentModal({ isOpen, onClose }: Props) {
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="flex justify-between items-center mb-6">
-                    <button type="button" onClick={() => { setSelectedType(null); setError(null); }} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors">
-                      <LucideIcons.ArrowLeft className="w-4 h-4" />
-                      Voltar
-                    </button>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                      {CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}
-                    </h3>
+                    <button type="button" onClick={() => setSelectedType(null)} className="flex items-center gap-2 text-slate-500 font-bold"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
+                    <h3 className="text-xl font-black">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
                     <div className="w-16" />
                   </div>
 
                   {selectedType === 'experience' && (
                     <div className="space-y-4">
-                      <div><label className={labelCls}>Empresa *</label><input required value={expForm.company_name} onChange={e => setExpForm(p => ({ ...p, company_name: e.target.value }))} className={inputCls} /></div>
-                      <div><label className={labelCls}>Cargo *</label><input required value={expForm.role} onChange={e => setExpForm(p => ({ ...p, role: e.target.value }))} className={inputCls} /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className={labelCls}>Início *</label><input required type="date" value={expForm.start_date} onChange={e => setExpForm(p => ({ ...p, start_date: e.target.value }))} className={inputCls} /></div>
-                        <div><label className={labelCls}>Término</label><input type="date" value={expForm.end_date} onChange={e => setExpForm(p => ({ ...p, end_date: e.target.value }))} className={inputCls} /></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className={labelCls}>Empresa *</label><input required value={expForm.company_name} onChange={e => setExpForm(p => ({ ...p, company_name: e.target.value }))} className={inputCls} /></div>
+                        <div><label className={labelCls}>Cargo *</label><input required value={expForm.role} onChange={e => setExpForm(p => ({ ...p, role: e.target.value }))} className={inputCls} /></div>
                       </div>
-                      <div><label className={labelCls}>Descrição</label><textarea rows={4} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls} /></div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <label className={labelCls}>Início *</label>
+                          <button type="button" onClick={() => setShowCalendar(showCalendar === 'start' ? null : 'start')} className={inputCls + ' text-left flex items-center justify-between'}>
+                            {expForm.start_date ? format(expForm.start_date, 'PPP', { locale: ptBR }) : 'Selecionar data'}
+                            <LucideIcons.Calendar size={18} />
+                          </button>
+                          {showCalendar === 'start' && (
+                            <div className="absolute top-full left-0 z-50 mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
+                              <DayPicker mode="single" selected={expForm.start_date} onSelect={(d) => { setExpForm(p => ({ ...p, start_date: d || undefined })); setShowCalendar(null); }} locale={ptBR} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <label className={labelCls}>Término</label>
+                          <button type="button" onClick={() => setShowCalendar(showCalendar === 'end' ? null : 'end')} className={inputCls + ' text-left flex items-center justify-between'}>
+                            {expForm.end_date ? format(expForm.end_date, 'PPP', { locale: ptBR }) : 'Atualmente'}
+                            <LucideIcons.Calendar size={18} />
+                          </button>
+                          {showCalendar === 'end' && (
+                            <div className="absolute top-full left-0 z-50 mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
+                              <DayPicker mode="single" selected={expForm.end_date} onSelect={(d) => { setExpForm(p => ({ ...p, end_date: d || undefined })); setShowCalendar(null); }} locale={ptBR} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div><label className={labelCls}>Descrição da Experiência</label><textarea rows={4} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Dica: Use ``` para blocos de código se for da área de tecnologia." /></div>
                     </div>
                   )}
 
                   {selectedType === 'education' && (
                     <div className="space-y-4">
-                      <div><label className={labelCls}>Instituição *</label><input required value={eduForm.institution} onChange={e => setEduForm(p => ({ ...p, institution: e.target.value }))} className={inputCls} /></div>
-                      <div><label className={labelCls}>Curso *</label><input required value={eduForm.course} onChange={e => setEduForm(p => ({ ...p, course: e.target.value }))} className={inputCls} /></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className={labelCls}>Instituição *</label><input required value={eduForm.institution} onChange={e => setEduForm(p => ({ ...p, institution: e.target.value }))} className={inputCls} /></div>
+                        <div><label className={labelCls}>Curso *</label><input required value={eduForm.course} onChange={e => setEduForm(p => ({ ...p, course: e.target.value }))} className={inputCls} /></div>
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div><label className={labelCls}>Início *</label><input required type="date" value={eduForm.start_date} onChange={e => setEduForm(p => ({ ...p, start_date: e.target.value }))} className={inputCls} /></div>
-                        <div><label className={labelCls}>Fim</label><input type="date" value={eduForm.end_date} onChange={e => setEduForm(p => ({ ...p, end_date: e.target.value }))} className={inputCls} /></div>
+                        <div><label className={labelCls}>Início *</label><input type="date" required onChange={e => setEduForm(p => ({ ...p, start_date: new Date(e.target.value) }))} className={inputCls} /></div>
+                        <div><label className={labelCls}>Conclusão</label><input type="date" onChange={e => setEduForm(p => ({ ...p, end_date: new Date(e.target.value) }))} className={inputCls} /></div>
                       </div>
                     </div>
                   )}
 
-                  {/* Outros campos simplificados para brevidade */}
-                  {selectedType !== 'experience' && selectedType !== 'education' && (
-                    <div className="p-10 text-center text-slate-500">
-                      Formulário em desenvolvimento para este tipo de conteúdo.
-                    </div>
-                  )}
-
                   <div className="flex gap-4 pt-4">
-                    <button type="button" onClick={() => { setSelectedType(null); setError(null); }} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 transition-colors">
-                      Cancelar
-                    </button>
-                    <button type="submit" disabled={isSaving} className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                      {isSaving && <LucideIcons.Loader2 className="w-4 h-4 animate-spin" />}
-                      {isSaving ? 'Salvando...' : 'Salvar'}
+                    <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
+                    <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                      {isSaving && <LucideIcons.Loader2 className="animate-spin" />}
+                      {isSaving ? 'Salvando...' : 'Adicionar Registro'}
                     </button>
                   </div>
                 </form>
@@ -249,6 +206,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           </motion.div>
         </motion.div>
       )}
+      <style>{`.rdp { --rdp-cell-size: 40px; --rdp-accent-color: #3b82f6; --rdp-background-color: #e0f2fe; margin: 0; font-family: inherit; }`}</style>
     </AnimatePresence>
   );
 }
