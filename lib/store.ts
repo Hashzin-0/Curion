@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { supabase } from './supabase';
 import { detectAreaFromRole } from './utils';
@@ -43,7 +42,7 @@ export type AreaSkill = {
   id: string;
   area_id: string;
   skill_id: string;
-  level: number; // 1-100
+  level: number;
 };
 
 export type Education = {
@@ -109,8 +108,6 @@ interface AppState {
   recommendations: RecommendationLetter[];
   isLoading: boolean;
   isAuthReady: boolean;
-  login: (username: string) => void;
-  logout: () => void;
   setUser: (user: User | null) => void;
   setAuthReady: (ready: boolean) => void;
   syncUserWithDatabase: (userData: Partial<User>) => Promise<User | null>;
@@ -148,26 +145,77 @@ interface AppState {
   fetchData: () => Promise<void>;
 }
 
-const mockUsers: User[] = [
+const mockUser: User = {
+  id: 'kardec-demo-id',
+  username: 'kardec',
+  name: 'Allan Kardec',
+  photo_url: 'https://picsum.photos/seed/kardec/400/400',
+  headline: 'Desenvolvedor Full Stack | Chef de Cozinha | Designer Gráfico',
+  summary: 'Profissional multidisciplinar com paixão por tecnologia, gastronomia e artes visuais. Acredito que a criatividade é o elo que une todas as minhas áreas de atuação.',
+  location: 'São Paulo, SP',
+};
+
+const mockAreas: ProfessionalArea[] = [
+  { id: 'area-tech', name: 'Tecnologia', slug: 'tecnologia', icon: 'Code2', theme_color: '#3b82f6' },
+  { id: 'area-gastro', name: 'Gastronomia', slug: 'gastronomia', icon: 'ChefHat', theme_color: '#f97316' },
+  { id: 'area-design', name: 'Design & Marketing', slug: 'design', icon: 'Palette', theme_color: '#7c3aed' },
+];
+
+const mockExperiences: Experience[] = [
   {
-    id: '1',
-    username: 'kardec',
-    name: 'Allan Kardec',
-    photo_url: 'https://picsum.photos/seed/kardec/200/200',
-    headline: 'Profissional Multidisciplinar',
-    summary: 'Experiência em diversas áreas, buscando sempre aprender e entregar o melhor resultado.',
-    location: 'São Paulo, SP',
+    id: 'exp-1',
+    user_id: mockUser.id,
+    area_id: 'area-tech',
+    company_name: 'TechInova Solutions',
+    company_logo: 'https://picsum.photos/seed/tech/100/100',
+    role: 'Desenvolvedor Full Stack Senior',
+    start_date: '2021-01-15',
+    end_date: null,
+    description: 'Liderança técnica em projetos de larga escala utilizando React, Next.js e Node.js. Implementação de arquiteturas serverless e microserviços.',
   },
+  {
+    id: 'exp-2',
+    user_id: mockUser.id,
+    area_id: 'area-gastro',
+    company_name: 'Restaurante Sabor & Arte',
+    company_logo: 'https://picsum.photos/seed/food/100/100',
+    role: 'Sous Chef de Cozinha',
+    start_date: '2018-05-10',
+    end_date: '2020-12-20',
+    description: 'Gestão de praça, criação de menus sazonais e controle de qualidade de insumos. Especialista em cozinha mediterrânea.',
+  },
+  {
+    id: 'exp-3',
+    user_id: mockUser.id,
+    area_id: 'area-design',
+    company_name: 'Studio Criativo Freelance',
+    company_logo: 'https://picsum.photos/seed/art/100/100',
+    role: 'Designer Gráfico Pleno',
+    start_date: '2016-02-01',
+    end_date: '2018-04-30',
+    description: 'Desenvolvimento de identidades visuais impactantes para startups e marcas de lifestyle. Criação de campanhas para redes sociais.',
+  },
+];
+
+const mockEducation: Education[] = [
+  { id: 'edu-1', user_id: mockUser.id, institution: 'USP - Universidade de São Paulo', course: 'Ciência da Computação', start_date: '2012-02-01', end_date: '2016-12-15' },
+  { id: 'edu-2', user_id: mockUser.id, institution: 'Le Cordon Bleu', course: 'Diplôme de Cuisine', start_date: '2017-01-10', end_date: '2017-12-20' },
+];
+
+const mockSkills: Skill[] = [
+  { id: 'skill-1', name: 'TypeScript', icon: 'Code2' },
+  { id: 'skill-2', name: 'Gastronomia Molecular', icon: 'ChefHat' },
+  { id: 'skill-3', name: 'Branding', icon: 'Palette' },
 ];
 
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null,
-  users: mockUsers,
-  areas: [],
-  experiences: [],
-  skills: [],
+  users: [mockUser],
+  areas: mockAreas,
+  experiences: mockExperiences,
+  skills: mockSkills,
   areaSkills: [],
-  education: [],
+  education: mockEducation,
   achievements: [],
   certificates: [],
   portfolio: [],
@@ -175,94 +223,39 @@ export const useStore = create<AppState>((set, get) => ({
   isLoading: true,
   isAuthReady: false,
   
-  login: (username) => set((state) => ({ currentUser: state.users.find(u => u.username === username) || null })),
-  logout: () => set({ currentUser: null }),
   setUser: (user) => set({ currentUser: user }),
   setAuthReady: (ready) => set({ isAuthReady: ready }),
 
   syncUserWithDatabase: async (userData) => {
     if (!userData.id) return null;
-    
     try {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userData.id)
-        .maybeSingle();
-
+      const { data: existingUser } = await supabase.from('users').select('*').eq('id', userData.id).maybeSingle();
       if (existingUser) {
         set({ currentUser: existingUser });
         return existingUser;
       }
-
-      let finalUsername = userData.username || 'user';
-      const { data: usernameTaken } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', finalUsername)
-        .maybeSingle();
-
-      if (usernameTaken) {
-        finalUsername = `${finalUsername}-${userData.id.substring(0, 5)}`;
-      }
-
       const newUser: User = {
         id: userData.id,
-        username: finalUsername,
+        username: userData.username || 'user',
         name: userData.name || 'Usuário',
-        photo_url: userData.photo_url || `https://picsum.photos/seed/${userData.id}/200/200`,
+        photo_url: userData.photo_url || `https://picsum.photos/seed/${userData.id}/400/400`,
         headline: userData.headline || 'Profissional',
         summary: userData.summary || 'Bem-vindo ao meu perfil.',
         location: userData.location || 'Brasil',
       };
-
-      const { data, error } = await supabase
-        .from('users')
-        .upsert(newUser, { onConflict: 'id' })
-        .select()
-        .single();
-
-      if (error) {
-        set({ currentUser: newUser });
-        return newUser;
-      }
-
-      set({ currentUser: data });
-      return data;
-    } catch (err: any) {
-      const fallbackUser: User = {
-        id: userData.id,
-        username: userData.username || 'user',
-        name: userData.name || 'Usuário',
-        photo_url: userData.photo_url || '',
-        headline: 'Profissional',
-        summary: '',
-        location: '',
-      };
-      set({ currentUser: fallbackUser });
-      return fallbackUser;
+      const { data } = await supabase.from('users').upsert(newUser).select().single();
+      set({ currentUser: data || newUser });
+      return data || newUser;
+    } catch (err) {
+      return null;
     }
   },
 
   updateUser: async (userData) => {
     const { currentUser } = get();
     if (!currentUser) return;
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .update(userData)
-        .eq('id', currentUser.id)
-        .select()
-        .single();
-      if (error) throw error;
-      set((state) => ({
-        currentUser: data,
-        users: state.users.map(u => u.id === data.id ? data : u),
-      }));
-    } catch (err: any) {
-      console.error('Error updating user:', err.message || err);
-      throw err;
-    }
+    const { data } = await supabase.from('users').update(userData).eq('id', currentUser.id).select().single();
+    if (data) set({ currentUser: data });
   },
   
   fetchData: async () => {
@@ -293,151 +286,121 @@ export const useStore = create<AppState>((set, get) => ({
       ]);
 
       set({
-        users: (usersData && usersData.length > 0) ? [...usersData, ...mockUsers.filter(mu => !usersData.find(u => u.username === mu.username))] : mockUsers,
-        areas: areasData || [],
-        experiences: experiencesData || [],
-        skills: skillsData || [],
+        users: (usersData && usersData.length > 0) ? [...usersData, mockUser] : [mockUser],
+        areas: (areasData && areasData.length > 0) ? areasData : mockAreas,
+        experiences: (experiencesData && experiencesData.length > 0) ? experiencesData : mockExperiences,
+        skills: (skillsData && skillsData.length > 0) ? skillsData : mockSkills,
         areaSkills: areaSkillsData || [],
-        education: educationData || [],
+        education: (educationData && educationData.length > 0) ? educationData : mockEducation,
         achievements: achievementsData || [],
         certificates: certificatesData || [],
         portfolio: portfolioData || [],
         recommendations: recommendationsData || [],
         isLoading: false
       });
-    } catch (error: any) {
-      console.error('Error fetching data:', error.message || error);
+    } catch (error) {
       set({ isLoading: false });
     }
   },
 
-  addExperience: async (experience) => {
-    const { data, error } = await supabase.from('experiences').insert([experience]).select().single();
-    if (error) throw error;
-    set((state) => ({ experiences: [data, ...state.experiences] }));
+  addExperience: async (exp) => {
+    const { data } = await supabase.from('experiences').insert([exp]).select().single();
+    if (data) set((state) => ({ experiences: [data, ...state.experiences] }));
   },
-  updateExperience: async (experience) => {
-    const { data, error } = await supabase.from('experiences').update(experience).eq('id', experience.id).select().single();
-    if (error) throw error;
-    set((state) => ({ experiences: state.experiences.map(e => e.id === experience.id ? data : e) }));
+  updateExperience: async (exp) => {
+    const { data } = await supabase.from('experiences').update(exp).eq('id', exp.id).select().single();
+    if (data) set((state) => ({ experiences: state.experiences.map(e => e.id === exp.id ? data : e) }));
   },
   removeExperience: async (id) => {
-    const { error } = await supabase.from('experiences').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('experiences').delete().eq('id', id);
     set((state) => ({ experiences: state.experiences.filter(e => e.id !== id) }));
   },
   addExperienceWithAutoArea: async (exp) => {
     const { areas, addArea, addExperience } = get();
     const detected = detectAreaFromRole(exp.role);
     let area = areas.find(a => a.slug === detected.slug);
-    
     if (!area) {
-      await addArea({
-        name: detected.name,
-        slug: detected.slug,
-        icon: detected.icon,
-        theme_color: detected.themeColor,
-      });
+      await addArea({ name: detected.name, slug: detected.slug, icon: detected.icon, theme_color: detected.themeColor });
       area = get().areas.find(a => a.slug === detected.slug);
     }
-    
-    if (!area) throw new Error('Não foi possível identificar ou criar a área de atuação.');
-    await addExperience({ ...exp, area_id: area.id });
+    if (area) await addExperience({ ...exp, area_id: area.id });
   },
   
-  addEducation: async (education) => {
-    const { data, error } = await supabase.from('education').insert([education]).select().single();
-    if (error) throw error;
-    set((state) => ({ education: [data, ...state.education] }));
+  addEducation: async (edu) => {
+    const { data } = await supabase.from('education').insert([edu]).select().single();
+    if (data) set((state) => ({ education: [data, ...state.education] }));
   },
-  updateEducation: async (education) => {
-    const { data, error } = await supabase.from('education').update(education).eq('id', education.id).select().single();
-    if (error) throw error;
-    set((state) => ({ education: state.education.map(e => e.id === education.id ? data : e) }));
+  updateEducation: async (edu) => {
+    const { data } = await supabase.from('education').update(edu).eq('id', edu.id).select().single();
+    if (data) set((state) => ({ education: state.education.map(e => e.id === edu.id ? data : e) }));
   },
   removeEducation: async (id) => {
-    const { error } = await supabase.from('education').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('education').delete().eq('id', id);
     set((state) => ({ education: state.education.filter(e => e.id !== id) }));
   },
   
   addArea: async (area) => {
-    const { data, error } = await supabase.from('areas').insert([area]).select().single();
-    if (error) throw error;
-    set((state) => ({ areas: [...state.areas, data] }));
+    const { data } = await supabase.from('areas').insert([area]).select().single();
+    if (data) set((state) => ({ areas: [...state.areas, data] }));
   },
   updateArea: async (area) => {
-    const { data, error } = await supabase.from('areas').update(area).eq('id', area.id).select().single();
-    if (error) throw error;
-    set((state) => ({ areas: state.areas.map(a => a.id === area.id ? data : a) }));
+    const { data } = await supabase.from('areas').update(area).eq('id', area.id).select().single();
+    if (data) set((state) => ({ areas: state.areas.map(a => a.id === area.id ? data : a) }));
   },
-  removeArea: async (areaId) => {
-    const { error } = await supabase.from('areas').delete().eq('id', areaId);
-    if (error) throw error;
-    set((state) => ({ areas: state.areas.filter(a => a.id !== areaId) }));
+  removeArea: async (id) => {
+    await supabase.from('areas').delete().eq('id', id);
+    set((state) => ({ areas: state.areas.filter(a => a.id !== id) }));
   },
   
-  addAchievement: async (achievement) => {
-    const { data, error } = await supabase.from('achievements').insert([achievement]).select().single();
-    if (error) throw error;
-    set((state) => ({ achievements: [data, ...state.achievements] }));
+  addAchievement: async (ach) => {
+    const { data } = await supabase.from('achievements').insert([ach]).select().single();
+    if (data) set((state) => ({ achievements: [data, ...state.achievements] }));
   },
-  updateAchievement: async (achievement) => {
-    const { data, error } = await supabase.from('achievements').update(achievement).eq('id', achievement.id).select().single();
-    if (error) throw error;
-    set((state) => ({ achievements: state.achievements.map(a => a.id === achievement.id ? data : a) }));
+  updateAchievement: async (ach) => {
+    const { data } = await supabase.from('achievements').update(ach).eq('id', ach.id).select().single();
+    if (data) set((state) => ({ achievements: state.achievements.map(a => a.id === ach.id ? data : a) }));
   },
   removeAchievement: async (id) => {
-    const { error } = await supabase.from('achievements').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('achievements').delete().eq('id', id);
     set((state) => ({ achievements: state.achievements.filter(a => a.id !== id) }));
   },
 
-  addCertificate: async (certificate) => {
-    const { data, error } = await supabase.from('certificates').insert([certificate]).select().single();
-    if (error) throw error;
-    set((state) => ({ certificates: [data, ...state.certificates] }));
+  addCertificate: async (cert) => {
+    const { data } = await supabase.from('certificates').insert([cert]).select().single();
+    if (data) set((state) => ({ certificates: [data, ...state.certificates] }));
   },
-  updateCertificate: async (certificate) => {
-    const { data, error } = await supabase.from('certificates').update(certificate).eq('id', certificate.id).select().single();
-    if (error) throw error;
-    set((state) => ({ certificates: state.certificates.map(c => c.id === certificate.id ? data : c) }));
+  updateCertificate: async (cert) => {
+    const { data } = await supabase.from('certificates').update(cert).eq('id', cert.id).select().single();
+    if (data) set((state) => ({ certificates: state.certificates.map(c => c.id === cert.id ? data : c) }));
   },
   removeCertificate: async (id) => {
-    const { error } = await supabase.from('certificates').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('certificates').delete().eq('id', id);
     set((state) => ({ certificates: state.certificates.filter(c => c.id !== id) }));
   },
 
   addPortfolioItem: async (item) => {
-    const { data, error } = await supabase.from('portfolio').insert([item]).select().single();
-    if (error) throw error;
-    set((state) => ({ portfolio: [data, ...state.portfolio] }));
+    const { data } = await supabase.from('portfolio').insert([item]).select().single();
+    if (data) set((state) => ({ portfolio: [data, ...state.portfolio] }));
   },
   updatePortfolioItem: async (item) => {
-    const { data, error } = await supabase.from('portfolio').update(item).eq('id', item.id).select().single();
-    if (error) throw error;
-    set((state) => ({ portfolio: state.portfolio.map(p => p.id === item.id ? data : p) }));
+    const { data } = await supabase.from('portfolio').update(item).eq('id', item.id).select().single();
+    if (data) set((state) => ({ portfolio: state.portfolio.map(p => p.id === item.id ? data : p) }));
   },
   removePortfolioItem: async (id) => {
-    const { error } = await supabase.from('portfolio').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('portfolio').delete().eq('id', id);
     set((state) => ({ portfolio: state.portfolio.filter(p => p.id !== id) }));
   },
 
-  addRecommendation: async (recommendation) => {
-    const { data, error } = await supabase.from('recommendations').insert([recommendation]).select().single();
-    if (error) throw error;
-    set((state) => ({ recommendations: [data, ...state.recommendations] }));
+  addRecommendation: async (rec) => {
+    const { data } = await supabase.from('recommendations').insert([rec]).select().single();
+    if (data) set((state) => ({ recommendations: [data, ...state.recommendations] }));
   },
-  updateRecommendation: async (recommendation) => {
-    const { data, error } = await supabase.from('recommendations').update(recommendation).eq('id', recommendation.id).select().single();
-    if (error) throw error;
-    set((state) => ({ recommendations: state.recommendations.map(r => r.id === recommendation.id ? data : r) }));
+  updateRecommendation: async (rec) => {
+    const { data } = await supabase.from('recommendations').update(rec).eq('id', rec.id).select().single();
+    if (data) set((state) => ({ recommendations: state.recommendations.map(r => r.id === rec.id ? data : r) }));
   },
   removeRecommendation: async (id) => {
-    const { error } = await supabase.from('recommendations').delete().eq('id', id);
-    if (error) throw error;
+    await supabase.from('recommendations').delete().eq('id', id);
     set((state) => ({ recommendations: state.recommendations.filter(r => r.id !== id) }));
   },
 }));
