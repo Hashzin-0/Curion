@@ -251,6 +251,11 @@ export function ThemedProfileLayout({
           </div>
 
           <div className="max-w-5xl mx-auto px-6 py-12 space-y-20">
+            {/* Seção de Gráficos e Estatísticas */}
+            <section>
+              <Stats userId={user.id} />
+            </section>
+
             <section>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
                 <div>
@@ -311,7 +316,24 @@ export function ThemedProfileLayout({
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
+                          className="relative"
                         >
+                          {isOwner && (
+                            <div className="absolute top-4 right-4 z-20 flex gap-2">
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditArea?.(area); }}
+                                className="w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteArea?.(area); }}
+                                className="w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
                           <Link href={`/${username}/${area.slug}`} className="block relative group h-full">
                             <div
                               className="relative overflow-hidden rounded-[2.5rem] p-8 h-full cursor-pointer transition-all duration-500 bg-white dark:bg-slate-900 shadow-sm group-hover:shadow-2xl border border-slate-100 dark:border-slate-800"
