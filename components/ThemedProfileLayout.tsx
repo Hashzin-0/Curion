@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
 import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
@@ -13,8 +13,12 @@ import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
+import { PremiumCard3D } from '@/components/PremiumCard3D';
+import { useQueryState } from 'nuqs';
 import SimpleBar from 'simplebar-react';
-import Lottie from 'lottie-react';
+import dynamic from 'next/dynamic';
+
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 type Props = {
   user: User;
@@ -28,9 +32,6 @@ type Props = {
   isLoadingTheme: boolean;
   username: string;
 };
-
-// Placeholder animado para estados vazios (Lottie)
-const emptyAnimationUrl = "https://assets9.lottiefiles.com/packages/lf20_m6zL7u.json";
 
 function PremiumParticle({ emoji, x, y, size, speed, delay }: { 
   emoji: string; 
@@ -77,6 +78,7 @@ export function ThemedProfileLayout({
 }: Props) {
   const [isMounted, setIsMounted] = useState(false);
   const [showNotations, setShowNotations] = useState(false);
+  const [areaFilter, setAreaFilter] = useQueryState('area');
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,6 +89,11 @@ export function ThemedProfileLayout({
   const mainArea = areas[0]?.name || "tecnologia";
   const premium = useMemo(() => generatePremiumTheme(user.name, mainArea), [user.name, mainArea]);
 
+  const filteredAreas = useMemo(() => {
+    if (!areaFilter) return areas;
+    return areas.filter(a => a.slug === areaFilter);
+  }, [areas, areaFilter]);
+
   const heroBackground = premium.meshGradient;
   const accentColor = theme?.primaryHex || premium.palette.primary;
   const darkColor = theme?.darkHex || premium.palette.dark;
@@ -96,7 +103,6 @@ export function ThemedProfileLayout({
     <SimpleBar style={{ maxHeight: '100vh' }}>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         <LayoutGroup>
-          {/* ─── HERO SECTION ─── */}
           <div
             className="relative overflow-hidden"
             style={{ background: heroBackground, minHeight: '520px' }}
@@ -115,45 +121,39 @@ export function ThemedProfileLayout({
 
             <div className="absolute inset-0 bg-black/30 z-0" />
 
-            <div
-              className="absolute inset-0 z-0 opacity-10"
-              style={{
-                backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
-                backgroundSize: '32px 32px',
-              }}
-            />
-
             <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 flex flex-col md:flex-row items-center gap-10">
-              <motion.div
-                initial={{ scale: 0, rotate: -15 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.6, type: 'spring', bounce: 0.4 }}
-                className="shrink-0 relative"
-              >
-                <div
-                  className="w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden relative"
-                  style={{
-                    border: `6px solid ${accentColor}`,
-                    boxShadow: `0 0 0 6px rgba(255,255,255,0.1), 0 25px 50px rgba(0,0,0,0.5)`,
-                  }}
-                >
-                  <Image
-                    src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
-                    alt={user.name}
-                    fill
-                    className="object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+              <PremiumCard3D>
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.4, type: 'spring', bounce: 0.5 }}
-                  className="absolute -bottom-2 -right-2 text-4xl bg-white dark:bg-slate-900 rounded-full w-14 h-14 flex items-center justify-center shadow-2xl border-2 border-slate-100 dark:border-slate-800"
+                  initial={{ scale: 0, rotate: -15 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.6, type: 'spring', bounce: 0.4 }}
+                  className="shrink-0 relative"
                 >
-                  {heroEmoji}
+                  <div
+                    className="w-40 h-40 md:w-48 md:h-48 rounded-[2rem] overflow-hidden relative"
+                    style={{
+                      border: `6px solid ${accentColor}`,
+                      boxShadow: `0 25px 50px rgba(0,0,0,0.5)`,
+                    }}
+                  >
+                    <Image
+                      src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
+                      alt={user.name}
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: 'spring', bounce: 0.5 }}
+                    className="absolute -bottom-2 -right-2 text-4xl bg-white dark:bg-slate-900 rounded-2xl w-14 h-14 flex items-center justify-center shadow-2xl border-2 border-slate-100 dark:border-slate-800"
+                  >
+                    {heroEmoji}
+                  </motion.div>
                 </motion.div>
-              </motion.div>
+              </PremiumCard3D>
 
               <div className="text-center md:text-left flex-1">
                 <motion.div
@@ -166,7 +166,7 @@ export function ThemedProfileLayout({
                   {isLoadingTheme ? (
                     <>
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Sincronizando IA...
+                      IA Sincronizada
                     </>
                   ) : (
                     <>
@@ -201,17 +201,6 @@ export function ThemedProfileLayout({
                   </motion.p>
                 </RoughNotationGroup>
 
-                {theme?.tagline && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="text-white/60 text-base italic mb-6 max-w-lg"
-                  >
-                    "{theme.tagline}"
-                  </motion.p>
-                )}
-
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -226,11 +215,10 @@ export function ThemedProfileLayout({
                   )}
                   {user.summary && (
                     <div
-                      className="max-w-xl text-white/80 text-sm leading-relaxed border-l-4 pl-4 font-medium"
+                      className="max-w-xl text-white/80 text-sm leading-relaxed border-l-4 pl-4 font-medium prose prose-sm prose-invert"
                       style={{ borderColor: accentColor }}
-                    >
-                      {user.summary}
-                    </div>
+                      dangerouslySetInnerHTML={{ __html: user.summary }}
+                    />
                   )}
                 </motion.div>
 
@@ -260,18 +248,8 @@ export function ThemedProfileLayout({
                 )}
               </div>
             </div>
-
-            <div className="absolute bottom-0 left-0 right-0 z-10 overflow-hidden line-height-0">
-              <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-                <path
-                  d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 70C840 80 960 100 1080 105C1200 110 1320 100 1380 95L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z"
-                  className="fill-slate-50 dark:fill-slate-950"
-                />
-              </svg>
-            </div>
           </div>
 
-          {/* ─── MAIN CONTENT ─── */}
           <div className="max-w-5xl mx-auto px-6 py-12 space-y-20">
             <section>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
@@ -288,9 +266,12 @@ export function ThemedProfileLayout({
                     />
                     Áreas de Atuação
                   </motion.h2>
-                  <p className="text-slate-500 dark:text-slate-400 ml-7 text-base font-medium">
-                    Explore meus currículos por especialidade
-                  </p>
+                  <div className="flex gap-2 mt-4 ml-7">
+                    <button onClick={() => setAreaFilter(null)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${!areaFilter ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>Tudo</button>
+                    {areas.map(a => (
+                      <button key={a.id} onClick={() => setAreaFilter(a.slug)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${areaFilter === a.slug ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>{a.name}</button>
+                    ))}
+                  </div>
                 </div>
                 {isOwner && (
                   <button
@@ -304,29 +285,14 @@ export function ThemedProfileLayout({
                 )}
               </div>
 
-              {areas.length === 0 ? (
+              {filteredAreas.length === 0 ? (
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="text-center py-20 bg-white dark:bg-slate-900/50 border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem]"
                 >
-                  <div className="w-48 h-48 mx-auto mb-6">
-                    <Lottie 
-                      animationData={require('@/public/empty-box.json')} 
-                      loop={true} 
-                    />
-                  </div>
-                  <p className="text-slate-500 dark:text-slate-400 text-xl font-black">Nenhuma experiência catalogada</p>
-                  <p className="text-slate-400 dark:text-slate-500 text-sm mt-2 max-w-sm mx-auto">Comece a construir seu portfólio adicionando suas primeiras vivências profissionais.</p>
-                  {isOwner && (
-                    <button
-                      onClick={onAddContent}
-                      className="mt-8 px-8 py-3 rounded-full text-sm font-black text-white shadow-lg transition-transform hover:scale-110"
-                      style={{ backgroundColor: accentColor }}
-                    >
-                      Cadastrar Experiência
-                    </button>
-                  )}
+                  <p className="text-slate-500 dark:text-slate-400 text-xl font-black">Nenhum resultado para este filtro</p>
+                  <button onClick={() => setAreaFilter(null)} className="mt-4 text-blue-600 font-bold underline">Limpar filtros</button>
                 </motion.div>
               ) : (
                 <motion.div 
@@ -334,7 +300,7 @@ export function ThemedProfileLayout({
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                 >
                   <AnimatePresence mode="popLayout">
-                    {areas.map((area, i) => {
+                    {filteredAreas.map((area, i) => {
                       const Icon = (LucideIcons as any)[area.icon] || LucideIcons.Briefcase;
                       const areaEmoji = theme?.areaEmojis?.[area.name] || premium.particles[i % premium.particles.length].emoji;
 
@@ -342,56 +308,27 @@ export function ThemedProfileLayout({
                         <motion.div
                           key={area.id}
                           layout
-                          layoutId={`area-${area.id}`}
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
-                          transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
                         >
                           <Link href={`/${username}/${area.slug}`} className="block relative group h-full">
                             <div
                               className="relative overflow-hidden rounded-[2.5rem] p-8 h-full cursor-pointer transition-all duration-500 bg-white dark:bg-slate-900 shadow-sm group-hover:shadow-2xl border border-slate-100 dark:border-slate-800"
                               style={{ borderTop: `6px solid ${accentColor}` }}
                             >
-                              <div
-                                className="absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-5 group-hover:opacity-15 group-hover:scale-150 transition-all duration-700"
-                                style={{ backgroundColor: accentColor }}
-                              />
-
-                              {isOwner && (
-                                <div className="absolute top-6 right-6 flex gap-2 z-20">
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditArea?.(area); }}
-                                    className="p-2.5 bg-slate-50/90 dark:bg-slate-800/90 rounded-2xl text-blue-600 dark:text-blue-400 shadow-sm hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteArea?.(area); }}
-                                    className="p-2.5 bg-slate-50/90 dark:bg-slate-800/90 rounded-2xl text-red-600 dark:text-red-400 shadow-sm hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
-
                               <div className="relative z-10 flex flex-col h-full">
                                 <div className="flex items-center gap-4 mb-6">
-                                  <div
-                                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-xl"
-                                    style={{ backgroundColor: accentColor }}
-                                  >
+                                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-xl" style={{ backgroundColor: accentColor }}>
                                     <Icon className="w-7 h-7" />
                                   </div>
                                   <span className="text-4xl filter drop-shadow-md group-hover:scale-125 transition-transform duration-500">
                                     {areaEmoji}
                                   </span>
                                 </div>
-
                                 <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                   {area.name}
                                 </h3>
-
                                 <div className="mt-auto pt-6 flex items-center text-sm font-black transition-all gap-2" style={{ color: accentColor }}>
                                   <span className="tracking-widest uppercase text-[10px]">Acessar Currículo</span>
                                   <ArrowRight className="w-4 h-4 group-hover:translate-x-3 transition-transform duration-500" />
@@ -407,37 +344,9 @@ export function ThemedProfileLayout({
               )}
             </section>
 
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="pt-10"
-            >
+            <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="pt-10">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
-                <span
-                  className="w-3 h-10 rounded-full inline-block shadow-lg"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <RoughNotation type="highlight" color={`${accentColor}33`} show={showNotations}>
-                  Analytics de Carreira
-                </RoughNotation>
-              </h2>
-              <div className="bg-white dark:bg-slate-900/50 p-6 md:p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-                <Stats userId={user.id} />
-              </div>
-            </motion.section>
-
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="pt-10"
-            >
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
-                <span
-                  className="w-3 h-10 rounded-full inline-block shadow-lg"
-                  style={{ backgroundColor: accentColor }}
-                />
+                <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: accentColor }} />
                 Jornada Profissional
               </h2>
               <div className="bg-white dark:bg-slate-900/50 p-6 md:p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -445,25 +354,6 @@ export function ThemedProfileLayout({
               </div>
             </motion.section>
           </div>
-
-          <footer className="mt-20 py-16 border-t border-slate-200 dark:border-slate-800 text-center bg-white dark:bg-slate-900">
-            <div className="max-w-5xl mx-auto px-6">
-              <div className="text-2xl font-black text-slate-900 dark:text-white mb-4">
-                {user.name}
-              </div>
-              <p className="text-slate-500 dark:text-slate-400 font-bold mb-8">
-                © {new Date().getFullYear()} — CareerCanvas. Criado com inteligência.
-              </p>
-              <div className="flex justify-center gap-6 text-slate-400">
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-                  <LucideIcons.Linkedin className="w-5 h-5" />
-                </div>
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-                  <LucideIcons.Github className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </footer>
         </LayoutGroup>
       </div>
     </SimpleBar>

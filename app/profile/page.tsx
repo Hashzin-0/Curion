@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,6 +11,10 @@ import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flo
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
+import { PhotoCropModal } from '@/components/PhotoCropModal';
+import { RichEditor } from '@/components/RichEditor';
+import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
 
 export default function Dashboard() {
   const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea, isLoading } = useStore();
@@ -30,6 +35,10 @@ export default function Dashboard() {
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Estados para Foto
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+
   useEffect(() => {
     if (isAuthReady && !currentUser && !isLoading) {
       router.push('/');
@@ -47,6 +56,22 @@ export default function Dashboard() {
       });
     }
   }, [currentUser]);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImage(reader.result as string);
+      setIsCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png'] },
+    multiple: false
+  });
 
   const fetchTheme = useCallback(async () => {
     if (!currentUser) return;
@@ -86,6 +111,7 @@ export default function Dashboard() {
     e.preventDefault();
     await updateUser(editedProfile);
     setIsEditingProfile(false);
+    toast.success('Perfil atualizado com sucesso!');
     if (currentUser) {
       localStorage.removeItem(`profile-theme-${currentUser.id}`);
       setProfileTheme(null);
@@ -106,8 +132,10 @@ export default function Dashboard() {
         skills: userSkills,
       });
       setEditedProfile(prev => ({ ...prev, summary: result.summary }));
+      toast.info('Resumo gerado pela IA!');
     } catch (error) {
       console.error('Erro ao gerar resumo:', error);
+      toast.error('Erro ao gerar resumo com IA.');
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -119,9 +147,9 @@ export default function Dashboard() {
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast.success('Link copiado!');
   };
 
-  // Handlers para áreas
   const handleEditArea = (area: ProfessionalArea) => {
     setEditingArea(area);
     setAreaForm({ ...area });
@@ -132,6 +160,7 @@ export default function Dashboard() {
     await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea);
     setIsProcessingArea(false);
     setEditingArea(null);
+    toast.success('Área atualizada!');
   };
   const handleDeleteArea = async () => {
     if (!deletingArea) return;
@@ -139,6 +168,7 @@ export default function Dashboard() {
     await removeArea(deletingArea.id);
     setIsProcessingArea(false);
     setDeletingArea(null);
+    toast.success('Área removida.');
   };
 
   if (!isAuthReady || (isLoading && !currentUser)) {
@@ -195,31 +225,57 @@ export default function Dashboard() {
 
       <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
 
-      {/* Edit Profile Modal */}
+      {rawImage && (
+        <PhotoCropModal
+          image={rawImage}
+          isOpen={isCropOpen}
+          onClose={() => { setIsCropOpen(false); setRawImage(null); }}
+          onCropComplete={(cropped) => setEditedProfile({ ...editedProfile, photo_url: cropped })}
+        />
+      )}
+
       <AnimatePresence>
         {isEditingProfile && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Editar Perfil</h3>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Editar Perfil</h3>
                 <button onClick={() => setIsEditingProfile(false)} className="p-2 text-slate-400 hover:text-slate-600"><LucideIcons.X className="w-6 h-6" /></button>
               </div>
               <form onSubmit={handleUpdateProfile} className="space-y-6">
+                
+                <div {...getRootProps()} className={`w-full border-2 border-dashed rounded-[1.5rem] p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                  <input {...getInputProps()} />
+                  {editedProfile.photo_url ? (
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg">
+                      <img src={editedProfile.photo_url} alt="profile" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <LucideIcons.Camera size={40} className="text-slate-400" />
+                  )}
+                  <p className="text-sm font-bold text-slate-500">Arraste uma foto ou clique para alterar</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div><label className="block text-sm font-bold mb-2">Nome</label><input type="text" value={editedProfile.name || ''} onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })} className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" /></div>
                   <div><label className="block text-sm font-bold mb-2">Headline</label><input type="text" value={editedProfile.headline || ''} onChange={(e) => setEditedProfile({ ...editedProfile, headline: e.target.value })} className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" /></div>
                 </div>
                 <div><label className="block text-sm font-bold mb-2">Localização</label><input type="text" value={editedProfile.location || ''} onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })} className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" /></div>
+                
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-bold">Resumo Profissional</label>
-                    <button type="button" onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="text-xs font-bold text-blue-600 flex items-center gap-1">{isGeneratingSummary ? <LucideIcons.Loader2 className="w-3 h-3 animate-spin" /> : <LucideIcons.Sparkles className="w-3 h-3" />} Melhorar com IA</button>
+                    <button type="button" onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                      {isGeneratingSummary ? <LucideIcons.Loader2 className="w-3 h-3 animate-spin" /> : <LucideIcons.Sparkles className="w-3 h-3" />}
+                      Melhorar com IA
+                    </button>
                   </div>
-                  <textarea rows={4} value={editedProfile.summary || ''} onChange={(e) => setEditedProfile({ ...editedProfile, summary: e.target.value })} className="w-full p-4 rounded-xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 resize-none" />
+                  <RichEditor content={editedProfile.summary || ''} onChange={(val) => setEditedProfile({ ...editedProfile, summary: val })} placeholder="Fale um pouco sobre sua trajetória..." />
                 </div>
+
                 <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
-                  <button type="submit" className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold">Salvar</button>
+                  <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold">Cancelar</button>
+                  <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl">Salvar Perfil</button>
                 </div>
               </form>
             </motion.div>
@@ -227,7 +283,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Edit Area Modal */}
+      {/* Outros modais existentes (Area etc) permanecem iguais... */}
       <AnimatePresence>
         {editingArea && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -257,7 +313,6 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Delete Area Modal */}
       <AnimatePresence>
         {deletingArea && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
