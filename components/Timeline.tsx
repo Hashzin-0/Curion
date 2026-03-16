@@ -1,12 +1,15 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Briefcase, GraduationCap, Star, Plus, X, Calendar, MapPin, Building, Trophy, Pencil, Trash2 } from 'lucide-react';
-import { useStore, Experience, Education, Achievement } from '@/lib/store';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Briefcase, GraduationCap, Star, Plus, X, Calendar, Building, Pencil, Trash2 } from 'lucide-react';
+import { useStore } from '@/lib/store';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseSafeDate } from '@/lib/utils';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { toast } from 'sonner';
 
 type TimelineItem = {
   id: string;
@@ -60,11 +63,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<TimelineItem | null>(null);
   const [newItem, setNewItem] = useState<Partial<TimelineItem>>({ type: 'work' });
-  const [isMounted, setIsMounted] = useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const [parent] = useAutoAnimate();
 
   const timelineData = useMemo(() => {
     if (!targetUserId) return [];
@@ -122,43 +121,50 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
     return items.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
   }, [targetUserId, experiences, education, achievements]);
 
-  if (!isMounted || !targetUserId) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !newItem.title || !newItem.organization) return;
     
-    // Simplificando datas para este protótipo
     const dateToStore = new Date().toISOString(); 
     
-    if (editingItem) {
-      if (editingItem.type === 'work') {
-        await updateExperience({ ...editingItem.raw, role: newItem.title, company_name: newItem.organization, description: newItem.description || '' });
-      } else if (editingItem.type === 'education') {
-        await updateEducation({ ...editingItem.raw, course: newItem.title, institution: newItem.organization });
-      } else if (editingItem.type === 'achievement') {
-        await updateAchievement({ ...editingItem.raw, title: newItem.title, organization: newItem.organization, description: newItem.description || '' });
+    try {
+      if (editingItem) {
+        if (editingItem.type === 'work') {
+          await updateExperience({ ...editingItem.raw, role: newItem.title, company_name: newItem.organization, description: newItem.description || '' });
+        } else if (editingItem.type === 'education') {
+          await updateEducation({ ...editingItem.raw, course: newItem.title, institution: newItem.organization });
+        } else if (editingItem.type === 'achievement') {
+          await updateAchievement({ ...editingItem.raw, title: newItem.title, organization: newItem.organization, description: newItem.description || '' });
+        }
+        toast.success('Registro atualizado com sucesso!');
+      } else {
+        if (newItem.type === 'work') {
+          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || '', company_name: newItem.organization, company_logo: 'https://picsum.photos/seed/company/100/100', role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
+        } else if (newItem.type === 'education') {
+          await addEducation({ user_id: currentUser.id, institution: newItem.organization, course: newItem.title, start_date: dateToStore, end_date: null });
+        } else if (newItem.type === 'achievement') {
+          await addAchievement({ user_id: currentUser.id, title: newItem.title, organization: newItem.organization, date: dateToStore, description: newItem.description || '' });
+        }
+        toast.success('Novo registro adicionado!');
       }
-    } else {
-      if (newItem.type === 'work') {
-        await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || '', company_name: newItem.organization, company_logo: 'https://picsum.photos/seed/company/100/100', role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
-      } else if (newItem.type === 'education') {
-        await addEducation({ user_id: currentUser.id, institution: newItem.organization, course: newItem.title, start_date: dateToStore, end_date: null });
-      } else if (newItem.type === 'achievement') {
-        await addAchievement({ user_id: currentUser.id, title: newItem.title, organization: newItem.organization, date: dateToStore, description: newItem.description || '' });
-      }
+      setIsAdding(false);
+      setEditingItem(null);
+      setNewItem({ type: 'work' });
+    } catch (err) {
+      toast.error('Erro ao salvar o registro.');
     }
-    
-    setIsAdding(false);
-    setEditingItem(null);
-    setNewItem({ type: 'work' });
   };
 
   const confirmDelete = async () => {
     if (!deletingItem) return;
-    if (deletingItem.type === 'work') await removeExperience(deletingItem.id);
-    if (deletingItem.type === 'education') await removeEducation(deletingItem.id);
-    if (deletingItem.type === 'achievement') await removeAchievement(deletingItem.id);
+    try {
+      if (deletingItem.type === 'work') await removeExperience(deletingItem.id);
+      if (deletingItem.type === 'education') await removeEducation(deletingItem.id);
+      if (deletingItem.type === 'achievement') await removeAchievement(deletingItem.id);
+      toast.success('Registro removido.');
+    } catch (err) {
+      toast.error('Erro ao excluir.');
+    }
     setDeletingItem(null);
   };
 
@@ -185,14 +191,20 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
       <AnimatePresence>
         {isAdding && !readOnly && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <motion.form className="w-full max-w-xl bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800" onSubmit={handleSubmit}>
+            <motion.form 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="w-full max-w-xl bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800" 
+              onSubmit={handleSubmit}
+            >
               <div className="flex justify-between items-center mb-8">
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Editar Registro' : 'Novo Registro'}</h3>
                 <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
               </div>
               <div className="space-y-6">
                 {!editingItem && (
-                  <div>
+                  <div ref={parent}>
                     <label className="block text-sm font-bold mb-2">Tipo de Registro</label>
                     <div className="grid grid-cols-3 gap-3">
                       {[
@@ -219,7 +231,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
                   </div>
                 </div>
                 {(newItem.type === 'work' || newItem.type === 'achievement') && (
-                  <div>
+                  <div key="desc-field">
                     <label className="block text-sm font-bold mb-2">Descrição</label>
                     <textarea className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none" rows={4} value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} placeholder="Fale um pouco sobre..." />
                   </div>
@@ -234,7 +246,6 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deletingItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -254,9 +265,16 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         {timelineData.length > 0 ? (
           <>
             <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 z-0 min-w-[1200px]"></div>
-            <div className="flex flex-row items-center gap-12 min-w-[1200px] px-12 relative z-10">
+            <div ref={parent} className="flex flex-row items-center gap-12 min-w-[1200px] px-12 relative z-10">
               {timelineData.map((item, index) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: index % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className={`relative flex flex-col items-center w-80 shrink-0 ${index % 2 === 0 ? 'mb-64' : 'mt-64'}`}>
+                <motion.div 
+                  key={item.id} 
+                  layout
+                  initial={{ opacity: 0, y: index % 2 === 0 ? -20 : 20 }} 
+                  whileInView={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: index * 0.1 }} 
+                  className={`relative flex flex-col items-center w-80 shrink-0 ${index % 2 === 0 ? 'mb-64' : 'mt-64'}`}
+                >
                   <div className={`absolute ${index % 2 === 0 ? 'bottom-[-3.5rem]' : 'top-[-3.5rem]'} left-1/2 -translate-x-1/2 w-12 h-12 rounded-2xl border-4 border-white dark:border-slate-950 flex items-center justify-center bg-white dark:bg-slate-900 ${getColorClass(item.type)} z-20 shadow-md`}>
                     {getIcon(item.type)}
                   </div>

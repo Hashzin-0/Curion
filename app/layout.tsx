@@ -1,25 +1,29 @@
+
 import type {Metadata} from 'next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
 import { StoreInitializer } from '@/components/StoreInitializer';
 import { AuthProvider } from '@/components/AuthProvider';
-import './globals.css'; // Global styles
+import { Toaster } from 'sonner';
+import 'simplebar-react/dist/simplebar.min.css';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: 'CareerCanvas — Portfólio Inteligente',
+  description: 'Seu currículo interativo e temático com IA',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <StoreInitializer />
-            <div className="fixed top-4 right-4 z-50">
+            <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
               <DarkModeToggle />
             </div>
+            <Toaster position="top-center" richColors />
             {children}
           </AuthProvider>
         </ThemeProvider>

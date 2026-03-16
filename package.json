@@ -11,6 +11,7 @@
     "clean": "next clean"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.8.2",
     "@genkit-ai/google-genai": "^1.0.7",
     "@google/genai": "^1.17.0",
     "@hookform/resolvers": "^5.2.1",
@@ -23,6 +24,7 @@
     "genkit": "^1.0.7",
     "genkitx-openai": "^0.30.0",
     "html2pdf.js": "^0.14.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
@@ -32,7 +34,10 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "react-rough-notation": "^1.0.5",
     "recharts": "^3.8.0",
+    "simplebar-react": "^3.3.0",
+    "sonner": "^1.7.4",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.11"
   },
