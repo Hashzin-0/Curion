@@ -8,7 +8,10 @@ import { openAI } from 'genkitx-openai';
 export const ai = genkit({
   plugins: [
     googleAI(),
-    // O plugin openAI é configurado para redirecionar chamadas ao OpenRouter
+    /**
+     * O plugin OpenAI é configurado como um túnel para o OpenRouter.
+     * Isso permite usar qualquer modelo do OpenRouter através do namespace 'openai/'.
+     */
     openAI({
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: 'https://openrouter.ai/api/v1',

@@ -23,7 +23,6 @@ export type SummaryOutput = z.infer<typeof SummaryOutputSchema>;
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
-  model: AI_CONFIG.primaryModel,
   input: { schema: SummaryInputSchema },
   output: { schema: SummaryOutputSchema },
   prompt: `Você é um especialista em recrutamento. Gere um resumo profissional curto e impactante (máximo 4 linhas) para:
@@ -38,13 +37,12 @@ export async function generateProfessionalSummary(input: SummaryInput): Promise<
   const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
   let lastError = null;
 
-  for (const model of models) {
+  for (const modelId of models) {
     try {
-      console.log(`Tentando gerar resumo com modelo: ${model}`);
-      const { output } = await summaryPrompt(input, { model });
+      const { output } = await summaryPrompt(input, { model: modelId });
       if (output) return output;
     } catch (e) {
-      console.warn(`Modelo ${model} falhou. Tentando fallback...`);
+      console.warn(`Tentativa com modelo ${modelId} falhou. Erro:`, e);
       lastError = e;
     }
   }

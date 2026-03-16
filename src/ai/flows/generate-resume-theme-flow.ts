@@ -39,7 +39,6 @@ export type ResumeTheme = z.infer<typeof ThemeOutputSchema>;
 
 const themePrompt = ai.definePrompt({
   name: 'resumeThemePrompt',
-  model: AI_CONFIG.primaryModel,
   input: { schema: ThemeInputSchema },
   output: { schema: ThemeOutputSchema },
   prompt: `Você é um designer gráfico especializado em currículos temáticos.
@@ -57,16 +56,15 @@ export async function generateResumeTheme(input: ResumeThemeInput): Promise<Resu
   const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
   let lastError = null;
 
-  for (const model of models) {
+  for (const modelId of models) {
     try {
-      console.log(`Tentando gerar tema de currículo com modelo: ${model}`);
-      const { output } = await themePrompt(input, { model });
+      const { output } = await themePrompt(input, { model: modelId });
       if (output) return output;
     } catch (e) {
-      console.warn(`Modelo ${model} indisponível. Tentando próximo...`);
+      console.warn(`Tentativa com modelo ${modelId} falhou. Erro:`, e);
       lastError = e;
     }
   }
 
-  throw lastError || new Error('Falha crítica: Todos os modelos de IA falharam.');
+  throw lastError || new Error('Falha crítica: Todos os modelos de IA falharam na geração do tema do currículo.');
 }

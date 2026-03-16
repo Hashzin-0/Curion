@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Fluxo de IA para gerar tema visual completo para páginas de perfil com fallback.
+ * @fileOverview Fluxo de IA para gerar tema visual completo para páginas de perfil com fallback de modelos.
  */
 
 import { ai } from '@/src/ai/genkit';
@@ -31,7 +31,6 @@ export type ProfileTheme = z.infer<typeof ProfileThemeOutputSchema>;
 
 const profileThemePrompt = ai.definePrompt({
   name: 'profileThemePrompt',
-  model: AI_CONFIG.primaryModel,
   input: { schema: ProfileThemeInputSchema },
   output: { schema: ProfileThemeOutputSchema },
   prompt: `Você é um designer criativo que cria identidades visuais vibrantes para profissionais.
@@ -63,13 +62,13 @@ export async function generateProfileTheme(input: ProfileThemeInput): Promise<Pr
   const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
   let lastError = null;
 
-  for (const model of models) {
+  for (const modelId of models) {
     try {
-      console.log(`Tentando gerar tema de perfil com modelo: ${model}`);
-      const { output } = await profileThemePrompt(input, { model });
+      // O Genkit precisa que o modelo seja passado explicitamente na chamada se for diferente do padrão do prompt
+      const { output } = await profileThemePrompt(input, { model: modelId });
       if (output) return output;
     } catch (e) {
-      console.warn(`Modelo ${model} falhou ou está offline. Tentando próximo...`);
+      console.warn(`Tentativa com modelo ${modelId} falhou. Erro:`, e);
       lastError = e;
     }
   }
