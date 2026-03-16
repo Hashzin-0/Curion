@@ -15,7 +15,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY || '',
   baseURL: 'https://openrouter.ai/api/v1',
   defaultHeaders: {
-    'HTTP-Referer': 'https://curion-iota.vercel.app/',
+    'HTTP-Referer': 'https://curion-iota.vercel.app',
     'X-Title': 'Curion',
   }
 });

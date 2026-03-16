@@ -1,9 +1,10 @@
 
 'use client';
 
-import { forwardRef } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
+import WebFont from 'webfontloader';
 
 export type ResumeData = {
   name: string;
@@ -24,11 +25,10 @@ export type ResumeData = {
 
 type Props = {
   data: ResumeData;
-  theme: ResumeTheme;
+  theme: ResumeTheme & { fontFamily?: string };
   profileUrl?: string;
 };
 
-/* ─── helpers ─── */
 function DottedLine({ color }: { color: string }) {
   return (
     <span style={{ flex: 1, borderBottom: `2px dotted ${color}`, margin: '0 8px', marginBottom: '4px', opacity: 0.4 }} />
@@ -50,13 +50,24 @@ function SectionTitle({ emoji, label, primaryColor, secondaryColor }: { emoji: s
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LAYOUT 1: VIBRANT
-════════════════════════════════════════════════════════════ */
 function VibrantLayout({ data, theme, profileUrl }: Props) {
   const nameParts = data.name.toUpperCase().split(' ');
   const firstName = nameParts[0] || '';
   const restName = nameParts.slice(1).join(' ') || '';
+
+  const fontStyle = {
+    fontFamily: theme.fontFamily ? `'${theme.fontFamily}', sans-serif` : "'Arial Black', sans-serif"
+  };
+
+  useEffect(() => {
+    if (theme.fontFamily) {
+      WebFont.load({
+        google: {
+          families: [`${theme.fontFamily}:400,700,900`]
+        }
+      });
+    }
+  }, [theme.fontFamily]);
 
   const renderSection = (type: string) => {
     switch (type) {
@@ -113,7 +124,7 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
   const sections = data.sectionsOrder || ['summary', 'experience', 'education', 'skill'];
 
   return (
-    <div id="resume-template" style={{ width: '794px', minHeight: '1123px', backgroundColor: '#fff', fontFamily: "'Arial Black', Arial, sans-serif", color: '#1a1a1a', position: 'relative', overflow: 'hidden' }}>
+    <div id="resume-template" style={{ ...fontStyle, width: '794px', minHeight: '1123px', backgroundColor: '#fff', color: '#1a1a1a', position: 'relative', overflow: 'hidden' }}>
       <div style={{ height: '10px', backgroundColor: theme.primaryColor }} />
       <div style={{ backgroundColor: theme.primaryColor, padding: '30px 40px', display: 'flex', alignItems: 'center', gap: '24px', position: 'relative' }}>
         {data.photoUrl && (
@@ -140,7 +151,11 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
 
       <div style={{ position: 'absolute', bottom: 0, width: '100%', backgroundColor: '#1a1a1a', padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ color: '#fff', fontSize: '14px', fontWeight: '900' }}>{data.email} | {data.phone}</div>
-        {profileUrl && <div style={{ backgroundColor: '#fff', padding: '4px', borderRadius: '8px' }}><QRCodeSVG value={profileUrl} size={60} /></div>}
+        {profileUrl && (
+          <div style={{ backgroundColor: '#fff', padding: '6px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+            <QRCodeSVG value={profileUrl} size={60} level="H" includeMargin />
+          </div>
+        )}
       </div>
     </div>
   );
