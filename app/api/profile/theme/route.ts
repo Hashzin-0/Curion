@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { generateSystemProfileTheme } from '@/lib/premium-themes';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
     }
 
-    const theme = await generateProfileTheme({ name, headline, areas });
+    // Agora usa o gerador de sistema determinístico em vez de IA
+    const theme = generateSystemProfileTheme(name, headline || '', areas || []);
     return NextResponse.json(theme);
   } catch (error) {
     console.error('Erro ao gerar tema de perfil:', error);

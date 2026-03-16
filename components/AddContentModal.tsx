@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -48,11 +47,40 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [showCalendar, setShowCalendar] = useState<'start' | 'end' | null>(null);
   const [formParent] = useAutoAnimate();
 
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '', company_logo: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
+
+  const handleRefineDescription = async () => {
+    if (!expForm.description || !expForm.role) {
+      toast.warning('Preencha o cargo e a descrição atual primeiro.');
+      return;
+    }
+    setIsRefining(true);
+    try {
+      const res = await fetch('/api/experience/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: expForm.role,
+          company: expForm.company_name,
+          description: expForm.description,
+        }),
+      });
+      const data = await res.json();
+      if (data.refinedDescription) {
+        setExpForm(p => ({ ...p, description: data.refinedDescription }));
+        toast.success('Descrição refinada com IA!');
+      }
+    } catch (e) {
+      toast.error('Erro ao refinar com IA.');
+    } finally {
+      setIsRefining(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +204,21 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                         </div>
                       </div>
                       
-                      <div><label className={labelCls}>Descrição da Experiência</label><textarea rows={4} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Dica: Use ``` para blocos de código se for da área de tecnologia." /></div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className={labelCls}>Descrição da Experiência</label>
+                          <button 
+                            type="button" 
+                            onClick={handleRefineDescription} 
+                            disabled={isRefining}
+                            className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1 hover:underline"
+                          >
+                            {isRefining ? <LucideIcons.Loader2 size={12} className="animate-spin" /> : <LucideIcons.Sparkles size={12} />}
+                            {isRefining ? 'Refinando...' : 'Refinar com IA'}
+                          </button>
+                        </div>
+                        <textarea rows={6} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Descreva suas principais atividades e resultados..." />
+                      </div>
                     </div>
                   )}
 

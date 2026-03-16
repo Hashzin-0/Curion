@@ -3,6 +3,9 @@
  * Gera paletas, gradientes e partículas baseados no nome e área do usuário.
  */
 
+import { themes } from '@/styles/themes';
+import { detectAreaFromRole } from './utils';
+
 export function hashString(str: string) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -87,5 +90,71 @@ export function generatePremiumTheme(name: string, area = "tecnologia") {
     meshGradient: generateMeshGradient(palette),
     heroEmoji: particles[0].emoji,
     particles,
+  };
+}
+
+/**
+ * Gera tema de perfil determinístico (sem IA).
+ */
+export function generateSystemProfileTheme(name: string, headline: string, areas: string[]) {
+  const seed = hashString(name + headline);
+  const mainArea = areas[0] || "Geral";
+  const palette = generatePalette(seed);
+  const particles = generateParticles(seed, mainArea);
+  
+  const areaEmojis: Record<string, string> = {};
+  areas.forEach((a, i) => {
+    const aSeed = hashString(a);
+    const set = generateParticles(aSeed, a);
+    areaEmojis[a] = set[0].emoji;
+  });
+
+  return {
+    themeName: `Premium ${mainArea}`,
+    primaryHex: palette.primary,
+    secondaryHex: palette.secondary,
+    darkHex: palette.dark,
+    gradientStart: palette.primary,
+    gradientEnd: palette.secondary,
+    floatingEmojis: particles.slice(0, 8).map(p => p.emoji),
+    heroEmoji: particles[0].emoji,
+    tagline: `Portfólio Profissional de ${name}`,
+    areaEmojis,
+  };
+}
+
+/**
+ * Gera tema de currículo determinístico (sem IA).
+ */
+export function generateSystemResumeTheme(name: string, profession: string) {
+  const detected = detectAreaFromRole(profession);
+  const themeBase = themes[detected.slug as keyof typeof themes] || themes.default;
+  const seed = hashString(name + profession);
+  const palette = generatePalette(seed);
+
+  // Layout corporativo para certas áreas, vibrante para outras
+  const sidebarAreas = ['tecnologia', 'saude', 'logistica', 'administrativo', 'educacao'];
+  const layoutStyle = sidebarAreas.includes(detected.slug) ? 'sidebar' : 'vibrant';
+
+  const particles = generateParticles(seed, detected.slug);
+
+  return {
+    themeName: `Sistema ${detected.name}`,
+    layoutStyle,
+    primaryColor: themeBase.hex,
+    secondaryColor: themeBase.hexSecondary,
+    accentColor: palette.accent,
+    sidebarColor: themeBase.hexDark,
+    sidebarTextColor: '#ffffff',
+    textOnPrimary: '#ffffff',
+    headerEmoji: themeBase.emoji,
+    decorationEmoji: particles[1].emoji,
+    experienceEmoji: '🏢',
+    educationEmoji: '🎓',
+    courseEmoji: '📚',
+    skillEmoji: '⭐',
+    bulletEmoji: themeBase.emoji,
+    summaryEmoji: '💬',
+    professionalSummary: `PROFISSIONAL COM EXPERIÊNCIA EM ${profession.toUpperCase()}, FOCADO EM RESULTADOS E EXCELÊNCIA TÉCNICA NA ÁREA DE ${detected.name.toUpperCase()}.`,
   };
 }

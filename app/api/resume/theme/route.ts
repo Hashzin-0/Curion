@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
+import { generateSystemResumeTheme } from '@/lib/premium-themes';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { profession, name, experiences, skills } = body;
+    const { profession, name } = body;
 
     if (!profession || !name) {
       return NextResponse.json({ error: 'Profissão e nome são obrigatórios' }, { status: 400 });
     }
 
-    const theme = await generateResumeTheme({ profession, name, experiences, skills });
+    // Agora usa o gerador de sistema determinístico em vez de IA para o visual
+    const theme = generateSystemResumeTheme(name, profession);
     return NextResponse.json(theme);
   } catch (error) {
     console.error('Erro ao gerar tema:', error);
-    return NextResponse.json({ error: 'Erro ao gerar tema com IA' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao gerar tema' }, { status: 500 });
   }
 }
