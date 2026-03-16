@@ -184,7 +184,6 @@ export const useStore = create<AppState>((set, get) => ({
     if (!userData.id) return null;
     
     try {
-      // 1. Tenta buscar se o usuário já existe pelo ID
       const { data: existingUser } = await supabase
         .from('users')
         .select('*')
@@ -196,8 +195,6 @@ export const useStore = create<AppState>((set, get) => ({
         return existingUser;
       }
 
-      // 2. Se não existe, vamos criar um novo
-      // Primeiro, garante que o username sugerido não está tomado por outro ID
       let finalUsername = userData.username || 'user';
       const { data: usernameTaken } = await supabase
         .from('users')
@@ -206,7 +203,6 @@ export const useStore = create<AppState>((set, get) => ({
         .maybeSingle();
 
       if (usernameTaken) {
-        // Se o username está tomado, anexa os primeiros caracteres do ID para torná-lo único
         finalUsername = `${finalUsername}-${userData.id.substring(0, 5)}`;
       }
 
@@ -227,8 +223,6 @@ export const useStore = create<AppState>((set, get) => ({
         .single();
 
       if (error) {
-        console.error('Error syncing user:', error.message, error.details);
-        // Fallback local se falhar por RLS ou outro motivo, mas evitar travar o app
         set({ currentUser: newUser });
         return newUser;
       }
@@ -236,8 +230,6 @@ export const useStore = create<AppState>((set, get) => ({
       set({ currentUser: data });
       return data;
     } catch (err: any) {
-      console.error('Sync try/catch error:', err.message || err);
-      // Fallback mínimo
       const fallbackUser: User = {
         id: userData.id,
         username: userData.username || 'user',
@@ -277,16 +269,16 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const [
-        { data: users },
-        { data: areas },
-        { data: experiences },
-        { data: skills },
-        { data: areaSkills },
-        { data: education },
-        { data: achievements },
-        { data: certificates },
-        { data: portfolio },
-        { data: recommendations }
+        { data: usersData },
+        { data: areasData },
+        { data: experiencesData },
+        { data: skillsData },
+        { data: areaSkillsData },
+        { data: educationData },
+        { data: achievementsData },
+        { data: certificatesData },
+        { data: portfolioData },
+        { data: recommendationsData }
       ] = await Promise.all([
         supabase.from('users').select('*'),
         supabase.from('areas').select('*'),
@@ -301,16 +293,16 @@ export const useStore = create<AppState>((set, get) => ({
       ]);
 
       set({
-        users: users || mockUsers,
-        areas: areas || [],
-        experiences: experiences || [],
-        skills: skills || [],
-        areaSkills: areaSkills || [],
-        education: education || [],
-        achievements: achievements || [],
-        certificates: certificates || [],
-        portfolio: portfolio || [],
-        recommendations: recommendations || [],
+        users: (usersData && usersData.length > 0) ? [...usersData, ...mockUsers.filter(mu => !usersData.find(u => u.username === mu.username))] : mockUsers,
+        areas: areasData || [],
+        experiences: experiencesData || [],
+        skills: skillsData || [],
+        areaSkills: areaSkillsData || [],
+        education: educationData || [],
+        achievements: achievementsData || [],
+        certificates: certificatesData || [],
+        portfolio: portfolioData || [],
+        recommendations: recommendationsData || [],
         isLoading: false
       });
     } catch (error: any) {
@@ -346,7 +338,6 @@ export const useStore = create<AppState>((set, get) => ({
         icon: detected.icon,
         theme_color: detected.themeColor,
       });
-      // Busca a área recém criada no estado atualizado
       area = get().areas.find(a => a.slug === detected.slug);
     }
     

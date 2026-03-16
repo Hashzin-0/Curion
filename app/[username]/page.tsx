@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useStore } from '@/lib/store';
@@ -59,17 +60,15 @@ export default function PublicProfile() {
 
   useEffect(() => {
     async function fetchUser() {
-      if (!username) return;
+      if (!username || !isMounted) return;
       setLoadingUser(true);
       
-      // Tenta encontrar na store primeiro
       let found = users.find(u => u.username === username);
       
-      // Se não encontrou na store, tenta buscar direto no banco
       if (!found) {
         try {
           const { supabase } = await import('@/lib/supabase');
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('users')
             .select('*')
             .eq('username', username)
@@ -83,17 +82,16 @@ export default function PublicProfile() {
       setUser(found || null);
       setLoadingUser(false);
       
-      // SÓ redireciona se o carregamento global ACABOU e o usuário CONTINUA não sendo encontrado
+      // Só redireciona se tivermos certeza que a store terminou de carregar E o banco também falhou
       if (!found && !isLoading && isMounted) {
-        console.log('User not found, redirecting to home...');
-        router.push('/');
+        const timer = setTimeout(() => {
+          router.push('/');
+        }, 500); // Pequeno atraso para evitar falsos negativos
+        return () => clearTimeout(timer);
       }
     }
     
-    // Aguarda a montagem e o carregamento inicial da store
-    if (isMounted) {
-      fetchUser();
-    }
+    fetchUser();
   }, [username, users, isMounted, isLoading, router]);
 
   useEffect(() => {
