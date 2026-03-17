@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -148,7 +149,7 @@ export function ThemedProfileLayout(props: Props) {
                         layout
                         className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
                       >
-                        <div className="h-2 w-full" style={{ backgroundColor: theme.hex }} />
+                        <div className="h-2 w-full" style={{ backgroundColor: area.theme_color || theme.hex }} />
                         
                         {props.isOwner && (
                           <CardActions 
@@ -161,7 +162,7 @@ export function ThemedProfileLayout(props: Props) {
                         <div className="p-8 flex flex-col h-full">
                           <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-4">
-                              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: theme.hex }}>
+                              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: area.theme_color || theme.hex }}>
                                 <Briefcase className="w-7 h-7" />
                               </div>
                               <div>
@@ -241,7 +242,7 @@ export function ThemedProfileLayout(props: Props) {
                             )}
                           </div>
 
-                          <Link href={`/${props.username}/${area.slug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
+                          <Link href={`/${props.username}/${area.slug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: (area.theme_color || theme.hex) + '15', color: area.theme_color || theme.hex }}>
                             Ver Currículo Completo
                             <ArrowRight className="w-4 h-4" />
                           </Link>
@@ -253,7 +254,7 @@ export function ThemedProfileLayout(props: Props) {
               ) : (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
                   <p className="text-slate-500 font-bold">Nenhuma área cadastrada ainda.</p>
-                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências para gerar áreas automaticamente.</p>}
+                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências ou crie uma nova área manualmente.</p>}
                 </div>
               )}
             </section>

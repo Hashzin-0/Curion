@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
-import { useStore, Skill } from '@/lib/store';
+import { useStore, Skill, ProfessionalArea } from '@/lib/store';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { toast } from 'sonner';
 import { DayPicker } from 'react-day-picker';
@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import { SkillSearch } from './SkillSearch';
 
-type ContentType = 'experience' | 'education' | 'skill' | 'portfolio' | 'certificate';
+type ContentType = 'experience' | 'education' | 'skill' | 'portfolio' | 'certificate' | 'area';
 
 type Props = {
   isOpen: boolean;
@@ -27,6 +27,7 @@ const CONTENT_OPTIONS: {
   icon: any;
   color: string;
 }[] = [
+  { type: 'area', label: 'Nova Área Profissional', description: 'Crie uma nova categoria de currículo', icon: LucideIcons.Layers, color: 'blue' },
   { type: 'experience', label: 'Experiência Profissional', description: 'Empregos anteriores e atuais', icon: LucideIcons.Briefcase, color: 'blue' },
   { type: 'education', label: 'Formação Acadêmica', description: 'Escolaridade e cursos superiores', icon: LucideIcons.GraduationCap, color: 'emerald' },
   { type: 'skill', label: 'Competências & Skills', description: 'Habilidades técnicas e interpessoais', icon: LucideIcons.Star, color: 'orange' },
@@ -43,7 +44,7 @@ const COLOR_CLASSES: Record<string, string> = {
 };
 
 export function AddContentModal({ isOpen, onClose }: Props) {
-  const { currentUser, addExperienceWithAutoArea, addEducation, addSkillToRelevantAreas, addPortfolioItem } = useStore();
+  const { currentUser, addExperienceWithAutoArea, addEducation, addSkillToRelevantAreas, addPortfolioItem, addArea } = useStore();
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,6 +55,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
   const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
   const [skillForm, setSkillForm] = useState({ level: 80 });
+  const [areaForm, setAreaForm] = useState({ name: '', theme_color: '#3b82f6' });
 
   const handleAddSkill = async (skill: Skill) => {
     if (!currentUser || isSaving) return;
@@ -77,7 +79,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
     setIsSaving(true);
     try {
-      if (selectedType === 'experience') {
+      if (selectedType === 'area') {
+        if (!areaForm.name) throw new Error('Nome da área é obrigatório');
+        await addArea({
+          name: areaForm.name,
+          slug: areaForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          icon: 'Layers',
+          theme_color: areaForm.theme_color,
+        });
+      } else if (selectedType === 'experience') {
         if (!expForm.start_date) throw new Error('Data de início é obrigatória');
         await addExperienceWithAutoArea({
           user_id: currentUser.id,
@@ -194,8 +204,24 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     </div>
                   )}
 
-                  {(selectedType === 'experience' || selectedType === 'education' || selectedType === 'portfolio') && (
+                  {(selectedType === 'experience' || selectedType === 'education' || selectedType === 'portfolio' || selectedType === 'area') && (
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {selectedType === 'area' && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className={labelCls}>Nome da Área Profissional *</label>
+                            <input required value={areaForm.name} onChange={e => setAreaForm(p => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="Ex: Engenharia Civil, Marketing Digital..." />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Cor de Identidade</label>
+                            <div className="flex gap-4 items-center">
+                              <input type="color" value={areaForm.theme_color} onChange={e => setAreaForm(p => ({ ...p, theme_color: e.target.value }))} className="w-16 h-16 rounded-2xl cursor-pointer border-none p-0 bg-transparent" />
+                              <span className="text-xs font-mono uppercase text-slate-500">{areaForm.theme_color}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {selectedType === 'experience' && (
                         <div className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
