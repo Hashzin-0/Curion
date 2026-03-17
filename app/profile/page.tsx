@@ -14,7 +14,7 @@ import { RichEditor } from '@/components/RichEditor';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { Modal, Button, inputCls, labelCls } from '@/components/ui/SharedUI';
-import { cn } from '@/lib/utils';
+import { cn, calcDuration } from '@/lib/utils';
 
 export default function Dashboard() {
   const { 
@@ -46,29 +46,56 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (currentUser) {
-      setEditedProfile({ name: currentUser.name, headline: currentUser.headline, summary: currentUser.summary, location: currentUser.location, photo_url: currentUser.photo_url });
+      setEditedProfile({ 
+        name: currentUser.name, 
+        headline: currentUser.headline, 
+        summary: currentUser.summary, 
+        location: currentUser.location, 
+        photo_url: currentUser.photo_url 
+      });
     }
   }, [currentUser]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     const reader = new FileReader();
-    reader.onload = () => { setRawImage(reader.result as string); setIsCropOpen(true); };
+    reader.onload = () => { 
+      setRawImage(reader.result as string); 
+      setIsCropOpen(true); 
+    };
     reader.readAsDataURL(file);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'image/*': ['.jpeg', '.jpg', '.png'] }, multiple: false });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop, 
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png'] }, 
+    multiple: false 
+  });
 
   const fetchTheme = useCallback(async () => {
     if (!currentUser) return;
     setIsLoadingTheme(true);
     try {
-      const res = await fetch('/api/profile/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: currentUser.name, headline: currentUser.headline, areas: areas.map(a => a.name) }) });
+      const res = await fetch('/api/profile/theme', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          name: currentUser.name, 
+          headline: currentUser.headline, 
+          areas: areas.map(a => a.name) 
+        }) 
+      });
       if (res.ok) setProfileTheme(await res.json());
-    } catch (e) { console.error(e); } finally { setIsLoadingTheme(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setIsLoadingTheme(false); 
+    }
   }, [currentUser, areas]);
 
-  useEffect(() => { if (isAuthReady && currentUser) fetchTheme(); }, [isAuthReady, currentUser, fetchTheme]);
+  useEffect(() => { 
+    if (isAuthReady && currentUser) fetchTheme(); 
+  }, [isAuthReady, currentUser, fetchTheme]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,11 +109,43 @@ export default function Dashboard() {
     if (!currentUser) return;
     setIsGeneratingSummary(true);
     try {
-      const userExps = experiences.filter(e => e.user_id === currentUser.id).map(e => `${e.role} na ${e.company_name}`);
-      const result = await generateProfessionalSummary({ name: editedProfile.name || currentUser.name, headline: editedProfile.headline || currentUser.headline, experiences: userExps, skills: skills.map(s => s.name) });
+      // Coleta dados para o contexto da IA
+      const userExps = experiences
+        .filter(e => e.user_id === currentUser.id)
+        .map(e => ({
+          role: e.role,
+          company: e.company_name,
+          duration: calcDuration(e.start_date, e.end_date)
+        }));
+      
+      const userEdu = education
+        .filter(e => e.user_id === currentUser.id)
+        .map(e => ({
+          course: e.course,
+          institution: e.institution
+        }));
+
+      const userSkills = areaSkills
+        .filter(as => areas.some(a => a.id === as.area_id && a.user_id === currentUser.id))
+        .map(as => skills.find(s => s.id === as.skill_id)?.name)
+        .filter(Boolean) as string[];
+
+      const result = await generateProfessionalSummary({ 
+        name: editedProfile.name || currentUser.name, 
+        headline: editedProfile.headline || currentUser.headline, 
+        experiences: userExps, 
+        skills: [...new Set(userSkills)], // Habilidades únicas
+        education: userEdu
+      });
+      
       setEditedProfile(prev => ({ ...prev, summary: result.summary }));
       toast.info('Resumo gerado pela IA!');
-    } catch (error) { toast.error('Erro ao gerar resumo.'); } finally { setIsGeneratingSummary(false); }
+    } catch (error) { 
+      console.error('Erro ao gerar resumo:', error);
+      toast.error('Erro ao processar resumo com IA.'); 
+    } finally { 
+      setIsGeneratingSummary(false); 
+    }
   };
 
   const copyProfileLink = () => {
@@ -97,9 +156,34 @@ export default function Dashboard() {
     toast.success('Link copiado!');
   };
 
-  const handleSaveEdu = async (e: React.FormEvent) => { e.preventDefault(); if (!editingEdu) return; setIsProcessing(true); await updateEducation(editingEdu); setIsProcessing(false); setEditingEdu(null); toast.success('Atualizado!'); };
-  const handleSavePort = async (e: React.FormEvent) => { e.preventDefault(); if (!editingPort) return; setIsProcessing(true); await updatePortfolioItem(editingPort); setIsProcessing(false); setEditingPort(null); toast.success('Atualizado!'); };
-  const handleSaveArea = async () => { if (!editingArea || !areaForm.name) return; setIsProcessing(true); await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea); setIsProcessing(false); setEditingArea(null); toast.success('Atualizado!'); };
+  const handleSaveEdu = async (e: React.FormEvent) => { 
+    e.preventDefault(); 
+    if (!editingEdu) return; 
+    setIsProcessing(true); 
+    await updateEducation(editingEdu); 
+    setIsProcessing(false); 
+    setEditingEdu(null); 
+    toast.success('Atualizado!'); 
+  };
+  
+  const handleSavePort = async (e: React.FormEvent) => { 
+    e.preventDefault(); 
+    if (!editingPort) return; 
+    setIsProcessing(true); 
+    await updatePortfolioItem(editingPort); 
+    setIsProcessing(false); 
+    setEditingPort(null); 
+    toast.success('Atualizado!'); 
+  };
+  
+  const handleSaveArea = async () => { 
+    if (!editingArea || !areaForm.name) return; 
+    setIsProcessing(true); 
+    await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea); 
+    setIsProcessing(false); 
+    setEditingArea(null); 
+    toast.success('Atualizado!'); 
+  };
 
   if (!isAuthReady || (isLoading && !currentUser)) return <div className="min-h-screen flex items-center justify-center"><LucideIcons.Loader2 className="animate-spin" /></div>;
   if (!currentUser) return null;
@@ -116,21 +200,43 @@ export default function Dashboard() {
       </div>
 
       <ThemedProfileLayout
-        user={currentUser} areas={areas} education={education.filter(e => e.user_id === currentUser.id)} portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
-        isOwner={true} onEditProfile={() => setIsEditingProfile(true)} onAddContent={() => setIsAddingContent(true)}
-        onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} onDeleteArea={() => {}}
-        onEditEducation={setEditingEdu} onDeleteEducation={removeEducation} onEditPortfolio={setEditingPort} onDeletePortfolio={removePortfolioItem}
-        theme={profileTheme} isLoadingTheme={isLoadingTheme} username={currentUser.username}
+        user={currentUser} 
+        areas={areas} 
+        education={education.filter(e => e.user_id === currentUser.id)} 
+        portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
+        isOwner={true} 
+        onEditProfile={() => setIsEditingProfile(true)} 
+        onAddContent={() => setIsAddingContent(true)}
+        onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} 
+        onDeleteArea={() => {}}
+        onEditEducation={setEditingEdu} 
+        onDeleteEducation={removeEducation} 
+        onEditPortfolio={setEditingPort} 
+        onDeletePortfolio={removePortfolioItem}
+        theme={profileTheme} 
+        isLoadingTheme={isLoadingTheme} 
+        username={currentUser.username}
       />
 
       <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
-      {rawImage && <PhotoCropModal image={rawImage} isOpen={isCropOpen} onClose={() => { setIsCropOpen(false); setRawImage(null); }} onCropComplete={(cropped) => setEditedProfile({ ...editedProfile, photo_url: cropped })} />}
+      {rawImage && (
+        <PhotoCropModal 
+          image={rawImage} 
+          isOpen={isCropOpen} 
+          onClose={() => { setIsCropOpen(false); setRawImage(null); }} 
+          onCropComplete={(cropped) => setEditedProfile({ ...editedProfile, photo_url: cropped })} 
+        />
+      )}
 
       <Modal isOpen={isEditingProfile} onClose={() => setIsEditingProfile(false)} title="Editar Perfil">
         <form onSubmit={handleUpdateProfile} className="space-y-6">
           <div {...getRootProps()} className={cn("w-full border-2 border-dashed rounded-[1.5rem] p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all", isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200')}>
             <input {...getInputProps()} />
-            {editedProfile.photo_url ? <img src={editedProfile.photo_url} alt="profile" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" /> : <LucideIcons.Camera size={40} className="text-slate-400" />}
+            {editedProfile.photo_url ? (
+              <img src={editedProfile.photo_url} alt="profile" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
+            ) : (
+              <LucideIcons.Camera size={40} className="text-slate-400" />
+            )}
             <p className="text-sm font-bold text-slate-500">Alterar Foto de Perfil</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -140,14 +246,22 @@ export default function Dashboard() {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className={labelCls}>Resumo Profissional</label>
-              <button type="button" onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline">
+              <button 
+                type="button" 
+                onClick={handleGenerateSummary} 
+                disabled={isGeneratingSummary} 
+                className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline disabled:opacity-50"
+              >
                 {isGeneratingSummary ? <LucideIcons.Loader2 size={12} className="animate-spin" /> : <LucideIcons.Sparkles size={12} />}
                 {isGeneratingSummary ? 'Gerando...' : 'Gerar com IA'}
               </button>
             </div>
             <RichEditor content={editedProfile.summary || ''} onChange={(val) => setEditedProfile({ ...editedProfile, summary: val })} />
           </div>
-          <div className="flex gap-4"><Button variant="secondary" className="flex-1" onClick={() => setIsEditingProfile(false)}>Cancelar</Button><Button className="flex-1" type="submit">Salvar Alterações</Button></div>
+          <div className="flex gap-4">
+            <Button variant="secondary" className="flex-1" onClick={() => setIsEditingProfile(false)}>Cancelar</Button>
+            <Button className="flex-1" type="submit">Salvar Alterações</Button>
+          </div>
         </form>
       </Modal>
 
@@ -162,7 +276,13 @@ export default function Dashboard() {
       <Modal isOpen={!!editingArea} onClose={() => setEditingArea(null)} title="Estilo da Área">
         <div className="space-y-4">
           <div><label className={labelCls}>Nome da Área</label><input value={areaForm.name || ''} onChange={e => setAreaForm({...areaForm, name: e.target.value})} className={inputCls} /></div>
-          <div><label className={labelCls}>Cor Principal</label><div className="flex gap-2"><input type="color" value={areaForm.theme_color || '#3b82f6'} onChange={e => setAreaForm({...areaForm, theme_color: e.target.value})} className="h-12 w-12 rounded-xl cursor-pointer" /><input value={areaForm.theme_color || ''} onChange={e => setAreaForm({...areaForm, theme_color: e.target.value})} className="flex-1 font-mono uppercase text-sm px-4 rounded-xl border" /></div></div>
+          <div>
+            <label className={labelCls}>Cor Principal</label>
+            <div className="flex gap-2">
+              <input type="color" value={areaForm.theme_color || '#3b82f6'} onChange={e => setAreaForm({...areaForm, theme_color: e.target.value})} className="h-12 w-12 rounded-xl cursor-pointer" />
+              <input value={areaForm.theme_color || ''} onChange={e => setAreaForm({...areaForm, theme_color: e.target.value})} className="flex-1 font-mono uppercase text-sm px-4 rounded-xl border" />
+            </div>
+          </div>
           <Button className="w-full" onClick={handleSaveArea}>Aplicar Design</Button>
         </div>
       </Modal>
