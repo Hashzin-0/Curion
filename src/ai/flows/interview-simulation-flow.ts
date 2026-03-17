@@ -55,23 +55,27 @@ async function pcmToWav(
 }
 
 export async function simulateInterview(input: InterviewInput): Promise<InterviewOutput> {
-  // Utilizamos o modelo gemini-2.5-flash-preview que suporta áudio nativo in/out
-  // O nome solicitado 'gemini-live-2.5-flash-native-audio' é mapeado para as capacidades multimodais do flash 2.5
-  
-  const promptParts: any[] = [
-    { text: `Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}. Seja profissional e direto. Responda SEMPRE em áudio e texto simultaneamente.` }
-  ];
+  // Mapeamento de histórico para o formato de mensagens do Genkit 1.x
+  const historyMessages = input.history?.map(h => ({
+    role: h.role === 'model' ? 'model' as const : 'user' as const,
+    content: [{ text: h.content }]
+  })) || [];
 
-  // Se o usuário enviou áudio, incluímos como parte do prompt multimodal
-  if (input.userAudio) {
-    promptParts.push({
+  const currentPromptParts: any[] = [];
+
+  // Se for o início, o sistema se apresenta
+  if (historyMessages.length === 0 && !input.userAudio) {
+    currentPromptParts.push({ text: `Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}. Seja profissional e direto. Inicie a entrevista se apresentando e fazendo a primeira pergunta.` });
+  } else if (input.userAudio) {
+    // Se o usuário enviou áudio, incluímos como parte do prompt multimodal
+    currentPromptParts.push({
       media: {
         url: input.userAudio,
         contentType: 'audio/wav'
       }
     });
   } else {
-    promptParts.push({ text: "Inicie a entrevista se apresentando e fazendo a primeira pergunta." });
+    currentPromptParts.push({ text: "Continue a entrevista com base no contexto anterior." });
   }
 
   const response = await ai.generate({
@@ -84,8 +88,17 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
         },
       },
     },
-    prompt: promptParts,
-    history: input.history?.map(h => ({ role: h.role, content: [{ text: h.content }] })),
+    messages: [
+      {
+        role: 'user',
+        content: [{ text: `Sistema: Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}.` }]
+      },
+      ...historyMessages,
+      {
+        role: 'user',
+        content: currentPromptParts
+      }
+    ]
   });
 
   const responseText = response.text;
