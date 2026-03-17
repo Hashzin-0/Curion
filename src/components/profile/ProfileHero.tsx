@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User } from '@/lib/store';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
-import { ImportResumeModal } from '@/components/ImportResumeModal';
 
 type Props = {
   user: User;
@@ -22,7 +22,6 @@ type Props = {
 
 export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor }: Props) {
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
     <>
@@ -97,16 +96,15 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
                 <Sparkles className="w-4 h-4" /> Exportação Inteligente
               </button>
-              <button onClick={() => setIsImportOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
+              <Link href="/import" className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
                 <FileUp className="w-4 h-4" /> Importar Currículo
-              </button>
+              </Link>
             </div>
           )}
         </div>
       </div>
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
-      <ImportResumeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
     </>
   );
 }
