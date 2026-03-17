@@ -1,16 +1,15 @@
-
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Loader2, Plus, Trash2, Wand2, Download, ArrowLeft, X,
   User, Briefcase, GraduationCap, Star, FileText,
-  Palette, Layers, GripVertical, Upload, FileCode, Save, Check
+  Palette, Layers, GripVertical, Upload, FileCode, Save, Check, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
 import type { ResumeData } from '@/components/ResumeTemplate';
 import { ChromePicker } from 'react-color';
@@ -34,6 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { parseResumeText } from '@/src/ai/flows/parse-resume-text-flow';
+import { calcDuration } from '@/lib/utils';
 
 const ResumeTemplate = dynamic(() => import('@/components/ResumeTemplate'), { ssr: false });
 
@@ -53,7 +53,7 @@ const SECTION_OPTIONS: { type: SectionType; label: string; description: string; 
   { type: 'summary', label: 'Resumo Profissional', description: 'Um parágrafo sobre você', icon: FileText, color: 'blue' },
   { type: 'experience', label: 'Experiência', description: 'Empresa, cargo e período', icon: Briefcase, color: 'emerald' },
   { type: 'education', label: 'Escolaridade', description: 'Instituição e curso', icon: GraduationCap, color: 'purple' },
-  { type: 'course', label: 'Curso / Certificado', description: 'Cursos extras e certificações', icon: BookOpen, color: 'orange' },
+  { type: 'course', label: 'Curso / Certificado', description: 'Cursos extras e certificações', icon: Star, color: 'orange' },
   { type: 'skill', label: 'Competência', description: 'Habilidade técnica ou pessoal', icon: Star, color: 'rose' },
 ];
 
@@ -82,7 +82,11 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 
 export default function ResumeBuilderPage() {
   const router = useRouter();
-  const { currentUser, addExperienceWithAutoArea, addEducation, updateUser } = useStore();
+  const searchParams = useSearchParams();
+  const isSmartMode = searchParams.get('smart') === 'true';
+  
+  const { currentUser, experiences: dbExperiences, education: dbEducation, portfolio: dbPortfolio, areaSkills, skills: dbSkills, addExperienceWithAutoArea, addEducation, updateUser } = useStore();
+  
   const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
   const [isParsing, setIsParsing] = useState(false);
   const [isSavingToProfile, setIsSavingToProfile] = useState(false);
@@ -100,7 +104,7 @@ export default function ResumeBuilderPage() {
   const [education, setEducation] = useState<Education[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [addedSections, setAddedSections] = useState<SectionType[]>(['summary', 'experience', 'education']);
+  const [addedSections, setAddedSections] = useState<SectionType[]>(['summary', 'experience', 'education', 'skill']);
 
   // Theme State
   const [theme, setTheme] = useState<(ResumeTheme & { fontFamily?: string }) | null>(null);
@@ -112,6 +116,41 @@ export default function ResumeBuilderPage() {
   const [draftSummary, setDraftSummary] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  // Carrega dados de match inteligente se disponível
+  useEffect(() => {
+    if (!isSmartMode) return;
+
+    const storedMatch = localStorage.getItem('career_canvas_smart_match');
+    if (storedMatch) {
+      try {
+        const matchData = JSON.parse(storedMatch);
+        
+        // Filtra e mapeia os dados do banco baseados nos IDs selecionados pela IA
+        const matchedExps = dbExperiences
+          .filter(e => matchData.selectedExperienceIds.includes(e.id))
+          .map(e => ({ company: e.company_name, role: e.role, duration: calcDuration(e.start_date, e.end_date) }));
+        
+        const matchedEdu = dbEducation
+          .filter(e => matchData.selectedEducationIds.includes(e.id))
+          .map(e => ({ institution: e.institution, course: e.course, period: 'Concluído' }));
+
+        const matchedSkills = areaSkills
+          .filter(as => matchData.selectedSkillIds.includes(as.id))
+          .map(as => ({ name: dbSkills.find(s => s.id === as.skill_id)?.name || '', description: '' }));
+
+        setExperiences(matchedExps);
+        setEducation(matchedEdu);
+        setSkills(matchedSkills);
+        setSummary(matchData.tailoredSummary);
+        setProfession(matchData.tailoredHeadline);
+        
+        toast.success('Curadoria inteligente aplicada!');
+      } catch (e) {
+        console.error('Erro ao carregar match:', e);
+      }
+    }
+  }, [isSmartMode, dbExperiences, dbEducation, areaSkills, dbSkills]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -148,103 +187,6 @@ export default function ResumeBuilderPage() {
     }
   }, [name, profession, theme, generateTheme]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsParsing(true);
-    const toastId = toast.loading('Analisando currículo com IA...');
-
-    try {
-      let text = '';
-      if (file.type === 'application/pdf') {
-        const pdfjs = await import('pdfjs-dist');
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjs.getDocument(arrayBuffer).promise;
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map((item: any) => item.str).join(' ');
-        }
-      } else if (file.type.startsWith('image/')) {
-        const { createWorker } = await import('tesseract.js');
-        const worker = await createWorker('por');
-        const ret = await worker.recognize(file);
-        text = ret.data.text;
-        await worker.terminate();
-      }
-
-      if (!text) throw new Error('Não foi possível extrair texto do arquivo.');
-
-      const parsed = await parseResumeText({ text });
-      
-      if (parsed.name) setName(parsed.name);
-      if (parsed.profession) setProfession(parsed.profession);
-      if (parsed.email) setEmail(parsed.email);
-      if (parsed.phone) setPhone(parsed.phone);
-      if (parsed.summary) setSummary(parsed.summary);
-      if (parsed.experiences) setExperiences(parsed.experiences);
-      if (parsed.education) setEducation(parsed.education);
-      
-      toast.success('Dados importados! Revise abaixo.', { id: toastId });
-    } catch (err) {
-      console.error(err);
-      toast.error('Falha ao importar.', { id: toastId });
-    } finally {
-      setIsParsing(false);
-    }
-  };
-
-  const handleSaveToProfile = async () => {
-    if (!currentUser) return;
-    setIsSavingToProfile(true);
-    const toastId = toast.loading('Sincronizando com seu perfil...');
-
-    try {
-      // 1. Atualiza dados básicos
-      await updateUser({
-        name,
-        headline: profession,
-        summary,
-        phone,
-        email
-      });
-
-      // 2. Adiciona experiências
-      for (const exp of experiences) {
-        await addExperienceWithAutoArea({
-          user_id: currentUser.id,
-          company_name: exp.company,
-          role: exp.role,
-          company_logo: `https://picsum.photos/seed/${Math.random()}/100/100`,
-          start_date: new Date().toISOString(), // Idealmente extrair data real, mas simplificando
-          end_date: null,
-          description: '',
-        });
-      }
-
-      // 3. Adiciona Educação
-      for (const edu of education) {
-        await addEducation({
-          user_id: currentUser.id,
-          institution: edu.institution,
-          course: edu.course,
-          start_date: new Date().toISOString(),
-          end_date: null,
-        });
-      }
-
-      toast.success('Perfil atualizado com sucesso!', { id: toastId });
-      router.push('/profile');
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao salvar no perfil.', { id: toastId });
-    } finally {
-      setIsSavingToProfile(false);
-    }
-  };
-
   const exportPDF = useCallback(async () => {
     setIsExporting(true);
     try {
@@ -253,7 +195,7 @@ export default function ResumeBuilderPage() {
       if (!element) return;
       await html2pdf().set({
         margin: 0,
-        filename: `curriculo-${name.toLowerCase().replace(/\s+/g, '-')}.pdf`,
+        filename: `curriculo-otimizado-${name.toLowerCase().replace(/\s+/g, '-')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
         jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' },
@@ -277,7 +219,10 @@ export default function ResumeBuilderPage() {
         <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-md border-b border-white/10 p-4">
           <div className="flex items-center justify-between mb-4">
             <Link href="/profile" className="p-2 hover:bg-white/10 rounded-full transition-colors"><ArrowLeft size={20} /></Link>
-            <h1 className="text-sm font-black uppercase tracking-widest">Revisão de Importação</h1>
+            <h1 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+              {isSmartMode && <Sparkles size={14} className="text-blue-400" />}
+              {isSmartMode ? 'Currículo Otimizado' : 'Editor de Currículo'}
+            </h1>
             <button onClick={generateTheme} disabled={!name || !profession || isGenerating} className="p-2 text-yellow-400 hover:scale-110 transition-transform disabled:opacity-30">
               {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Wand2 size={20} />}
             </button>
@@ -291,18 +236,15 @@ export default function ResumeBuilderPage() {
         <div className="p-6 space-y-8">
           {activeTab === 'content' ? (
             <>
-              <div className="bg-blue-600/10 border border-blue-500/20 p-6 rounded-3xl text-center">
-                <label className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <Upload className="text-blue-400 group-hover:scale-110 transition-transform w-8 h-8" />
-                  <span className="text-xs font-black uppercase text-blue-400">Importar Novo Arquivo</span>
-                  <input type="file" accept=".pdf,image/*" className="hidden" onChange={handleFileUpload} disabled={isParsing} />
-                  {isParsing && <Loader2 className="animate-spin w-4 h-4 text-blue-400 mt-2" />}
-                </label>
-              </div>
+              {isSmartMode && (
+                <div className="bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl mb-6">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">IA selecionou os itens mais relevantes para a vaga.</p>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-yellow-400 mb-2">
-                  <User size={18} /> <h2 className="text-xs font-black uppercase">Dados Extraídos</h2>
+                  <User size={18} /> <h2 className="text-xs font-black uppercase">Dados Pessoais</h2>
                 </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome Completo" className={inputCls} />
                 <input value={profession} onChange={e => setProfession(e.target.value)} placeholder="Profissão" className={inputCls} />
@@ -312,7 +254,7 @@ export default function ResumeBuilderPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-blue-400"><Layers size={18} /> <h2 className="text-xs font-black uppercase">Configuração Visual</h2></div>
+                  <div className="flex items-center gap-2 text-blue-400"><Layers size={18} /> <h2 className="text-xs font-black uppercase">Organização</h2></div>
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={addedSections} strategy={verticalListSortingStrategy}>
@@ -333,17 +275,6 @@ export default function ResumeBuilderPage() {
                     </div>
                   </SortableContext>
                 </DndContext>
-              </div>
-              
-              <div className="pt-6">
-                <button 
-                  onClick={handleSaveToProfile}
-                  disabled={isSavingToProfile || !name}
-                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
-                >
-                  {isSavingToProfile ? <Loader2 className="animate-spin" /> : <Save />}
-                  Confirmar e Salvar no Perfil
-                </button>
               </div>
             </>
           ) : (
@@ -386,7 +317,7 @@ export default function ResumeBuilderPage() {
         {theme && (
           <div className="fixed bottom-8 right-8 flex gap-4">
             <button onClick={exportPDF} disabled={isExporting} className="px-8 py-4 bg-white text-slate-900 font-black rounded-full shadow-2xl flex items-center gap-3 hover:scale-105 transition-all">
-              {isExporting ? <Loader2 className="animate-spin" /> : <Download />} Baixar PDF
+              {isExporting ? <Loader2 className="animate-spin" /> : <Download />} Baixar PDF Otimizado
             </button>
           </div>
         )}
