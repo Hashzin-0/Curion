@@ -1,15 +1,17 @@
+
 'use client';
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles } from 'lucide-react';
+import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles, Mail } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User } from '@/lib/store';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
+import { CoverLetterModal } from '@/components/CoverLetterModal';
 
 type Props = {
   user: User;
@@ -22,6 +24,7 @@ type Props = {
 
 export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor }: Props) {
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
+  const [isCoverLetterOpen, setIsCoverLetterOpen] = useState(false);
 
   return (
     <>
@@ -89,15 +92,18 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
           </div>
 
           {isOwner && (
-            <div className="flex gap-4 mt-8 justify-center md:justify-start flex-wrap">
-              <button onClick={onEdit} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
+            <div className="flex gap-3 mt-8 justify-center md:justify-start flex-wrap">
+              <button onClick={onEdit} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
                 <Pencil className="w-4 h-4" /> Editar Perfil
               </button>
-              <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
-                <Sparkles className="w-4 h-4" /> Exportação Inteligente
+              <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
+                <Sparkles className="w-4 h-4" /> Currículo IA
               </button>
-              <Link href="/import" className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
-                <FileUp className="w-4 h-4" /> Importar Currículo
+              <button onClick={() => setIsCoverLetterOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl">
+                <Mail className="w-4 h-4" /> Carta de Apresentação
+              </button>
+              <Link href="/import" className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
+                <FileUp className="w-4 h-4" /> Importar
               </Link>
             </div>
           )}
@@ -105,6 +111,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
       </div>
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
+      <CoverLetterModal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} />
     </>
   );
 }
