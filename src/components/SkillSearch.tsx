@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useStore, Skill } from '@/lib/store';
 import fuzzysort from 'fuzzysort';
 import { Search, Plus, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { FixedSizeList as List } from 'react-window';
 
 export function SkillSearch({ onAdd }: { onAdd: (skill: Skill) => void }) {

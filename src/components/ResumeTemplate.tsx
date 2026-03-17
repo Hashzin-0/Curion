@@ -1,4 +1,3 @@
-
 'use client';
 
 import { forwardRef, useEffect } from 'react';
@@ -59,7 +58,8 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
   };
 
   useEffect(() => {
-    if (theme.fontFamily && typeof window !== 'undefined') {
+    if (theme.fontFamily) {
+      // Carregamento dinâmico do webfontloader para evitar erro de window no SSR
       import('webfontloader').then((WebFont) => {
         WebFont.load({
           google: {

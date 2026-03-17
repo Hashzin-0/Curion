@@ -6,11 +6,12 @@ import { FileUp, Type, Loader2, Sparkles, FileText, BrainCircuit } from 'lucide-
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { parseResumeText } from '@/ai/flows/parse-resume-text-flow';
-import { matchJobRequirements } from '@/ai/flows/match-job-requirements-flow';
+import { parseResumeText } from '@/src/ai/flows/parse-resume-text-flow';
+import { matchJobRequirements } from '@/src/ai/flows/match-job-requirements-flow';
 import * as pdfjs from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
+// Configuração do PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 type Props = {
@@ -58,8 +59,10 @@ export function ImportResumeModal({ isOpen, onClose }: Props) {
         throw new Error('Por favor, forneça o texto ou arquivo do currículo.');
       }
 
+      // Chama a IA para extrair dados estruturados do currículo
       const parsedData = await parseResumeText({ text: finalResumeText });
 
+      // Se houver detalhes da vaga, fazemos o match também
       let matchResult = null;
       if (jobText) {
         matchResult = await matchJobRequirements({ 
@@ -72,6 +75,7 @@ export function ImportResumeModal({ isOpen, onClose }: Props) {
         });
       }
 
+      // Salva no localStorage para a página /resume consumir
       localStorage.setItem('career_canvas_import_data', JSON.stringify({
         parsedData,
         matchResult,

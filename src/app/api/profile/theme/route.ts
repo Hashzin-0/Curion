@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSystemProfileTheme } from '@/lib/premium-themes';
 
@@ -11,6 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
     }
 
+    // Agora usa o gerador de sistema determinístico em vez de IA
     const theme = generateSystemProfileTheme(name, headline || '', areas || []);
     return NextResponse.json(theme);
   } catch (error) {

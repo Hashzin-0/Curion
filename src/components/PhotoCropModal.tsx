@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useCallback } from 'react';
 import Cropper, { Area } from 'react-easy-crop';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Check } from 'lucide-react';
 import Resizer from 'react-image-file-resizer';
 

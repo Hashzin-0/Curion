@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { Modal, Button, inputCls, labelCls } from './ui/SharedUI';
 import { useStore } from '@/lib/store';
-import { Sparkles, Loader2, Upload, BrainCircuit, FileUp, Type } from 'lucide-react';
+import { Sparkles, Loader2, FileText, Upload, BrainCircuit, FileUp, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import * as pdfjs from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
+// Configuração do PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 type Props = {
@@ -61,6 +62,7 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
         throw new Error('Por favor, forneça uma descrição da vaga válida.');
       }
 
+      // Coleta dados completos para o match
       const profileContext = {
         experiences: experiences.filter(e => e.user_id === currentUser.id),
         education: education.filter(e => e.user_id === currentUser.id),
@@ -79,6 +81,7 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
       if (!res.ok) throw new Error('Falha na resposta da IA');
       const matchResult = await res.json();
 
+      // Salva no localStorage para o preview de currículo carregar
       localStorage.setItem('career_canvas_smart_match', JSON.stringify({
         ...matchResult,
         timestamp: Date.now()
