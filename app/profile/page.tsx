@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore, User, ProfessionalArea } from '@/lib/store';
+import { useStore, User, ProfessionalArea, Education, PortfolioItem, Certificate } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -17,14 +16,25 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { currentUser, areas, updateUser, isAuthReady, experiences, skills, updateArea, removeArea, isLoading } = useStore();
+  const { 
+    currentUser, areas, updateUser, isAuthReady, experiences, skills, 
+    updateArea, removeArea, isLoading, education, portfolio, certificates,
+    updateEducation, removeEducation, updatePortfolioItem, removePortfolioItem,
+    updateCertificate, removeCertificate
+  } = useStore();
   const router = useRouter();
 
   // Estados para edição/exclusão de áreas
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
   const [deletingArea, setDeletingArea] = useState<ProfessionalArea | null>(null);
-  const [isProcessingArea, setIsProcessingArea] = useState(false);
+  
+  // Estados para edição de novos tipos de conteúdo
+  const [editingEdu, setEditingEdu] = useState<Education | null>(null);
+  const [editingPort, setEditingPort] = useState<PortfolioItem | null>(null);
+  const [editingCert, setEditingCert] = useState<Certificate | null>(null);
+  
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Estados para perfil
   const [isAddingContent, setIsAddingContent] = useState(false);
@@ -150,23 +160,51 @@ export default function Dashboard() {
     toast.success('Link copiado!');
   };
 
-  const handleEditArea = (area: ProfessionalArea) => {
-    setEditingArea(area);
-    setAreaForm({ ...area });
+  // Handlers de Edição Genéricos
+  const handleSaveEdu = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEdu) return;
+    setIsProcessing(true);
+    await updateEducation(editingEdu);
+    setIsProcessing(false);
+    setEditingEdu(null);
+    toast.success('Formação atualizada!');
   };
+
+  const handleSavePort = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPort) return;
+    setIsProcessing(true);
+    await updatePortfolioItem(editingPort);
+    setIsProcessing(false);
+    setEditingPort(null);
+    toast.success('Item do portfólio atualizado!');
+  };
+
+  const handleSaveCert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCert) return;
+    setIsProcessing(true);
+    await updateCertificate(editingCert);
+    setIsProcessing(false);
+    setEditingCert(null);
+    toast.success('Certificado atualizado!');
+  };
+
   const handleSaveArea = async () => {
     if (!editingArea || !areaForm.name || !areaForm.slug) return;
-    setIsProcessingArea(true);
+    setIsProcessing(true);
     await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea);
-    setIsProcessingArea(false);
+    setIsProcessing(false);
     setEditingArea(null);
     toast.success('Área atualizada!');
   };
+
   const handleDeleteArea = async () => {
     if (!deletingArea) return;
-    setIsProcessingArea(true);
+    setIsProcessing(true);
     await removeArea(deletingArea.id);
-    setIsProcessingArea(false);
+    setIsProcessing(false);
     setDeletingArea(null);
     toast.success('Área removida.');
   };
@@ -181,6 +219,9 @@ export default function Dashboard() {
   }
 
   if (!currentUser) return null;
+
+  const inputCls = "w-full p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium";
+  const labelCls = "block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2";
 
   return (
     <>
@@ -213,11 +254,20 @@ export default function Dashboard() {
       <ThemedProfileLayout
         user={currentUser}
         areas={areas}
+        education={education.filter(e => e.user_id === currentUser.id)}
+        portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
+        certificates={certificates.filter(c => c.user_id === currentUser.id)}
         isOwner={true}
         onEditProfile={() => setIsEditingProfile(true)}
         onAddContent={() => setIsAddingContent(true)}
-        onEditArea={handleEditArea}
+        onEditArea={(area) => { setEditingArea(area); setAreaForm(area); }}
         onDeleteArea={setDeletingArea}
+        onEditEducation={setEditingEdu}
+        onDeleteEducation={removeEducation}
+        onEditPortfolio={setEditingPort}
+        onDeletePortfolio={removePortfolioItem}
+        onEditCertificate={setEditingCert}
+        onDeleteCertificate={removeCertificate}
         theme={profileTheme}
         isLoadingTheme={isLoadingTheme}
         username={currentUser.username}
@@ -234,6 +284,7 @@ export default function Dashboard() {
         />
       )}
 
+      {/* MODAL EDITAR PERFIL */}
       <AnimatePresence>
         {isEditingProfile && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -283,8 +334,57 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Outros modais existentes (Area etc) permanecem iguais... */}
+      {/* MODAIS DE EDIÇÃO DE CONTEÚDO */}
       <AnimatePresence>
+        {editingEdu && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form onSubmit={handleSaveEdu} className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-xl">
+              <h3 className="text-xl font-black mb-6">Editar Formação</h3>
+              <div className="space-y-4">
+                <div><label className={labelCls}>Instituição</label><input required value={editingEdu.institution} onChange={e => setEditingEdu({...editingEdu, institution: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Curso</label><input required value={editingEdu.course} onChange={e => setEditingEdu({...editingEdu, course: e.target.value})} className={inputCls} /></div>
+                <div className="flex gap-4">
+                  <button type="button" onClick={() => setEditingEdu(null)} className="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
+                  <button type="submit" disabled={isProcessing} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">{isProcessing ? 'Salvando...' : 'Salvar'}</button>
+                </div>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
+        {editingPort && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form onSubmit={handleSavePort} className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-xl">
+              <h3 className="text-xl font-black mb-6">Editar Projeto</h3>
+              <div className="space-y-4">
+                <div><label className={labelCls}>Título</label><input required value={editingPort.title} onChange={e => setEditingPort({...editingPort, title: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Descrição</label><textarea required value={editingPort.description} onChange={e => setEditingPort({...editingPort, description: e.target.value})} className={inputCls + " h-32"} /></div>
+                <div><label className={labelCls}>Link (Opcional)</label><input value={editingPort.link_url || ''} onChange={e => setEditingPort({...editingPort, link_url: e.target.value})} className={inputCls} /></div>
+                <div className="flex gap-4">
+                  <button type="button" onClick={() => setEditingPort(null)} className="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
+                  <button type="submit" disabled={isProcessing} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold">{isProcessing ? 'Salvando...' : 'Salvar'}</button>
+                </div>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
+        {editingCert && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form onSubmit={handleSaveCert} className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-xl">
+              <h3 className="text-xl font-black mb-6">Editar Certificado</h3>
+              <div className="space-y-4">
+                <div><label className={labelCls}>Título</label><input required value={editingCert.title} onChange={e => setEditingCert({...editingCert, title: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Instituição</label><input required value={editingCert.institution} onChange={e => setEditingCert({...editingCert, institution: e.target.value})} className={inputCls} /></div>
+                <div className="flex gap-4">
+                  <button type="button" onClick={() => setEditingCert(null)} className="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
+                  <button type="submit" disabled={isProcessing} className="flex-1 py-3 bg-orange-600 text-white rounded-xl font-bold">{isProcessing ? 'Salvando...' : 'Salvar'}</button>
+                </div>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
         {editingArea && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
@@ -303,8 +403,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex gap-3 pt-6">
                   <button onClick={() => setEditingArea(null)} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-500">Cancelar</button>
-                  <button onClick={handleSaveArea} disabled={isProcessingArea} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
-                    {isProcessingArea ? 'Salvando...' : 'Salvar'}
+                  <button onClick={handleSaveArea} disabled={isProcessing} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
+                    {isProcessing ? 'Salvando...' : 'Salvar'}
                   </button>
                 </div>
               </div>
@@ -324,8 +424,8 @@ export default function Dashboard() {
               <p className="text-slate-500 dark:text-slate-400 mb-8">Tem certeza que deseja remover a área <strong>{deletingArea.name}</strong>? Todas as experiências associadas serão mantidas, mas a área sumirá.</p>
               <div className="flex gap-3">
                 <button onClick={() => setDeletingArea(null)} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-500">Cancelar</button>
-                <button onClick={handleDeleteArea} disabled={isProcessingArea} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 disabled:opacity-50">
-                  {isProcessingArea ? 'Removendo...' : 'Sim, Remover'}
+                <button onClick={handleDeleteArea} disabled={isProcessing} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 disabled:opacity-50">
+                  {isProcessing ? 'Removendo...' : 'Sim, Remover'}
                 </button>
               </div>
             </motion.div>
