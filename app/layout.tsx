@@ -1,4 +1,3 @@
-
 import type {Metadata} from 'next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
@@ -13,6 +12,10 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'CareerCanvas — Portfólio Inteligente',
   description: 'Seu currículo interativo e temático com IA',
+  icons: {
+    icon: '/icon-512.png',
+    apple: '/icon-512.png',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
