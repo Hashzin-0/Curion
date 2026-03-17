@@ -73,6 +73,18 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
+  // Conquistas
+  async upsertAchievement(ach: Partial<Achievement>) {
+    const { data, error } = await supabase.from('achievements').upsert(ach).select().single();
+    if (error) throw error;
+    return data as Achievement;
+  },
+
+  async deleteAchievement(id: string) {
+    const { error } = await supabase.from('achievements').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   // Portfólio
   async upsertPortfolioItem(item: Partial<PortfolioItem>) {
     const { data, error } = await supabase.from('portfolio').upsert(item).select().single();

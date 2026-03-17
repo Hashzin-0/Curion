@@ -50,6 +50,10 @@ interface AppState {
   updateEducation: (edu: Education) => Promise<void>;
   removeEducation: (id: string) => Promise<void>;
 
+  addAchievement: (ach: Omit<Achievement, 'id'>) => Promise<void>;
+  updateAchievement: (ach: Achievement) => Promise<void>;
+  removeAchievement: (id: string) => Promise<void>;
+
   addPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => Promise<void>;
   updatePortfolioItem: (item: PortfolioItem) => Promise<void>;
   removePortfolioItem: (id: string) => Promise<void>;
@@ -163,6 +167,19 @@ export const useStore = create<AppState>()(
       removeEducation: async (id) => {
         await DatabaseService.deleteEducation(id);
         set(s => ({ education: s.education.filter(e => e.id !== id) }));
+      },
+
+      addAchievement: async (ach) => {
+        const data = await DatabaseService.upsertAchievement(ach);
+        set(s => ({ achievements: [data, ...s.achievements] }));
+      },
+      updateAchievement: async (ach) => {
+        const data = await DatabaseService.upsertAchievement(ach);
+        set(s => ({ achievements: s.achievements.map(a => a.id === ach.id ? data : a) }));
+      },
+      removeAchievement: async (id) => {
+        await DatabaseService.deleteAchievement(id);
+        set(s => ({ achievements: s.achievements.filter(a => a.id !== id) }));
       },
 
       addPortfolioItem: async (item) => {
