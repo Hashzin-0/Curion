@@ -136,6 +136,7 @@ export const useStore = create<AppState>()(
         if (!currentUser) return;
         const data = await DatabaseService.upsertArea({ ...area, user_id: currentUser.id });
         set((s) => ({ areas: [...s.areas, data] }));
+        return data;
       },
       updateArea: async (area) => {
         const data = await DatabaseService.upsertArea(area);

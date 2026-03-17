@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
 import { useStore, Skill } from '@/lib/store';
@@ -42,7 +43,7 @@ const COLOR_CLASSES: Record<string, string> = {
 };
 
 export function AddContentModal({ isOpen, onClose }: Props) {
-  const { currentUser, areas, addExperienceWithAutoArea, addEducation, addAreaSkill, areaSkills } = useStore();
+  const { currentUser, areas, addExperienceWithAutoArea, addEducation, addAreaSkill, areaSkills, addArea } = useStore();
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,28 +54,55 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
   const [skillForm, setSkillForm] = useState({ areaId: '', level: 80 });
 
-  const handleAddSkill = async (skill: Skill) => {
-    if (!currentUser || !skillForm.areaId) {
-      toast.error('Selecione uma área para vincular esta habilidade.');
-      return;
+  // Pré-seleciona a primeira área disponível ao abrir a seção de habilidades
+  useEffect(() => {
+    if (selectedType === 'skill' && areas.length > 0 && !skillForm.areaId) {
+      setSkillForm(s => ({ ...s, areaId: areas[0].id }));
     }
+  }, [selectedType, areas, skillForm.areaId]);
 
-    const alreadyHas = areaSkills.find(as => as.area_id === skillForm.areaId && as.skill_id === skill.id);
-    if (alreadyHas) {
-      toast.warning('Esta habilidade já está nesta área.');
-      return;
-    }
+  const handleAddSkill = async (skill: Skill) => {
+    if (!currentUser) return;
+    if (isSaving) return;
 
     setIsSaving(true);
     try {
+      let targetAreaId = skillForm.areaId;
+
+      // Se o usuário não tiver áreas, criamos uma área "Geral" automaticamente
+      if (!targetAreaId) {
+        if (areas.length === 0) {
+          const newArea = await addArea({
+            name: 'Geral',
+            slug: 'geral',
+            icon: 'Briefcase',
+            theme_color: '#334155'
+          } as any);
+          targetAreaId = (newArea as any).id;
+          setSkillForm(s => ({ ...s, areaId: targetAreaId }));
+        } else {
+          toast.error('Por favor, selecione uma área para vincular esta habilidade.');
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      const alreadyHas = areaSkills.find(as => as.area_id === targetAreaId && as.skill_id === skill.id);
+      if (alreadyHas) {
+        toast.warning('Esta habilidade já está nesta área.');
+        setIsSaving(false);
+        return;
+      }
+
       await addAreaSkill({
-        area_id: skillForm.areaId,
+        area_id: targetAreaId,
         skill_id: skill.id,
         level: skillForm.level
       });
       toast.success(`${skill.name} adicionada com sucesso!`);
     } catch (e) {
-      toast.error('Erro ao adicionar habilidade.');
+      console.error(e);
+      toast.error('Erro ao adicionar habilidade. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
@@ -82,8 +110,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
-    if (selectedType === 'skill') return; // Skills são tratadas pelo handleAddSkill
+    if (!currentUser || isSaving) return;
+    if (selectedType === 'skill') return;
 
     setIsSaving(true);
     try {
@@ -109,11 +137,11 @@ export function AddContentModal({ isOpen, onClose }: Props) {
         });
       }
 
-      toast.success('Conteúdo adicionado!');
+      toast.success('Conteúdo adicionado com sucesso!');
       setSelectedType(null);
       onClose();
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao salvar.');
+      toast.error(err.message || 'Erro ao salvar os dados.');
     } finally {
       setIsSaving(false);
     }
@@ -146,10 +174,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     {CONTENT_OPTIONS.map((option) => {
                       const Icon = option.icon;
                       return (
-                        <button key={option.type} onClick={() => {
-                          setSelectedType(option.type);
-                          if (option.type === 'skill' && areas.length > 0) setSkillForm(s => ({ ...s, areaId: areas[0].id }));
-                        }} className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}>
+                        <button key={option.type} onClick={() => setSelectedType(option.type)} className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}>
                           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/50 dark:bg-slate-800/50"><Icon /></div>
                           <div className="flex-1">
                             <div className="font-black text-slate-900 dark:text-white">{option.label}</div>
@@ -163,8 +188,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
               ) : (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center mb-6">
-                    <button type="button" onClick={() => setSelectedType(null)} className="flex items-center gap-2 text-slate-500 font-bold"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
-                    <h3 className="text-xl font-black">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
+                    <button type="button" onClick={() => setSelectedType(null)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-700 transition-colors"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
+                    <h3 className="text-xl font-black uppercase tracking-tight">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
                     <div className="w-16" />
                   </div>
 
@@ -178,7 +203,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                             onChange={(e) => setSkillForm({ ...skillForm, areaId: e.target.value })} 
                             className={inputCls}
                           >
-                            <option value="">Selecione uma área</option>
+                            <option value="">{areas.length === 0 ? "Criar Área Geral automaticamente" : "Selecione uma área"}</option>
                             {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                           </select>
                         </div>
@@ -195,10 +220,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                       <div className="pt-4">
                         <label className={labelCls}>Procurar Habilidade</label>
                         <SkillSearch onAdd={handleAddSkill} />
+                        {isSaving && (
+                          <div className="flex items-center justify-center gap-2 mt-4 text-blue-600 font-bold animate-pulse">
+                            <LucideIcons.Loader2 className="animate-spin" /> Salvando habilidade...
+                          </div>
+                        )}
                       </div>
                       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800">
                         <p className="text-xs font-bold text-blue-600 dark:text-blue-400 text-center">
-                          Habilidades adicionadas aqui aparecerão automaticamente no currículo da área selecionada.
+                          Selecione uma habilidade na busca acima para salvá-la no seu perfil.
                         </p>
                       </div>
                     </div>
@@ -260,7 +290,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
                       <div className="flex gap-4 pt-4">
                         <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
-                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:scale-[1.02]">
                           {isSaving && <LucideIcons.Loader2 className="animate-spin" />}
                           {isSaving ? 'Salvando...' : 'Adicionar Registro'}
                         </button>
@@ -270,7 +300,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
                   {selectedType === 'skill' && (
                     <div className="flex justify-center pt-8">
-                      <button onClick={onClose} className="px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black shadow-xl">Concluir</button>
+                      <button onClick={onClose} className="px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black shadow-xl hover:scale-[1.02] transition-all">Concluir</button>
                     </div>
                   )}
                 </div>
