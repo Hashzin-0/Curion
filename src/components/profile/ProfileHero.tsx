@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -13,6 +12,7 @@ import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
 import { CoverLetterModal } from '@/components/CoverLetterModal';
 import { InterviewSimulatorModal } from '@/components/InterviewSimulatorModal';
+import { AudioBioPlayer } from './AudioBioPlayer';
 
 type Props = {
   user: User;
@@ -62,9 +62,14 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
         </PremiumCard3D>
 
         <div className="text-center md:text-left flex-1">
-          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] bg-white/10 text-white border border-white/20 backdrop-blur-md">
-            <Wand2 className="w-3 h-3 text-yellow-400" />
-            {theme?.themeName || 'Premium Portfolio'}
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] bg-white/10 text-white border border-white/20 backdrop-blur-md">
+              <Wand2 className="w-3 h-3 text-yellow-400" />
+              {theme?.themeName || 'Premium Portfolio'}
+            </div>
+            {user.summary && (
+              <AudioBioPlayer text={user.summary} accentColor={accentColor} />
+            )}
           </div>
 
           <RoughNotationGroup show={true}>
