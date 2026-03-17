@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import {
   Loader2, Plus, Trash2, Wand2, Download, ArrowLeft, X,
   User, Briefcase, GraduationCap, Star, FileText,
@@ -79,7 +79,7 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
   );
 }
 
-export default function ResumeBuilderPage() {
+function ResumeBuilderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSmartMode = searchParams.get('smart') === 'true';
@@ -381,5 +381,17 @@ export default function ResumeBuilderPage() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
       `}</style>
     </div>
+  );
+}
+
+export default function ResumeBuilderPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+      </div>
+    }>
+      <ResumeBuilderContent />
+    </Suspense>
   );
 }
