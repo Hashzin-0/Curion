@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/services/database';
 
 export default function PublicProfile() {
   const { username } = useParams();
@@ -44,7 +45,12 @@ export default function PublicProfile() {
       }
     }
     
-    setUser(found || null);
+    if (found) {
+      setUser(found);
+      // Registra a visualização (Analytics)
+      DatabaseService.recordProfileView(found.id);
+    }
+    
     setLoadingUser(false);
     
     // Redireciona se não encontrar após carregar

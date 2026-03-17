@@ -12,6 +12,7 @@ import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
 import { PhotoCropModal } from '@/components/PhotoCropModal';
 import { RichEditor } from '@/components/RichEditor';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { Modal, Button, inputCls, labelCls } from '@/components/ui/SharedUI';
@@ -27,6 +28,7 @@ export default function Dashboard() {
   } = useStore();
   const router = useRouter();
 
+  const [activeTab, setActiveTab] = useState<'profile' | 'analytics'>('profile');
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
   const [editingEdu, setEditingEdu] = useState<Education | null>(null);
@@ -205,6 +207,20 @@ export default function Dashboard() {
     <>
       <div className="fixed top-4 left-4 z-20 flex items-center gap-2">
         <Button variant="secondary" onClick={() => router.push(`/${currentUser.username}`)}>Ver Perfil</Button>
+        <div className="flex bg-white/10 backdrop-blur-md p-1 rounded-2xl border border-white/20">
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn("px-4 py-2 rounded-xl text-xs font-black uppercase transition-all", activeTab === 'profile' ? "bg-white text-slate-900 shadow-lg" : "text-white/70")}
+          >
+            Perfil
+          </button>
+          <button 
+            onClick={() => setActiveTab('analytics')}
+            className={cn("px-4 py-2 rounded-xl text-xs font-black uppercase transition-all", activeTab === 'analytics' ? "bg-white text-slate-900 shadow-lg" : "text-white/70")}
+          >
+            Métricas
+          </button>
+        </div>
         <Button variant={copied ? 'accent' : 'secondary'} className={copied ? 'bg-emerald-500 text-white' : ''} onClick={copyProfileLink}>
           {copied ? <LucideIcons.Check size={16} /> : <LucideIcons.Copy size={16} />}
           {copied ? 'Copiado' : 'Link'}
@@ -212,26 +228,38 @@ export default function Dashboard() {
         <Button variant="danger" onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}>Sair</Button>
       </div>
 
-      <ThemedProfileLayout
-        user={currentUser} 
-        areas={areas} 
-        education={education.filter(e => e.user_id === currentUser.id)} 
-        portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
-        isOwner={true} 
-        onEditProfile={() => setIsEditingProfile(true)} 
-        onAddContent={() => setIsAddingContent(true)}
-        onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} 
-        onDeleteArea={(id) => { if(confirm('Excluir esta área e todas as suas experiências?')) removeArea(id); }}
-        onEditEducation={setEditingEdu} 
-        onDeleteEducation={(id) => { if(confirm('Excluir esta formação?')) removeEducation(id); }} 
-        onEditPortfolio={setEditingPort} 
-        onDeletePortfolio={(id) => { if(confirm('Excluir este item do portfólio?')) removePortfolioItem(id); }}
-        onEditExperience={setEditingExp}
-        onDeleteExperience={(id) => { if(confirm('Excluir esta experiência?')) removeExperience(id); }}
-        theme={profileTheme} 
-        isLoadingTheme={isLoadingTheme} 
-        username={currentUser.username}
-      />
+      {activeTab === 'profile' ? (
+        <ThemedProfileLayout
+          user={currentUser} 
+          areas={areas} 
+          education={education.filter(e => e.user_id === currentUser.id)} 
+          portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
+          isOwner={true} 
+          onEditProfile={() => setIsEditingProfile(true)} 
+          onAddContent={() => setIsAddingContent(true)}
+          onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} 
+          onDeleteArea={(id) => { if(confirm('Excluir esta área e todas as suas experiências?')) removeArea(id); }}
+          onEditEducation={setEditingEdu} 
+          onDeleteEducation={(id) => { if(confirm('Excluir esta formação?')) removeEducation(id); }} 
+          onEditPortfolio={setEditingPort} 
+          onDeletePortfolio={(id) => { if(confirm('Excluir este item do portfólio?')) removePortfolioItem(id); }}
+          onEditExperience={setEditingExp}
+          onDeleteExperience={(id) => { if(confirm('Excluir esta experiência?')) removeExperience(id); }}
+          theme={profileTheme} 
+          isLoadingTheme={isLoadingTheme} 
+          username={currentUser.username}
+        />
+      ) : (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-12 pt-24">
+          <div className="max-w-5xl mx-auto space-y-12">
+            <header>
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Seu Alcance Profissional</h1>
+              <p className="text-slate-500 font-medium">Veja como os recrutadores estão interagindo com seu portfólio.</p>
+            </header>
+            <AnalyticsDashboard userId={currentUser.id} />
+          </div>
+        </div>
+      )}
 
       <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
       {rawImage && (

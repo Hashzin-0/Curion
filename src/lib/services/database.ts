@@ -37,6 +37,25 @@ export const DatabaseService = {
     return data;
   },
 
+  // Analytics de Visualizações
+  async recordProfileView(userId: string) {
+    // Registra uma visualização de perfil
+    const { error } = await supabase
+      .from('profile_views')
+      .insert([{ user_id: userId, viewed_at: new Date().toISOString() }]);
+    // Não bloqueamos se falhar, apenas logamos
+    if (error) console.warn('Falha ao registrar view:', error);
+  },
+
+  async fetchProfileStats(userId: string) {
+    const { data, error } = await supabase
+      .from('profile_views')
+      .select('viewed_at')
+      .eq('user_id', userId);
+    if (error) throw error;
+    return data;
+  },
+
   // Áreas
   async upsertArea(area: Partial<ProfessionalArea>) {
     const { data, error } = await supabase.from('areas').upsert(area).select().single();
