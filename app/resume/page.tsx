@@ -1,18 +1,21 @@
+
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Loader2, Plus, Trash2, Wand2, Download, ArrowLeft, X,
-  User, Briefcase, GraduationCap, BookOpen, Star, FileText,
-  Palette, Layers, GripVertical, Upload, FileCode
+  User, Briefcase, GraduationCap, Star, FileText,
+  Palette, Layers, GripVertical, Upload, FileCode, Save, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
 import type { ResumeData } from '@/components/ResumeTemplate';
 import { ChromePicker } from 'react-color';
 import { toast } from 'sonner';
+import { useStore } from '@/lib/store';
 import {
   DndContext,
   closestCenter,
@@ -78,23 +81,26 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 }
 
 export default function ResumeBuilderPage() {
+  const router = useRouter();
+  const { currentUser, addExperienceWithAutoArea, addEducation, updateUser } = useStore();
   const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
   const [isParsing, setIsParsing] = useState(false);
+  const [isSavingToProfile, setIsSavingToProfile] = useState(false);
 
   // Resume Data State
-  const [name, setName] = useState('');
-  const [profession, setProfession] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(currentUser?.name || '');
+  const [profession, setProfession] = useState(currentUser?.headline || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
   const [availableSince, setAvailableSince] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUrl, setPhotoUrl] = useState(currentUser?.photo_url || '');
 
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState(currentUser?.summary || '');
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [addedSections, setAddedSections] = useState<SectionType[]>([]);
+  const [addedSections, setAddedSections] = useState<SectionType[]>(['summary', 'experience', 'education']);
 
   // Theme State
   const [theme, setTheme] = useState<(ResumeTheme & { fontFamily?: string }) | null>(null);
@@ -102,9 +108,7 @@ export default function ResumeBuilderPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Modals
-  const [showPicker, setShowPicker] = useState(false);
   const [activeModal, setActiveModal] = useState<SectionType | null>(null);
-  const [draftExp, setDraftExp] = useState<Experience>({ company: '', role: '', duration: '' });
   const [draftSummary, setDraftSummary] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -137,6 +141,12 @@ export default function ResumeBuilderPage() {
       setIsGenerating(false);
     }
   }, [name, profession]);
+
+  useEffect(() => {
+    if (name && profession && !theme) {
+      generateTheme();
+    }
+  }, [name, profession, theme, generateTheme]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,25 +183,65 @@ export default function ResumeBuilderPage() {
       if (parsed.profession) setProfession(parsed.profession);
       if (parsed.email) setEmail(parsed.email);
       if (parsed.phone) setPhone(parsed.phone);
-      if (parsed.summary) {
-        setSummary(parsed.summary);
-        if (!addedSections.includes('summary')) setAddedSections(p => [...p, 'summary']);
-      }
-      if (parsed.experiences) {
-        setExperiences(parsed.experiences);
-        if (!addedSections.includes('experience')) setAddedSections(p => [...p, 'experience']);
-      }
-      if (parsed.education) {
-        setEducation(parsed.education);
-        if (!addedSections.includes('education')) setAddedSections(p => [...p, 'education']);
-      }
+      if (parsed.summary) setSummary(parsed.summary);
+      if (parsed.experiences) setExperiences(parsed.experiences);
+      if (parsed.education) setEducation(parsed.education);
       
-      toast.success('Currículo importado com sucesso!', { id: toastId });
+      toast.success('Dados importados! Revise abaixo.', { id: toastId });
     } catch (err) {
       console.error(err);
-      toast.error('Falha ao importar currículo.', { id: toastId });
+      toast.error('Falha ao importar.', { id: toastId });
     } finally {
       setIsParsing(false);
+    }
+  };
+
+  const handleSaveToProfile = async () => {
+    if (!currentUser) return;
+    setIsSavingToProfile(true);
+    const toastId = toast.loading('Sincronizando com seu perfil...');
+
+    try {
+      // 1. Atualiza dados básicos
+      await updateUser({
+        name,
+        headline: profession,
+        summary,
+        phone,
+        email
+      });
+
+      // 2. Adiciona experiências
+      for (const exp of experiences) {
+        await addExperienceWithAutoArea({
+          user_id: currentUser.id,
+          company_name: exp.company,
+          role: exp.role,
+          company_logo: `https://picsum.photos/seed/${Math.random()}/100/100`,
+          start_date: new Date().toISOString(), // Idealmente extrair data real, mas simplificando
+          end_date: null,
+          description: '',
+        });
+      }
+
+      // 3. Adiciona Educação
+      for (const edu of education) {
+        await addEducation({
+          user_id: currentUser.id,
+          institution: edu.institution,
+          course: edu.course,
+          start_date: new Date().toISOString(),
+          end_date: null,
+        });
+      }
+
+      toast.success('Perfil atualizado com sucesso!', { id: toastId });
+      router.push('/profile');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar no perfil.', { id: toastId });
+    } finally {
+      setIsSavingToProfile(false);
     }
   };
 
@@ -226,8 +276,8 @@ export default function ResumeBuilderPage() {
       <div className="w-full md:w-[400px] h-screen overflow-y-auto border-r border-white/10 bg-black/20 shrink-0 custom-scrollbar">
         <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-md border-b border-white/10 p-4">
           <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="p-2 hover:bg-white/10 rounded-full transition-colors"><ArrowLeft size={20} /></Link>
-            <h1 className="text-sm font-black uppercase tracking-widest">CareerCanvas</h1>
+            <Link href="/profile" className="p-2 hover:bg-white/10 rounded-full transition-colors"><ArrowLeft size={20} /></Link>
+            <h1 className="text-sm font-black uppercase tracking-widest">Revisão de Importação</h1>
             <button onClick={generateTheme} disabled={!name || !profession || isGenerating} className="p-2 text-yellow-400 hover:scale-110 transition-transform disabled:opacity-30">
               {isGenerating ? <Loader2 className="animate-spin" size={20} /> : <Wand2 size={20} />}
             </button>
@@ -241,18 +291,18 @@ export default function ResumeBuilderPage() {
         <div className="p-6 space-y-8">
           {activeTab === 'content' ? (
             <>
-              <div className="bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl">
+              <div className="bg-blue-600/10 border border-blue-500/20 p-6 rounded-3xl text-center">
                 <label className="flex flex-col items-center gap-2 cursor-pointer group">
-                  <Upload className="text-blue-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black uppercase text-blue-400">Importar PDF / Foto</span>
+                  <Upload className="text-blue-400 group-hover:scale-110 transition-transform w-8 h-8" />
+                  <span className="text-xs font-black uppercase text-blue-400">Importar Novo Arquivo</span>
                   <input type="file" accept=".pdf,image/*" className="hidden" onChange={handleFileUpload} disabled={isParsing} />
-                  {isParsing && <Loader2 className="animate-spin w-4 h-4 text-blue-400" />}
+                  {isParsing && <Loader2 className="animate-spin w-4 h-4 text-blue-400 mt-2" />}
                 </label>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-yellow-400 mb-2">
-                  <User size={18} /> <h2 className="text-xs font-black uppercase">Dados Pessoais</h2>
+                  <User size={18} /> <h2 className="text-xs font-black uppercase">Dados Extraídos</h2>
                 </div>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome Completo" className={inputCls} />
                 <input value={profession} onChange={e => setProfession(e.target.value)} placeholder="Profissão" className={inputCls} />
@@ -262,8 +312,7 @@ export default function ResumeBuilderPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-blue-400"><Layers size={18} /> <h2 className="text-xs font-black uppercase">Seções</h2></div>
-                  <button onClick={() => setShowPicker(true)} className="p-1 hover:bg-white/10 rounded-lg text-slate-400"><Plus size={16} /></button>
+                  <div className="flex items-center gap-2 text-blue-400"><Layers size={18} /> <h2 className="text-xs font-black uppercase">Configuração Visual</h2></div>
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={addedSections} strategy={verticalListSortingStrategy}>
@@ -284,6 +333,17 @@ export default function ResumeBuilderPage() {
                     </div>
                   </SortableContext>
                 </DndContext>
+              </div>
+              
+              <div className="pt-6">
+                <button 
+                  onClick={handleSaveToProfile}
+                  disabled={isSavingToProfile || !name}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                >
+                  {isSavingToProfile ? <Loader2 className="animate-spin" /> : <Save />}
+                  Confirmar e Salvar no Perfil
+                </button>
               </div>
             </>
           ) : (
@@ -318,14 +378,14 @@ export default function ResumeBuilderPage() {
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-20 text-center">
               <FileCode size={64} className="mb-6 opacity-20" />
-              <h2 className="text-2xl font-black text-slate-900">Seu Currículo Aqui</h2>
-              <p className="text-slate-500 font-medium mt-2">Importe um PDF ou comece a digitar seus dados.</p>
+              <h2 className="text-2xl font-black text-slate-900">Pré-visualização</h2>
+              <p className="text-slate-500 font-medium mt-2">Aguardando dados para gerar o visual...</p>
             </div>
           )}
         </div>
         {theme && (
           <div className="fixed bottom-8 right-8 flex gap-4">
-            <button onClick={exportPDF} disabled={isExporting} className="px-8 py-4 bg-green-500 hover:bg-green-400 text-white font-black rounded-full shadow-2xl flex items-center gap-3">
+            <button onClick={exportPDF} disabled={isExporting} className="px-8 py-4 bg-white text-slate-900 font-black rounded-full shadow-2xl flex items-center gap-3 hover:scale-105 transition-all">
               {isExporting ? <Loader2 className="animate-spin" /> : <Download />} Baixar PDF
             </button>
           </div>

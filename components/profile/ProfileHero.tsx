@@ -3,7 +3,7 @@
 
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { MapPin, Wand as Wand2, Pencil, FileText } from 'lucide-react';
+import { MapPin, Wand as Wand2, Pencil, FileUp } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User } from '@/lib/store';
@@ -90,8 +90,8 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
             <button onClick={onEdit} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
               <Pencil className="w-4 h-4" /> Editar Perfil
             </button>
-            <Link href="/resume" className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white/10 text-white hover:bg-white/20 transition-all border border-white/20 backdrop-blur-md">
-              <FileText className="w-4 h-4" /> Criar Currículo
+            <Link href="/resume" className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
+              <FileUp className="w-4 h-4" /> Importar Currículo
             </Link>
           </div>
         )}
