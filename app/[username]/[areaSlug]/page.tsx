@@ -56,6 +56,7 @@ export default function AreaResume() {
   const [exportData, setExportData] = useState<ResumeData | null>(null);
   const [exportError, setExportError] = useState('');
   const [shouldExport, setShouldExport] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState('');
 
   // Estados de Edição
   const [editingExp, setEditingExp] = useState<Experience | null>(null);
@@ -68,6 +69,9 @@ export default function AreaResume() {
 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      setCurrentUrl(window.location.href);
+    }
   }, []);
 
   useEffect(() => {
@@ -147,7 +151,6 @@ export default function AreaResume() {
     return { ...as, skill };
   }).filter(s => s.skill);
   const userEducation = education.filter(e => e.user_id === user.id);
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   const nameParts = user.name.trim().split(' ');
   const firstName = nameParts.slice(0, Math.ceil(nameParts.length / 2)).join(' ');

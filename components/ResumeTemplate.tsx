@@ -1,10 +1,8 @@
-
 'use client';
 
 import { forwardRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
-import WebFont from 'webfontloader';
 
 export type ResumeData = {
   name: string;
@@ -61,10 +59,13 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
 
   useEffect(() => {
     if (theme.fontFamily) {
-      WebFont.load({
-        google: {
-          families: [`${theme.fontFamily}:400,700,900`]
-        }
+      // Carregamento dinâmico do webfontloader para evitar erro de window no SSR
+      import('webfontloader').then((WebFont) => {
+        WebFont.load({
+          google: {
+            families: [`${theme.fontFamily}:400,700,900`]
+          }
+        });
       });
     }
   }, [theme.fontFamily]);
