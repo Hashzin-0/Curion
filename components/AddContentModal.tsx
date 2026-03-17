@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -42,7 +43,7 @@ const COLOR_CLASSES: Record<string, string> = {
 };
 
 export function AddContentModal({ isOpen, onClose }: Props) {
-  const { currentUser, addExperienceWithAutoArea, addEducation, addSkillToRelevantAreas } = useStore();
+  const { currentUser, addExperienceWithAutoArea, addEducation, addSkillToRelevantAreas, addPortfolioItem } = useStore();
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,6 +52,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '', company_logo: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
+  const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
   const [skillForm, setSkillForm] = useState({ level: 80 });
 
   const handleAddSkill = async (skill: Skill) => {
@@ -94,6 +96,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           course: eduForm.course,
           start_date: eduForm.start_date.toISOString(),
           end_date: eduForm.end_date ? eduForm.end_date.toISOString() : null,
+        });
+      } else if (selectedType === 'portfolio') {
+        if (!portForm.title) throw new Error('Título é obrigatório');
+        await addPortfolioItem({
+          user_id: currentUser.id,
+          title: portForm.title,
+          description: portForm.description,
+          file_url: portForm.file_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+          link_url: portForm.link_url,
         });
       }
 
@@ -183,7 +194,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     </div>
                   )}
 
-                  {(selectedType === 'experience' || selectedType === 'education') && (
+                  {(selectedType === 'experience' || selectedType === 'education' || selectedType === 'portfolio') && (
                     <form onSubmit={handleSubmit} className="space-y-6">
                       {selectedType === 'experience' && (
                         <div className="space-y-4">
@@ -233,6 +244,27 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                           <div className="grid grid-cols-2 gap-4">
                             <div><label className={labelCls}>Início *</label><input type="date" required onChange={e => setEduForm(p => ({ ...p, start_date: new Date(e.target.value) }))} className={inputCls} /></div>
                             <div><label className={labelCls}>Conclusão</label><input type="date" onChange={e => setEduForm(p => ({ ...p, end_date: new Date(e.target.value) }))} className={inputCls} /></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedType === 'portfolio' && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className={labelCls}>Título do Projeto *</label>
+                            <input required value={portForm.title} onChange={e => setPortForm(p => ({ ...p, title: e.target.value }))} className={inputCls} placeholder="Ex: App de Delivery" />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Descrição</label>
+                            <textarea rows={4} value={portForm.description} onChange={e => setPortForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Conte mais sobre o projeto..." />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Link do Projeto (opcional)</label>
+                            <input value={portForm.link_url} onChange={e => setPortForm(p => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="https://github.com/..." />
+                          </div>
+                          <div>
+                            <label className={labelCls}>URL da Imagem de Capa (opcional)</label>
+                            <input value={portForm.file_url} onChange={e => setPortForm(p => ({ ...p, file_url: e.target.value }))} className={inputCls} placeholder="https://..." />
                           </div>
                         </div>
                       )}

@@ -65,6 +65,18 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
+  // Portfólio
+  async upsertPortfolioItem(item: Partial<PortfolioItem>) {
+    const { data, error } = await supabase.from('portfolio').upsert(item).select().single();
+    if (error) throw error;
+    return data as PortfolioItem;
+  },
+
+  async deletePortfolioItem(id: string) {
+    const { error } = await supabase.from('portfolio').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   // Habilidades
   async addAreaSkill(skill: Omit<AreaSkill, 'id'>) {
     const { data, error } = await supabase.from('area_skills').insert([skill]).select().single();

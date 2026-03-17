@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Gerenciamento de estado global com Zustand.
  * Utiliza o DatabaseService para persistência.
@@ -48,6 +49,10 @@ interface AppState {
   addEducation: (edu: Omit<Education, 'id'>) => Promise<void>;
   updateEducation: (edu: Education) => Promise<void>;
   removeEducation: (id: string) => Promise<void>;
+
+  addPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => Promise<void>;
+  updatePortfolioItem: (item: PortfolioItem) => Promise<void>;
+  removePortfolioItem: (id: string) => Promise<void>;
 
   addAreaSkill: (as: Omit<AreaSkill, 'id'>) => Promise<void>;
   addSkillToRelevantAreas: (skillId: string, skillName: string, level: number) => Promise<void>;
@@ -158,6 +163,19 @@ export const useStore = create<AppState>()(
       removeEducation: async (id) => {
         await DatabaseService.deleteEducation(id);
         set(s => ({ education: s.education.filter(e => e.id !== id) }));
+      },
+
+      addPortfolioItem: async (item) => {
+        const data = await DatabaseService.upsertPortfolioItem(item);
+        set(s => ({ portfolio: [data, ...s.portfolio] }));
+      },
+      updatePortfolioItem: async (item) => {
+        const data = await DatabaseService.upsertPortfolioItem(item);
+        set(s => ({ portfolio: s.portfolio.map(p => p.id === item.id ? data : p) }));
+      },
+      removePortfolioItem: async (id) => {
+        await DatabaseService.deletePortfolioItem(id);
+        set(s => ({ portfolio: s.portfolio.filter(p => p.id !== id) }));
       },
 
       addAreaSkill: async (as) => {
