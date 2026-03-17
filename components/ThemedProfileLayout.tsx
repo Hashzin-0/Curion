@@ -251,11 +251,7 @@ export function ThemedProfileLayout({
           </div>
 
           <div className="max-w-5xl mx-auto px-6 py-12 space-y-20">
-            {/* Seção de Gráficos e Estatísticas */}
-            <section>
-              <Stats userId={user.id} />
-            </section>
-
+            {/* 1. ÁREAS DE ATUAÇÃO (PRIORIDADE) */}
             <section>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
                 <div>
@@ -366,6 +362,12 @@ export function ThemedProfileLayout({
               )}
             </section>
 
+            {/* 2. GRÁFICOS E ESTATÍSTICAS */}
+            <section>
+              <Stats userId={user.id} />
+            </section>
+
+            {/* 3. JORNADA PROFISSIONAL (TIMELINE) */}
             <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="pt-10">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
                 <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: accentColor }} />
