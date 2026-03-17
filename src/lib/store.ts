@@ -16,6 +16,7 @@ export type AreaSkill = { id: string; area_id: string; skill_id: string; level: 
 export type Education = { id: string; user_id: string; institution: string; course: string; start_date: string; end_date: string | null; };
 export type Achievement = { id: string; user_id: string; title: string; organization: string; date: string; description: string; };
 export type PortfolioItem = { id: string; user_id: string; title: string; description: string; file_url?: string; link_url?: string; };
+export type Certificate = { id: string; user_id: string; name: string; issuer: string; date: string; url?: string; };
 
 interface AppState {
   currentUser: User | null;
@@ -26,6 +27,7 @@ interface AppState {
   areaSkills: AreaSkill[];
   education: Education[];
   achievements: Achievement[];
+  certificates: Certificate[];
   portfolio: PortfolioItem[];
   isLoading: boolean;
   isAuthReady: boolean;
@@ -74,6 +76,7 @@ export const useStore = create<AppState>()(
       areaSkills: [],
       education: [],
       achievements: [],
+      certificates: [],
       portfolio: [],
       isLoading: true,
       isAuthReady: false,
@@ -106,6 +109,7 @@ export const useStore = create<AppState>()(
             areaSkills: results[4].data || [],
             education: results[5].data || [],
             achievements: results[6].data || [],
+            certificates: results[7].data || [],
             portfolio: results[8].data || [],
             isLoading: false
           });
