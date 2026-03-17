@@ -16,6 +16,7 @@ export type User = {
 
 export type ProfessionalArea = {
   id: string;
+  user_id: string;
   name: string;
   slug: string;
   icon: string;
@@ -140,7 +141,7 @@ interface AppState {
   updateRecommendation: (recommendation: RecommendationLetter) => Promise<void>;
   removeRecommendation: (id: string) => Promise<void>;
   
-  addArea: (area: Omit<ProfessionalArea, 'id'>) => Promise<void>;
+  addArea: (area: Omit<ProfessionalArea, 'id' | 'user_id'>) => Promise<void>;
   updateArea: (area: ProfessionalArea) => Promise<void>;
   removeArea: (areaId: string) => Promise<void>;
   
@@ -158,9 +159,9 @@ const mockUser: User = {
 };
 
 const mockAreas: ProfessionalArea[] = [
-  { id: 'area-tech', name: 'Tecnologia', slug: 'tecnologia', icon: 'Code2', theme_color: '#3b82f6' },
-  { id: 'area-gastro', name: 'Gastronomia', slug: 'gastronomia', icon: 'ChefHat', theme_color: '#f97316' },
-  { id: 'area-design', name: 'Design & Marketing', slug: 'design', icon: 'Palette', theme_color: '#7c3aed' },
+  { id: 'area-tech', user_id: mockUser.id, name: 'Tecnologia', slug: 'tecnologia', icon: 'Code2', theme_color: '#3b82f6' },
+  { id: 'area-gastro', user_id: mockUser.id, name: 'Gastronomia', slug: 'gastronomia', icon: 'ChefHat', theme_color: '#f97316' },
+  { id: 'area-design', user_id: mockUser.id, name: 'Design & Marketing', slug: 'design', icon: 'Palette', theme_color: '#7c3aed' },
 ];
 
 const mockExperiences: Experience[] = [
@@ -311,10 +312,10 @@ export const useStore = create<AppState>()(
       addExperienceWithAutoArea: async (exp) => {
         const { areas, addArea, addExperience } = get();
         const detected = detectAreaFromRole(exp.role);
-        let area = areas.find(a => a.slug === detected.slug);
+        let area = areas.find(a => a.slug === detected.slug && a.user_id === exp.user_id);
         if (!area) {
           await addArea({ name: detected.name, slug: detected.slug, icon: detected.icon, theme_color: detected.themeColor });
-          area = get().areas.find(a => a.slug === detected.slug);
+          area = get().areas.find(a => a.slug === detected.slug && a.user_id === exp.user_id);
         }
         if (area) await addExperience({ ...exp, area_id: area.id });
       },
@@ -333,7 +334,9 @@ export const useStore = create<AppState>()(
       },
       
       addArea: async (area) => {
-        const { data } = await supabase.from('areas').insert([area]).select().single();
+        const { currentUser } = get();
+        if (!currentUser) return;
+        const { data } = await supabase.from('areas').insert([{ ...area, user_id: currentUser.id }]).select().single();
         if (data) set((state) => ({ areas: [...state.areas, data] }));
       },
       updateArea: async (area) => {
