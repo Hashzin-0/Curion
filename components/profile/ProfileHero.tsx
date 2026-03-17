@@ -9,6 +9,7 @@ import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User } from '@/lib/store';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
+import { ImportResumeModal } from '@/components/ImportResumeModal';
 import Link from 'next/link';
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
 
 export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor }: Props) {
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
     <>
@@ -45,7 +47,6 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
                 fill
                 className="object-cover"
                 referrerPolicy="no-referrer"
-                data-ai-hint="professional profile"
               />
             </div>
             <div className="absolute -bottom-2 -right-2 text-4xl bg-white dark:bg-slate-900 rounded-2xl w-14 h-14 flex items-center justify-center shadow-2xl border-2 border-slate-100 dark:border-slate-800">
@@ -97,15 +98,16 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
                 <Sparkles className="w-4 h-4" /> Exportação Inteligente
               </button>
-              <Link href="/resume" className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
+              <button onClick={() => setIsImportOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
                 <FileUp className="w-4 h-4" /> Importar Currículo
-              </Link>
+              </button>
             </div>
           )}
         </div>
       </div>
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
+      <ImportResumeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
     </>
   );
 }
