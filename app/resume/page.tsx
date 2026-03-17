@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -98,7 +97,7 @@ export default function ResumeBuilderPage() {
   const [addedSections, setAddedSections] = useState<SectionType[]>([]);
 
   // Theme State
-  const [theme, setTheme] = useState<ResumeTheme | null>(null);
+  const [theme, setTheme] = useState<(ResumeTheme & { fontFamily?: string }) | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
