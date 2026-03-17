@@ -43,23 +43,23 @@ export type DetectedArea = {
 
 const AREA_RULES: { keywords: string[]; area: DetectedArea }[] = [
   {
-    keywords: ['cozinha', 'cozinheiro', 'chef', 'gastronomia', 'pizz', 'padari', 'restaurante', 'barman'],
+    keywords: ['cozinha', 'cozinheiro', 'chef', 'gastronomia', 'pizz', 'padari', 'restaurante', 'barman', 'culinária'],
     area: { name: 'Gastronomia', slug: 'gastronomia', icon: 'ChefHat', themeColor: '#f97316' },
   },
   {
-    keywords: ['programador', 'desenvolved', 'developer', 'software', 'tech', 'ti ', 'dados'],
+    keywords: ['programador', 'desenvolved', 'developer', 'software', 'tech', 'ti ', 'dados', 'react', 'javascript', 'typescript', 'python', 'java', 'node', 'backend', 'frontend'],
     area: { name: 'Tecnologia', slug: 'tecnologia', icon: 'Code2', themeColor: '#3b82f6' },
   },
   {
-    keywords: ['saúde', 'enfermeiro', 'médico', 'hospital', 'fisiotera', 'nutricion', 'psicolog'],
+    keywords: ['saúde', 'enfermeiro', 'médico', 'hospital', 'fisiotera', 'nutricion', 'psicolog', 'anatomia', 'clínica'],
     area: { name: 'Saúde', slug: 'saude', icon: 'Heart', themeColor: '#10b981' },
   },
   {
-    keywords: ['atendente', 'vendedor', 'vendas', 'comercial', 'loja', 'caixa', 'balconista'],
+    keywords: ['atendente', 'vendedor', 'vendas', 'comercial', 'loja', 'caixa', 'balconista', 'pdv', 'estoque'],
     area: { name: 'Vendas & Atendimento', slug: 'vendas', icon: 'ShoppingBag', themeColor: '#8b5cf6' },
   },
   {
-    keywords: ['administrativo', 'auxiliar administrativo', 'financeiro', 'rh', 'secretária'],
+    keywords: ['administrativo', 'auxiliar administrativo', 'financeiro', 'rh', 'secretária', 'office', 'excel', 'gestão'],
     area: { name: 'Administrativo', slug: 'administrativo', icon: 'ClipboardList', themeColor: '#14b8a6' },
   },
 ];
@@ -74,4 +74,17 @@ export function detectAreaFromRole(role: string): DetectedArea {
   const name = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
   const slug = role.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
   return { name, slug, icon: 'Briefcase', themeColor: '#64748b' };
+}
+
+export function getRelevantAreaSlugsForSkill(skillName: string): string[] {
+  const skillLower = skillName.toLowerCase();
+  const matchedSlugs: string[] = [];
+  
+  for (const rule of AREA_RULES) {
+    if (rule.keywords.some(kw => skillLower.includes(kw))) {
+      matchedSlugs.push(rule.area.slug);
+    }
+  }
+  
+  return matchedSlugs;
 }

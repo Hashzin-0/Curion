@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Gerenciamento de estado global com Zustand.
  * Utiliza o DatabaseService para persistência.
@@ -6,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
-import { detectAreaFromRole } from './utils';
+import { detectAreaFromRole, getRelevantAreaSlugsForSkill } from './utils';
 
 export type User = { id: string; username: string; name: string; photo_url: string; headline: string; summary: string; location: string; email?: string; phone?: string; };
 export type ProfessionalArea = { id: string; user_id: string; name: string; slug: string; icon: string; theme_color: string; };
@@ -42,7 +41,7 @@ interface AppState {
   removeExperience: (id: string) => Promise<void>;
   addExperienceWithAutoArea: (exp: Omit<Experience, 'id' | 'area_id'>) => Promise<void>;
   
-  addArea: (area: Omit<ProfessionalArea, 'id' | 'user_id'>) => Promise<void>;
+  addArea: (area: Omit<ProfessionalArea, 'id' | 'user_id'>) => Promise<ProfessionalArea | void>;
   updateArea: (area: ProfessionalArea) => Promise<void>;
   removeArea: (id: string) => Promise<void>;
 
@@ -51,6 +50,7 @@ interface AppState {
   removeEducation: (id: string) => Promise<void>;
 
   addAreaSkill: (as: Omit<AreaSkill, 'id'>) => Promise<void>;
+  addSkillToRelevantAreas: (skillId: string, skillName: string, level: number) => Promise<void>;
   removeAreaSkill: (id: string) => Promise<void>;
   
   fetchData: () => Promise<void>;
@@ -164,6 +164,44 @@ export const useStore = create<AppState>()(
         const data = await DatabaseService.addAreaSkill(as);
         set(s => ({ areaSkills: [...s.areaSkills, data] }));
       },
+
+      addSkillToRelevantAreas: async (skillId, skillName, level) => {
+        const { areas, addArea, addAreaSkill, areaSkills } = get();
+        
+        // 1. Garantir que existam áreas. Se não houver, cria "Geral".
+        let targetAreas = [...areas];
+        if (targetAreas.length === 0) {
+          const newArea = await addArea({
+            name: 'Geral',
+            slug: 'geral',
+            icon: 'Briefcase',
+            theme_color: '#334155'
+          });
+          if (newArea) targetAreas = [newArea];
+        }
+
+        // 2. Detectar quais áreas do usuário são relevantes para esta habilidade
+        const matchedSlugs = getRelevantAreaSlugsForSkill(skillName);
+        let areasToLink = targetAreas.filter(a => matchedSlugs.includes(a.slug));
+
+        // 3. Se não houver correspondência específica ou for uma skill geral, adiciona a todas as áreas
+        if (areasToLink.length === 0) {
+          areasToLink = targetAreas;
+        }
+
+        // 4. Salvar os vínculos
+        for (const area of areasToLink) {
+          const alreadyHas = areaSkills.find(as => as.area_id === area.id && as.skill_id === skillId);
+          if (!alreadyHas) {
+            await addAreaSkill({
+              area_id: area.id,
+              skill_id: skillId,
+              level: level
+            });
+          }
+        }
+      },
+
       removeAreaSkill: async (id) => {
         await DatabaseService.deleteAreaSkill(id);
         set(s => ({ areaSkills: s.areaSkills.filter(as => as.id !== id) }));
