@@ -1,12 +1,10 @@
-
 'use client';
 
 import { motion } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { Education, PortfolioItem, Certificate, User, ProfessionalArea, Experience } from '@/lib/store';
-import { Pencil, Trash2, GraduationCap, Folder, Award, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
-import { getTheme } from '@/styles/themes';
+import { Education, PortfolioItem, Certificate } from '@/lib/store';
+import { GraduationCap, Folder, ArrowRight } from 'lucide-react';
+import { CardActions } from '@/components/shared/CardActions';
 
 type Props = {
   education: Education[];
@@ -35,10 +33,11 @@ export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }:
         {education.map((edu) => (
           <div key={edu.id} className="relative group bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all">
             {isOwner && (
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => onEditEdu?.(edu)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500"><Pencil size={14} /></button>
-                <button onClick={() => onDeleteEdu?.(edu.id)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500"><Trash2 size={14} /></button>
-              </div>
+              <CardActions 
+                onEdit={() => onEditEdu?.(edu)} 
+                onDelete={() => onDeleteEdu?.(edu.id)} 
+                variant="floating"
+              />
             )}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -69,10 +68,11 @@ export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort 
         {portfolio.map((item) => (
           <div key={item.id} className="relative group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all">
             {isOwner && (
-              <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => onEditPort?.(item)} className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-lg hover:text-blue-500 shadow-lg"><Pencil size={14} /></button>
-                <button onClick={() => onDeletePort?.(item.id)} className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-lg hover:text-red-500 shadow-lg"><Trash2 size={14} /></button>
-              </div>
+              <CardActions 
+                onEdit={() => onEditPort?.(item)} 
+                onDelete={() => onDeletePort?.(item.id)} 
+                variant="floating"
+              />
             )}
             <div className="h-48 bg-slate-100 dark:bg-slate-800 relative">
               {item.file_url ? (

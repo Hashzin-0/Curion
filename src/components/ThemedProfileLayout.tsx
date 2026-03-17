@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
 import { Plus, ArrowRight, Briefcase, ChevronDown } from 'lucide-react';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
-import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';
+import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
+import { User, ProfessionalArea, Education, PortfolioItem, Experience } from '@/lib/store';
 import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
@@ -26,7 +26,6 @@ type Props = {
   areas: ProfessionalArea[];
   education?: Education[];
   portfolio?: PortfolioItem[];
-  certificates?: Certificate[];
   isOwner?: boolean;
   onEditProfile?: () => void;
   onAddContent?: () => void;
@@ -38,7 +37,6 @@ type Props = {
   onDeletePortfolio?: (id: string) => void;
   onEditExperience?: (exp: Experience) => void;
   onDeleteExperience?: (id: string) => void;
-  onManageSkills?: () => void;
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
@@ -149,10 +147,8 @@ export function ThemedProfileLayout(props: Props) {
                         layout
                         className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
                       >
-                        {/* Faixa Superior de Cor */}
                         <div className="h-2 w-full" style={{ backgroundColor: theme.hex }} />
                         
-                        {/* Ações da Área */}
                         {props.isOwner && (
                           <CardActions 
                             onEdit={() => props.onEditArea?.(area)}
@@ -175,7 +171,6 @@ export function ThemedProfileLayout(props: Props) {
                             <span className="text-4xl filter drop-shadow-md">{theme.emoji}</span>
                           </div>
 
-                          {/* Lista de Cargos Expandível */}
                           <div className="space-y-3 mb-8 flex-1">
                             {areaExps.slice(0, 3).map((exp) => {
                               const isExpanded = expandedExpId === exp.id;
@@ -194,7 +189,6 @@ export function ThemedProfileLayout(props: Props) {
                                     <CardActions 
                                       onEdit={() => props.onEditExperience?.(exp)}
                                       onDelete={() => props.onDeleteExperience?.(exp.id)}
-                                      variant="floating"
                                       className="top-2 right-10"
                                       variant="small"
                                     />
@@ -223,10 +217,6 @@ export function ThemedProfileLayout(props: Props) {
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        transition={{ 
-                                          height: { type: "spring", stiffness: 400, damping: 30 },
-                                          opacity: { duration: 0.2 }
-                                        }}
                                         className="overflow-hidden"
                                       >
                                         <div className="px-4 pb-4 pt-2">
@@ -241,9 +231,6 @@ export function ThemedProfileLayout(props: Props) {
                                 </motion.div>
                               );
                             })}
-                            {areaExps.length > 3 && (
-                              <p className="text-[10px] font-black text-slate-400 uppercase text-center">+ {areaExps.length - 3} outros registros</p>
-                            )}
                           </div>
 
                           <Link href={`/${props.username}/${area.slug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
@@ -258,12 +245,10 @@ export function ThemedProfileLayout(props: Props) {
               ) : (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
                   <p className="text-slate-500 font-bold">Nenhuma área cadastrada ainda.</p>
-                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências para gerar áreas automaticamente.</p>}
                 </div>
               )}
             </section>
 
-            {/* SKILLS SECTION - Dinâmica */}
             {hasSkills && (
               <section>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
@@ -290,7 +275,6 @@ export function ThemedProfileLayout(props: Props) {
               </section>
             )}
 
-            {/* EDUCATION SECTION - Dinâmica */}
             {hasEducation && (
               <EducationSection 
                 education={props.education} 
@@ -300,7 +284,6 @@ export function ThemedProfileLayout(props: Props) {
               />
             )}
 
-            {/* PORTFOLIO SECTION - Dinâmica */}
             {hasPortfolio && (
               <PortfolioSection 
                 portfolio={props.portfolio} 
@@ -310,12 +293,10 @@ export function ThemedProfileLayout(props: Props) {
               />
             )}
 
-            {/* STATS SECTION - Dinâmica */}
             {(userExperiences.length > 0 || hasSkills) && (
               <section><Stats userId={props.user.id} /></section>
             )}
 
-            {/* TIMELINE SECTION - Dinâmica */}
             {hasTimeline && (
               <section><Timeline userId={props.user.id} readOnly={!props.isOwner} /></section>
             )}
