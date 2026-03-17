@@ -50,18 +50,23 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [showCalendar, setShowCalendar] = useState<'start' | 'end' | null>(null);
   const [formParent] = useAutoAnimate();
 
+  // Estados dos formulários
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '', company_logo: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
   const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
   const [skillForm, setSkillForm] = useState({ level: 80 });
+  const [tempSkill, setTempSkill] = useState<Skill | null>(null);
 
-  const handleAddSkill = async (skill: Skill) => {
-    if (!currentUser || isSaving) return;
+  const handleConfirmSkill = async () => {
+    if (!currentUser || !tempSkill || isSaving) return;
 
     setIsSaving(true);
     try {
-      await addSkillToRelevantAreas(skill.id, skill.name, skillForm.level);
-      toast.success(`${skill.name} adicionada e distribuída em suas áreas!`);
+      await addSkillToRelevantAreas(tempSkill.id, tempSkill.name, skillForm.level);
+      toast.success(`${tempSkill.name} adicionada com sucesso!`);
+      setTempSkill(null);
+      setSelectedType(null);
+      onClose();
     } catch (e) {
       console.error(e);
       toast.error('Erro ao adicionar habilidade.');
@@ -127,7 +132,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => { setSelectedType(null); onClose(); }}
+          onClick={() => { setSelectedType(null); setTempSkill(null); onClose(); }}
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
@@ -159,7 +164,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
               ) : (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center mb-6">
-                    <button type="button" onClick={() => setSelectedType(null)} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-700 transition-colors"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
+                    <button type="button" onClick={() => { setSelectedType(null); setTempSkill(null); }} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-700 transition-colors"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
                     <h3 className="text-xl font-black uppercase tracking-tight">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
                     <div className="w-16" />
                   </div>
@@ -172,25 +177,41 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                         </p>
                       </div>
                       
-                      <div className="w-full">
-                        <label className={labelCls}>Domínio ({skillForm.level}%)</label>
-                        <input 
-                          type="range" min="10" max="100" step="5" 
-                          value={skillForm.level} 
-                          onChange={(e) => setSkillForm({ ...skillForm, level: Number(e.target.value) })} 
-                          className="w-full h-10 accent-blue-600 cursor-pointer"
-                        />
-                      </div>
-                      
-                      <div className="pt-4">
-                        <label className={labelCls}>Procurar Habilidade</label>
-                        <SkillSearch onAdd={handleAddSkill} />
-                        {isSaving && (
-                          <div className="flex items-center justify-center gap-2 mt-4 text-blue-600 font-bold animate-pulse">
-                            <LucideIcons.Loader2 className="animate-spin" /> Processando habilidade...
+                      {tempSkill ? (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Habilidade Selecionada</p>
+                              <h4 className="text-xl font-black text-slate-900 dark:text-white">{tempSkill.name}</h4>
+                            </div>
+                            <button onClick={() => setTempSkill(null)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Trocar</button>
                           </div>
-                        )}
-                      </div>
+
+                          <div className="w-full">
+                            <label className={labelCls}>Domínio ({skillForm.level}%)</label>
+                            <input 
+                              type="range" min="10" max="100" step="5" 
+                              value={skillForm.level} 
+                              onChange={(e) => setSkillForm({ ...skillForm, level: Number(e.target.value) })} 
+                              className="w-full h-10 accent-blue-600 cursor-pointer"
+                            />
+                          </div>
+
+                          <button 
+                            onClick={handleConfirmSkill}
+                            disabled={isSaving}
+                            className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                          >
+                            {isSaving ? <LucideIcons.Loader2 className="animate-spin" /> : <LucideIcons.Check />}
+                            {isSaving ? 'Salvando...' : 'Confirmar e Salvar'}
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <div className="pt-4">
+                          <label className={labelCls}>Procurar Habilidade</label>
+                          <SkillSearch onAdd={(s) => setTempSkill(s)} />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -270,19 +291,13 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                       )}
 
                       <div className="flex gap-4 pt-4">
-                        <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
+                        <button type="button" onClick={() => { setSelectedType(null); setTempSkill(null); }} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
                         <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:scale-[1.02]">
                           {isSaving && <LucideIcons.Loader2 className="animate-spin" />}
                           {isSaving ? 'Salvando...' : 'Adicionar Registro'}
                         </button>
                       </div>
                     </form>
-                  )}
-
-                  {selectedType === 'skill' && (
-                    <div className="flex justify-center pt-8">
-                      <button onClick={onClose} className="px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black shadow-xl hover:scale-[1.02] transition-all">Concluir</button>
-                    </div>
                   )}
                 </div>
               )}
