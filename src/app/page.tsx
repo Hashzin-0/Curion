@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, Briefcase, FileText, QrCode, LogIn, Loader2, Sparkles, Users } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -34,7 +34,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8 transition-colors duration-300">
-      <div className="max-w-4xl w-full text-center space-y-8 mt-20 mb-20">
+      <div className="max-w-5xl w-full text-center space-y-8 mt-20 mb-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -58,7 +58,7 @@ export default function Home() {
             {isMounted && currentUser ? (
               <Link
                 href="/profile"
-                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
+                className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl"
               >
                 Meu Perfil
                 <ArrowRight className="w-5 h-5" />
@@ -67,7 +67,7 @@ export default function Home() {
               <button
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl disabled:opacity-70 cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-lg hover:shadow-xl disabled:opacity-70 cursor-pointer"
               >
                 {isLoggingIn ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -78,8 +78,15 @@ export default function Home() {
               </button>
             )}
             <Link
+              href="/explore"
+              className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+            >
+              Explorar Hub
+              <Users className="w-5 h-5" />
+            </Link>
+            <Link
               href="/kardec"
-              className="px-8 py-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-full font-bold text-lg flex items-center gap-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+              className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-full font-bold text-lg flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
             >
               Ver Exemplo
               <FileText className="w-5 h-5" />
