@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User } from '@/lib/store';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
 import { ImportResumeModal } from '@/components/ImportResumeModal';
 import Link from 'next/link';

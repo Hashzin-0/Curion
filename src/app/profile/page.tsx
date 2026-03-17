@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -5,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useStore, User, ProfessionalArea, Education, PortfolioItem, Experience } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { generateProfessionalSummary } from '@/ai/flows/generate-summary-flow';
+import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
 import { PhotoCropModal } from '@/components/PhotoCropModal';

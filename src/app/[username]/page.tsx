@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { supabase } from '@/lib/supabase';
 
 export default function PublicProfile() {

@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
 import { Plus, ArrowRight, Briefcase, ChevronDown } from 'lucide-react';
-import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
+import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';
 import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
@@ -194,7 +195,6 @@ export function ThemedProfileLayout(props: Props) {
                                     <CardActions 
                                       onEdit={() => props.onEditExperience?.(exp)}
                                       onDelete={() => props.onDeleteExperience?.(exp.id)}
-                                      variant="floating"
                                       className="top-2 right-10"
                                       variant="small"
                                     />

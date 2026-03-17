@@ -1,5 +1,6 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { refineExperienceDescription } from '@/src/ai/flows/refine-experience-flow';
+import { refineExperienceDescription } from '@/ai/flows/refine-experience-flow';
 
 export async function POST(req: NextRequest) {
   try {

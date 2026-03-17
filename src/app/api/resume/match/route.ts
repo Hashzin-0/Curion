@@ -1,5 +1,6 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { matchJobRequirements } from '@/src/ai/flows/match-job-requirements-flow';
+import { matchJobRequirements } from '@/ai/flows/match-job-requirements-flow';
 
 export async function POST(req: NextRequest) {
   try {

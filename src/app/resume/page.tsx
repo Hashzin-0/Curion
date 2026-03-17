@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
@@ -10,7 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
+import type { ResumeTheme } from '@/ai/flows/generate-resume-theme-flow';
 import type { ResumeData } from '@/components/ResumeTemplate';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
@@ -163,12 +164,6 @@ function ResumeBuilderContent() {
           start_date: new Date().toISOString(),
           end_date: null,
         });
-      }
-
-      // Salva skills
-      for (const skill of skills) {
-        // Encontra o ID da skill no nosso banco ou ignora se não existir (no MVP)
-        // addSkillToRelevantAreas requer ID e Nome
       }
 
       toast.success('Seu perfil foi atualizado com as novas informações!', { id: toastId });

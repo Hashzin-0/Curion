@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,8 +7,8 @@ import { FileUp, Type, Loader2, Sparkles, FileText, BrainCircuit } from 'lucide-
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { parseResumeText } from '@/src/ai/flows/parse-resume-text-flow';
-import { matchJobRequirements } from '@/src/ai/flows/match-job-requirements-flow';
+import { parseResumeText } from '@/ai/flows/parse-resume-text-flow';
+import { matchJobRequirements } from '@/ai/flows/match-job-requirements-flow';
 import * as pdfjs from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
