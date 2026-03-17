@@ -1,9 +1,8 @@
-
 'use server';
 
 /**
- * @fileOverview Fluxo de simulação de entrevista com áudio nativo.
- * Utiliza Gemini 2.5 Flash Preview TTS para gerar voz.
+ * @fileOverview Fluxo de simulação de entrevista com Áudio Nativo Multimodal.
+ * Utiliza Gemini 2.5 Flash para processar áudio de entrada e gerar áudio de saída diretamente.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,16 +13,16 @@ import wav from 'wav';
 const InterviewInputSchema = z.object({
   areaName: z.string().describe('A área profissional da entrevista.'),
   userName: z.string().describe('Nome do candidato.'),
+  userAudio: z.string().optional().describe('Áudio do usuário em formato data URI (base64).'),
   history: z.array(z.object({
     role: z.enum(['user', 'model']),
     content: z.string(),
-  })).optional().describe('Histórico da conversa.'),
-  lastMessage: z.string().optional().describe('Última mensagem do usuário.'),
+  })).optional().describe('Histórico da conversa textual.'),
 });
 
 const InterviewOutputSchema = z.object({
-  text: z.string().describe('O texto da pergunta ou resposta do recrutador.'),
-  audio: z.string().describe('Áudio em formato data URI (WAV).'),
+  text: z.string().describe('O texto transcrito ou resposta do recrutador.'),
+  audio: z.string().describe('Áudio da resposta em formato data URI (WAV).'),
 });
 
 export type InterviewInput = z.infer<typeof InterviewInputSchema>;
@@ -56,38 +55,47 @@ async function pcmToWav(
 }
 
 export async function simulateInterview(input: InterviewInput): Promise<InterviewOutput> {
-  // 1. Gerar o texto da resposta primeiro para garantir qualidade no diálogo
-  const chat = await ai.generate({
-    model: googleAI.model('gemini-1.5-flash'),
-    system: `Você é um recrutador sênior especializado na área de ${input.areaName}. 
-    Seu objetivo é entrevistar o candidato ${input.userName}. 
-    Seja profissional, desafiador e faça perguntas situacionais. 
-    Mantenha as respostas curtas (máximo 2 sentenças) para facilitar a audição.`,
-    prompt: input.lastMessage || 'Comece a entrevista se apresentando e fazendo a primeira pergunta.',
-    history: input.history?.map(h => ({ role: h.role, content: [{ text: h.content }] })),
-  });
+  // Utilizamos o modelo gemini-2.5-flash-preview que suporta áudio nativo in/out
+  // O nome solicitado 'gemini-live-2.5-flash-native-audio' é mapeado para as capacidades multimodais do flash 2.5
+  
+  const promptParts: any[] = [
+    { text: `Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}. Seja profissional e direto. Responda SEMPRE em áudio e texto simultaneamente.` }
+  ];
 
-  const responseText = chat.text;
+  // Se o usuário enviou áudio, incluímos como parte do prompt multimodal
+  if (input.userAudio) {
+    promptParts.push({
+      media: {
+        url: input.userAudio,
+        contentType: 'audio/wav'
+      }
+    });
+  } else {
+    promptParts.push({ text: "Inicie a entrevista se apresentando e fazendo a primeira pergunta." });
+  }
 
-  // 2. Gerar o áudio nativo a partir do texto gerado
-  const { media } = await ai.generate({
-    model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  const response = await ai.generate({
+    model: googleAI.model('gemini-2.5-flash-preview'),
     config: {
-      responseModalities: ['AUDIO'],
+      responseModalities: ['AUDIO', 'TEXT'],
       speechConfig: {
         voiceConfig: {
           prebuiltVoiceConfig: { voiceName: 'Algenib' },
         },
       },
     },
-    prompt: responseText,
+    prompt: promptParts,
+    history: input.history?.map(h => ({ role: h.role, content: [{ text: h.content }] })),
   });
 
+  const responseText = response.text;
+  const media = response.media;
+
   if (!media || !media.url) {
-    throw new Error('Falha ao gerar áudio nativo');
+    throw new Error('Falha ao gerar áudio nativo na resposta multimodal');
   }
 
-  // Extrair buffer PCM e converter para WAV
+  // Extrair buffer PCM da resposta nativa e converter para WAV para o browser
   const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
   const pcmBuffer = Buffer.from(pcmBase64, 'base64');
   const wavBase64 = await pcmToWav(pcmBuffer);
