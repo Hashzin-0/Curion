@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore, User, ProfessionalArea, Education, PortfolioItem, Certificate, Skill } from '@/lib/store';
+import { useStore, User, ProfessionalArea, Education, PortfolioItem, Certificate } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { generateProfessionalSummary } from '@/src/ai/flows/generate-summary-flow';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
@@ -12,32 +11,27 @@ import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
 import { PhotoCropModal } from '@/components/PhotoCropModal';
 import { RichEditor } from '@/components/RichEditor';
-import { SkillSearch } from '@/components/SkillSearch';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { Modal, Button, inputCls, labelCls } from '@/components/ui/SharedUI';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { 
     currentUser, areas, updateUser, isAuthReady, experiences, skills, 
-    updateArea, removeArea, isLoading, education, portfolio, certificates,
+    updateArea, isLoading, education, portfolio,
     updateEducation, removeEducation, updatePortfolioItem, removePortfolioItem,
-    updateCertificate, removeCertificate, addAreaSkill, removeAreaSkill, areaSkills
+    areaSkills, removeAreaSkill
   } = useStore();
   const router = useRouter();
 
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [areaForm, setAreaForm] = useState<Partial<ProfessionalArea>>({});
-  const [deletingArea, setDeletingArea] = useState<ProfessionalArea | null>(null);
   const [editingEdu, setEditingEdu] = useState<Education | null>(null);
   const [editingPort, setEditingPort] = useState<PortfolioItem | null>(null);
-  const [editingCert, setEditingCert] = useState<Certificate | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddingContent, setIsAddingContent] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isManagingSkills, setIsManagingSkills] = useState(false);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
-  const [skillLevel, setSkillLevel] = useState(80);
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
@@ -53,9 +47,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (currentUser) {
       setEditedProfile({ name: currentUser.name, headline: currentUser.headline, summary: currentUser.summary, location: currentUser.location, photo_url: currentUser.photo_url });
-      if (areas.length > 0) setSelectedAreaId(areas[0].id);
     }
-  }, [currentUser, areas]);
+  }, [currentUser]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -104,13 +97,6 @@ export default function Dashboard() {
     toast.success('Link copiado!');
   };
 
-  const handleAddSkill = async (skill: Skill) => {
-    if (!selectedAreaId) return toast.error('Selecione uma área.');
-    if (areaSkills.find(as => as.area_id === selectedAreaId && as.skill_id === skill.id)) return toast.warning('Já cadastrada.');
-    await addAreaSkill({ area_id: selectedAreaId, skill_id: skill.id, level: skillLevel });
-    toast.success(`${skill.name} adicionada!`);
-  };
-
   const handleSaveEdu = async (e: React.FormEvent) => { e.preventDefault(); if (!editingEdu) return; setIsProcessing(true); await updateEducation(editingEdu); setIsProcessing(false); setEditingEdu(null); toast.success('Atualizado!'); };
   const handleSavePort = async (e: React.FormEvent) => { e.preventDefault(); if (!editingPort) return; setIsProcessing(true); await updatePortfolioItem(editingPort); setIsProcessing(false); setEditingPort(null); toast.success('Atualizado!'); };
   const handleSaveArea = async () => { if (!editingArea || !areaForm.name) return; setIsProcessing(true); await updateArea({ ...editingArea, ...areaForm } as ProfessionalArea); setIsProcessing(false); setEditingArea(null); toast.success('Atualizado!'); };
@@ -132,9 +118,9 @@ export default function Dashboard() {
       <ThemedProfileLayout
         user={currentUser} areas={areas} education={education.filter(e => e.user_id === currentUser.id)} portfolio={portfolio.filter(p => p.user_id === currentUser.id)}
         isOwner={true} onEditProfile={() => setIsEditingProfile(true)} onAddContent={() => setIsAddingContent(true)}
-        onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} onDeleteArea={setDeletingArea}
+        onEditArea={(area: any) => { setEditingArea(area); setAreaForm(area); }} onDeleteArea={() => {}}
         onEditEducation={setEditingEdu} onDeleteEducation={removeEducation} onEditPortfolio={setEditingPort} onDeletePortfolio={removePortfolioItem}
-        onManageSkills={() => setIsManagingSkills(true)} theme={profileTheme} isLoadingTheme={isLoadingTheme} username={currentUser.username}
+        theme={profileTheme} isLoadingTheme={isLoadingTheme} username={currentUser.username}
       />
 
       <AddContentModal isOpen={isAddingContent} onClose={() => setIsAddingContent(false)} />
@@ -151,28 +137,18 @@ export default function Dashboard() {
             <div><label className={labelCls}>Nome</label><input className={inputCls} value={editedProfile.name || ''} onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })} /></div>
             <div><label className={labelCls}>Headline</label><input className={inputCls} value={editedProfile.headline || ''} onChange={(e) => setEditedProfile({ ...editedProfile, headline: e.target.value })} /></div>
           </div>
-          <div><label className={labelCls}>Resumo Profissional</label><RichEditor content={editedProfile.summary || ''} onChange={(val) => setEditedProfile({ ...editedProfile, summary: val })} /></div>
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className={labelCls}>Resumo Profissional</label>
+              <button type="button" onClick={handleGenerateSummary} disabled={isGeneratingSummary} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline">
+                {isGeneratingSummary ? <LucideIcons.Loader2 size={12} className="animate-spin" /> : <LucideIcons.Sparkles size={12} />}
+                {isGeneratingSummary ? 'Gerando...' : 'Gerar com IA'}
+              </button>
+            </div>
+            <RichEditor content={editedProfile.summary || ''} onChange={(val) => setEditedProfile({ ...editedProfile, summary: val })} />
+          </div>
           <div className="flex gap-4"><Button variant="secondary" className="flex-1" onClick={() => setIsEditingProfile(false)}>Cancelar</Button><Button className="flex-1" type="submit">Salvar Alterações</Button></div>
         </form>
-      </Modal>
-
-      <Modal isOpen={isManagingSkills} onClose={() => setIsManagingSkills(false)} title="Competências">
-        <div className="space-y-8">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className={labelCls}>Área</label><select value={selectedAreaId} onChange={(e) => setSelectedAreaId(e.target.value)} className={inputCls}>{areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
-            <div><label className={labelCls}>Domínio ({skillLevel}%)</label><input type="range" min="10" max="100" step="5" value={skillLevel} onChange={(e) => setSkillLevel(Number(e.target.value))} className="w-full accent-blue-600 h-10" /></div>
-          </div>
-          <SkillSearch onAdd={handleAddSkill} />
-          <div className="flex flex-wrap gap-2">
-            {areaSkills.map((as) => (
-              <div key={as.id} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl border border-slate-200">
-                <span className="font-bold text-xs">{skills.find(s => s.id === as.skill_id)?.name}</span>
-                <button onClick={() => removeAreaSkill(as.id)} className="text-red-500"><LucideIcons.X size={12} /></button>
-              </div>
-            ))}
-          </div>
-          <Button className="w-full" onClick={() => setIsManagingSkills(false)}>Concluir</Button>
-        </div>
       </Modal>
 
       <Modal isOpen={!!editingEdu} onClose={() => setEditingEdu(null)} title="Editar Formação">
