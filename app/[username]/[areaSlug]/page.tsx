@@ -39,7 +39,7 @@ function DottedSeparator({ color }: { color: string }) {
 
 export default function AreaResume() {
   const { username, areaSlug } = useParams();
-  const { users, areas, experiences, skills, areaSkills, education, isLoading } = useStore();
+  const { users, areas, experiences, skills, areaSkills, education, currentUser, isLoading } = useStore();
   const router = useRouter();
   const pdfRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -66,7 +66,7 @@ export default function AreaResume() {
       if (!found) {
         try {
           const { supabase } = await import('@/lib/supabase');
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('users')
             .select('*')
             .eq('username', username)
@@ -80,7 +80,6 @@ export default function AreaResume() {
       setUser(found || null);
       setLoadingUser(false);
       
-      // Só redireciona se tivermos certeza absoluta que não existe
       if (!found && !isLoading && isMounted) {
         router.push('/');
       }
@@ -125,6 +124,7 @@ export default function AreaResume() {
   const area = areas.find(a => a.slug === areaSlug);
   if (!user || !area) return null;
 
+  const isOwner = currentUser?.id === user.id;
   const theme = getTheme(area.slug);
   const areaExperiences = experiences.filter(e => e.area_id === area.id && e.user_id === user.id);
   const currentAreaSkills = areaSkills.filter(as => as.area_id === area.id);
@@ -197,7 +197,6 @@ export default function AreaResume() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8f8f8', fontFamily: "'Arial Black', Arial, sans-serif" }}>
 
-      {/* Toolbar - não entra no PDF */}
       <div style={{
         position: 'sticky',
         top: 0,
@@ -228,39 +227,41 @@ export default function AreaResume() {
           Voltar
         </button>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={handleExportThemed}
-            disabled={exporting}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 22px',
-              background: exporting ? '#ccc' : theme.hex,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 999,
-              fontWeight: 900,
-              fontSize: 14,
-              cursor: exporting ? 'not-allowed' : 'pointer',
-              boxShadow: `0 4px 14px ${theme.hex}55`,
-              transition: 'all .2s',
-            }}
-          >
-            {exporting ? (
-              <>
-                <LucideIcons.Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                Gerando com IA...
-              </>
-            ) : (
-              <>
-                <LucideIcons.Sparkles size={16} />
-                Exportar Currículo Temático
-              </>
-            )}
-          </button>
-        </div>
+        {isOwner && (
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              onClick={handleExportThemed}
+              disabled={exporting}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 22px',
+                background: exporting ? '#ccc' : theme.hex,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 999,
+                fontWeight: 900,
+                fontSize: 14,
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                boxShadow: `0 4px 14px ${theme.hex}55`,
+                transition: 'all .2s',
+              }}
+            >
+              {exporting ? (
+                <>
+                  <LucideIcons.Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  Gerando com IA...
+                </>
+              ) : (
+                <>
+                  <LucideIcons.Sparkles size={16} />
+                  Exportar Currículo Temático
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {exportError && (
@@ -269,7 +270,6 @@ export default function AreaResume() {
         </div>
       )}
 
-      {/* Poster-style resume view */}
       <div style={{
         maxWidth: 800,
         margin: '32px auto',
@@ -278,10 +278,8 @@ export default function AreaResume() {
         overflow: 'hidden',
       }}>
 
-        {/* Top stripe */}
         <div style={{ height: 14, background: theme.hex }} />
 
-        {/* Header */}
         <div style={{
           background: theme.hex,
           padding: '28px 36px 24px',
@@ -291,7 +289,6 @@ export default function AreaResume() {
           position: 'relative',
           overflow: 'hidden',
         }}>
-          {/* Decorative circles */}
           <div style={{
             position: 'absolute', top: -40, right: -40,
             width: 160, height: 160,
@@ -305,7 +302,6 @@ export default function AreaResume() {
             borderRadius: '50%',
           }} />
 
-          {/* Photo */}
           {user.photo_url && (
             <div style={{
               width: 120,
@@ -329,7 +325,6 @@ export default function AreaResume() {
             </div>
           )}
 
-          {/* Name block */}
           <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
             <div style={{
               fontSize: 44,
@@ -355,7 +350,6 @@ export default function AreaResume() {
             </div>
           </div>
 
-          {/* Area emoji */}
           <div style={{
             fontSize: 72,
             lineHeight: 1,
@@ -367,10 +361,8 @@ export default function AreaResume() {
           </div>
         </div>
 
-        {/* Secondary stripe */}
         <div style={{ height: 10, background: theme.hexSecondary }} />
 
-        {/* Contact bar */}
         <div style={{
           background: '#fff',
           padding: '14px 36px',
@@ -412,7 +404,6 @@ export default function AreaResume() {
           )}
         </div>
 
-        {/* Summary */}
         {user.summary && (
           <div style={{
             padding: '20px 36px',
@@ -423,7 +414,7 @@ export default function AreaResume() {
             borderBottom: `2px solid #eee`,
           }}>
             <div style={{ fontSize: 40, flexShrink: 0, lineHeight: 1 }}>💬</div>
-            <p style={{
+            <div style={{
               margin: 0,
               fontSize: 12,
               fontWeight: 700,
@@ -431,16 +422,12 @@ export default function AreaResume() {
               color: '#222',
               textTransform: 'uppercase',
               letterSpacing: 0.4,
-            }}>
-              {user.summary}
-            </p>
+            }} dangerouslySetInnerHTML={{ __html: user.summary }} />
           </div>
         )}
 
-        {/* Experiences section */}
         {areaExperiences.length > 0 && (
           <div style={{ padding: '0 36px' }}>
-            {/* Section header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '28px 0 20px' }}>
               <div style={{
                 background: theme.hexSecondary,
@@ -470,7 +457,6 @@ export default function AreaResume() {
               <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
             </div>
 
-            {/* Experience items */}
             <div style={{ paddingBottom: 8 }}>
               {areaExperiences.map((exp, i) => {
                 const duration = calcDuration(exp.start_date, exp.end_date);
@@ -512,7 +498,9 @@ export default function AreaResume() {
                       marginTop: 3,
                     }}>
                       {exp.role}
-                      {exp.description && ` — ${exp.description}`}
+                      {exp.description && (
+                        <span dangerouslySetInnerHTML={{ __html: ` — ${exp.description}` }} />
+                      )}
                     </div>
                   </div>
                 );
@@ -521,7 +509,6 @@ export default function AreaResume() {
           </div>
         )}
 
-        {/* Education section */}
         {userEducation.length > 0 && (
           <div style={{ padding: '0 36px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '20px 0 16px' }}>
@@ -584,7 +571,6 @@ export default function AreaResume() {
           </div>
         )}
 
-        {/* Skills section */}
         {allAreaSkillDetails.length > 0 && (
           <div style={{ padding: '0 36px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '20px 0 16px' }}>
@@ -635,7 +621,6 @@ export default function AreaResume() {
                       {s.skill!.name}
                     </span>
                   </div>
-                  {/* Progress bar */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 24, marginTop: 4 }}>
                     <div style={{
                       flex: 1,
@@ -667,11 +652,9 @@ export default function AreaResume() {
           </div>
         )}
 
-        {/* Bottom stripes */}
         <div style={{ height: 8, background: theme.hex, marginTop: 24 }} />
         <div style={{ height: 5, background: theme.hexSecondary }} />
 
-        {/* Footer with QR code */}
         <div style={{
           background: '#1a1a1a',
           padding: '20px 36px',
@@ -702,7 +685,6 @@ export default function AreaResume() {
         </div>
       </div>
 
-      {/* Hidden PDF template */}
       {exportTheme && exportData && (
         <div style={{ position: 'fixed', left: -9999, top: -9999, zIndex: -1 }}>
           <ResumeTemplate ref={pdfRef} data={exportData} theme={exportTheme} profileUrl={currentUrl} />
