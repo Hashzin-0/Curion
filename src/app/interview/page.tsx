@@ -2,7 +2,7 @@
 
 import { useRealtimeInterview } from '@/hooks/useRealtimeInterview';
 import { Button } from '@/components/ui/SharedUI';
-import { Mic, Square, ArrowLeft } from 'lucide-react';
+import { Mic, Square, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function InterviewPage() {

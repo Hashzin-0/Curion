@@ -107,10 +107,7 @@ export function useRealtimeInterview() {
       }
     };
 
-    ws.onerror = (err) => {
-      console.error('WebSocket Error:', err);
-      reconnect();
-    };
+    ws.onerror = () => reconnect();
     ws.onclose = () => reconnect();
   }
 
@@ -138,15 +135,11 @@ export function useRealtimeInterview() {
       buffer[i] = binary.charCodeAt(i);
     }
 
-    // Nota: decodeAudioData espera um container (WAV/MP3). 
-    // Se o modelo retornar PCM puro, pode ser necessário criar o buffer manualmente.
     audioCtx.decodeAudioData(buffer.buffer, (decoded) => {
       const src = audioCtx.createBufferSource();
       src.buffer = decoded;
       src.connect(audioCtx.destination);
       src.start();
-    }).catch(err => {
-      console.warn('Erro ao decodificar áudio nativo:', err);
     });
   }
 

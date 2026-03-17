@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense } from 'react';
 import {
-  Loader2, Wand2, ArrowLeft, Save, Sparkles, BrainCircuit, Share2
+  Loader2, ArrowLeft, Share2, Sparkles, BrainCircuit
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -20,12 +20,12 @@ function ResumeBuilderContent() {
   const searchParams = useSearchParams();
   const isSmartMode = searchParams.get('smart') === 'true';
   
-  const { currentUser, experiences: storeExp, education: storeEdu, skills: storeSkills, areas, areaSkills } = useStore();
+  const { currentUser, experiences: storeExp, education: storeEdu, skills: storeSkills } = useStore();
   
-  const [name, setName] = useState(currentUser?.name || '');
+  const [name] = useState(currentUser?.name || '');
   const [profession, setProfession] = useState(currentUser?.headline || '');
-  const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [email, setEmail] = useState(currentUser?.email || '');
+  const [phone] = useState(currentUser?.phone || '');
+  const [email] = useState(currentUser?.email || '');
   const [summary, setSummary] = useState(currentUser?.summary || '');
   
   const [experiences, setExperiences] = useState<any[]>([]);
@@ -37,7 +37,6 @@ function ResumeBuilderContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Carrega dados do Smart Match ou do Perfil
   useEffect(() => {
     if (isSmartMode) {
       const stored = localStorage.getItem('career_canvas_smart_match');
@@ -48,7 +47,6 @@ function ResumeBuilderContent() {
           if (data.tailoredSummary) setSummary(data.tailoredSummary);
           if (data.interviewQuestions) setInterviewQuestions(data.interviewQuestions);
           
-          // Filtra itens do store baseados nos IDs recomendados pela IA
           const selectedExps = storeExp
             .filter(e => data.selectedExperienceIds?.includes(e.id))
             .map(e => ({ company: e.company_name, role: e.role, duration: calcDuration(e.start_date, e.end_date) }));
@@ -71,7 +69,6 @@ function ResumeBuilderContent() {
         }
       }
     } else {
-      // Carregamento padrão do perfil completo
       setExperiences(storeExp.map(e => ({ company: e.company_name, role: e.role, duration: calcDuration(e.start_date, e.end_date) })));
       setEducation(storeEdu.map(e => ({ institution: e.institution, course: e.course, period: 'Concluído' })));
       setSkills(storeSkills.map(s => ({ name: s.name, description: '' })));
@@ -101,11 +98,10 @@ function ResumeBuilderContent() {
   }, [name, profession, theme, generateTheme]);
 
   const handleExport = () => {
-    setExporting(true);
-    // Simulação de exportação - o componente ResumeTemplate lida com o trigger de PDF via Ref em outras partes
+    setIsExporting(true);
     toast.info('Iniciando exportação do PDF...');
     setTimeout(() => {
-      setExporting(false);
+      setIsExporting(false);
       toast.success('PDF gerado com sucesso!');
     }, 2000);
   };
@@ -180,11 +176,6 @@ function ResumeBuilderContent() {
           )}
         </div>
       </div>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
