@@ -6,7 +6,8 @@
 import { themes } from '@/styles/themes';
 import { detectAreaFromRole } from './utils';
 
-export function hashString(str: string) {
+export function hashString(str: string | null | undefined) {
+  if (!str) return 0;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -93,11 +94,8 @@ export function generatePremiumTheme(name: string, area = "tecnologia") {
   };
 }
 
-/**
- * Gera tema de perfil determinístico (sem IA).
- */
 export function generateSystemProfileTheme(name: string, headline: string, areas: string[]) {
-  const seed = hashString(name + headline);
+  const seed = hashString((name || '') + (headline || ''));
   const mainArea = areas[0] || "Geral";
   const palette = generatePalette(seed);
   const particles = generateParticles(seed, mainArea);
@@ -123,16 +121,12 @@ export function generateSystemProfileTheme(name: string, headline: string, areas
   };
 }
 
-/**
- * Gera tema de currículo determinístico (sem IA).
- */
 export function generateSystemResumeTheme(name: string, profession: string) {
   const detected = detectAreaFromRole(profession);
   const themeBase = themes[detected.slug as keyof typeof themes] || themes.default;
-  const seed = hashString(name + profession);
+  const seed = hashString((name || '') + (profession || ''));
   const palette = generatePalette(seed);
 
-  // Layout corporativo para certas áreas, vibrante para outras
   const sidebarAreas = ['tecnologia', 'saude', 'logistica', 'administrativo', 'educacao'];
   const layoutStyle = sidebarAreas.includes(detected.slug) ? 'sidebar' : 'vibrant';
 
@@ -155,6 +149,6 @@ export function generateSystemResumeTheme(name: string, profession: string) {
     skillEmoji: '⭐',
     bulletEmoji: themeBase.emoji,
     summaryEmoji: '💬',
-    professionalSummary: `PROFISSIONAL COM EXPERIÊNCIA EM ${profession.toUpperCase()}, FOCADO EM RESULTADOS E EXCELÊNCIA TÉCNICA NA ÁREA DE ${detected.name.toUpperCase()}.`,
+    professionalSummary: `PROFISSIONAL COM EXPERIÊNCIA EM ${(profession || '').toUpperCase()}, FOCADO EM RESULTADOS E EXCELÊNCIA TÉCNICA NA ÁREA DE ${detected.name.toUpperCase()}.`,
   };
 }

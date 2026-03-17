@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,6 +10,7 @@ import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
 import SimpleBar from 'simplebar-react';
+import 'simplebar-react/dist/simplebar.min.css';
 import { getTheme } from '@/styles/themes';
 import { useStore } from '@/lib/store';
 import { useQueryState } from 'nuqs';
@@ -65,14 +65,14 @@ function Particle({ emoji, x, size, speed, delay }: any) {
 
 export function ThemedProfileLayout(props: Props) {
   const [isMounted, setIsMounted] = useState(false);
-  const [areaFilter, setAreaFilter] = useQueryState('area');
+  const [areaFilter] = useQueryState('area');
   const { areaSkills, skills, experiences } = useStore();
   const [expandedExpId, setExpandedExpId] = useState<string | null>(null);
 
   useEffect(() => { setIsMounted(true); }, []);
 
   const mainArea = props.areas[0]?.name || "tecnologia";
-  const premium = useMemo(() => generatePremiumTheme(props.user.name, mainArea), [props.user.name, mainArea]);
+  const premium = useMemo(() => generatePremiumTheme(props.user.name || '', mainArea), [props.user.name, mainArea]);
   const accentColor = props.theme?.primaryHex || premium.palette.primary;
   
   const filteredAreas = useMemo(() => {
@@ -107,7 +107,6 @@ export function ThemedProfileLayout(props: Props) {
     <SimpleBar style={{ maxHeight: '100vh' }}>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
         <LayoutGroup>
-          {/* HERO SECTION */}
           <div className="relative overflow-hidden" style={{ background: premium.meshGradient, minHeight: '520px' }}>
             {isMounted && Array.from({ length: 15 }).map((_, i) => (
               <Particle key={i} emoji={waterfallEmojis[i % waterfallEmojis.length]} x={(i * 7.5) % 100} size={20 + (i * 5) % 30} speed={5 + (i * 2) % 10} delay={i * 0.8} />
@@ -124,7 +123,6 @@ export function ThemedProfileLayout(props: Props) {
           </div>
 
           <div className="max-w-5xl mx-auto px-6 py-12 space-y-20">
-            {/* AREAS SECTION */}
             <section>
               <div className="flex items-center justify-between mb-10">
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4">
@@ -150,10 +148,8 @@ export function ThemedProfileLayout(props: Props) {
                         layout
                         className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
                       >
-                        {/* Faixa Superior de Cor */}
                         <div className="h-2 w-full" style={{ backgroundColor: theme.hex }} />
                         
-                        {/* Ações da Área */}
                         {props.isOwner && (
                           <CardActions 
                             onEdit={() => props.onEditArea?.(area)}
@@ -176,7 +172,6 @@ export function ThemedProfileLayout(props: Props) {
                             <span className="text-4xl filter drop-shadow-md">{theme.emoji}</span>
                           </div>
 
-                          {/* Lista de Cargos Expandível */}
                           <div className="space-y-3 mb-8 flex-1">
                             {areaExps.slice(0, 3).map((exp) => {
                               const isExpanded = expandedExpId === exp.id;
@@ -232,7 +227,7 @@ export function ThemedProfileLayout(props: Props) {
                                         <div className="px-4 pb-4 pt-2">
                                           <div 
                                             className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium prose prose-sm dark:prose-invert"
-                                            dangerouslySetInnerHTML={{ __html: exp.description || 'Nenhuma descrição detalhada fornecida.' }}
+                                            dangerouslySetInnerHTML={{ __html: exp.description || '' }}
                                           />
                                         </div>
                                       </motion.div>
@@ -263,7 +258,6 @@ export function ThemedProfileLayout(props: Props) {
               )}
             </section>
 
-            {/* SKILLS SECTION - Dinâmica */}
             {hasSkills && (
               <section>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
@@ -290,7 +284,6 @@ export function ThemedProfileLayout(props: Props) {
               </section>
             )}
 
-            {/* EDUCATION SECTION - Dinâmica */}
             {hasEducation && (
               <EducationSection 
                 education={props.education} 
@@ -300,7 +293,6 @@ export function ThemedProfileLayout(props: Props) {
               />
             )}
 
-            {/* PORTFOLIO SECTION - Dinâmica */}
             {hasPortfolio && (
               <PortfolioSection 
                 portfolio={props.portfolio} 
@@ -310,12 +302,10 @@ export function ThemedProfileLayout(props: Props) {
               />
             )}
 
-            {/* STATS SECTION - Dinâmica */}
             {(userExperiences.length > 0 || hasSkills) && (
               <section><Stats userId={props.user.id} /></section>
             )}
 
-            {/* TIMELINE SECTION - Dinâmica */}
             {hasTimeline && (
               <section><Timeline userId={props.user.id} readOnly={!props.isOwner} /></section>
             )}

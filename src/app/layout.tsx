@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { QueryClientProvider } from '@/components/QueryClientProvider';
 import { StoreInitializer } from '@/components/StoreInitializer';
 import { Toaster } from 'sonner';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 export default function RootLayout({
   children,
@@ -15,20 +16,22 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="antialiased font-sans">
-        <QueryClientProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AuthProvider>
-              <StoreInitializer />
-              {children}
-              <Toaster position="top-center" richColors />
-            </AuthProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        <NuqsAdapter>
+          <QueryClientProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthProvider>
+                <StoreInitializer />
+                {children}
+                <Toaster position="top-center" richColors />
+              </AuthProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

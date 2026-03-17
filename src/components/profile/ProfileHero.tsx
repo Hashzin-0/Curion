@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +10,6 @@ import { User } from '@/lib/store';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
 import { ImportResumeModal } from '@/components/ImportResumeModal';
-import Link from 'next/link';
 
 type Props = {
   user: User;
@@ -44,7 +42,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
             >
               <Image
                 src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
-                alt={user.name}
+                alt={user.name || 'Profile'}
                 fill
                 className="object-cover"
                 referrerPolicy="no-referrer"
@@ -65,12 +63,12 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
           <RoughNotationGroup show={true}>
             <h1 className="text-5xl md:text-7xl font-black text-white mb-4 leading-tight tracking-tighter" style={{ textShadow: `0 10px 30px ${darkColor}` }}>
               <RoughNotation type="underline" color={accentColor} strokeWidth={4} padding={10}>
-                {user.name}
+                {user.name || 'Seu Nome'}
               </RoughNotation>
             </h1>
             <p className="text-white/90 text-2xl font-bold mb-3 tracking-tight">
               <RoughNotation type="box" color="white" strokeWidth={1} padding={4}>
-                {user.headline}
+                {user.headline || 'Profissional'}
               </RoughNotation>
             </p>
           </RoughNotationGroup>
@@ -86,7 +84,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               <div
                 className="max-w-xl text-white/80 text-sm leading-relaxed border-l-4 pl-4 font-medium prose prose-sm prose-invert"
                 style={{ borderColor: accentColor }}
-                dangerouslySetInnerHTML={{ __html: user.summary }}
+                dangerouslySetInnerHTML={{ __html: user.summary || '' }}
               />
             )}
           </div>
