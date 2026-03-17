@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { motion, LayoutGroup } from 'motion/react';
+import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { Plus, Pencil, Trash2, ArrowRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowRight, Briefcase, FileText, X, Info } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
-import { User, ProfessionalArea, Education, PortfolioItem, Certificate } from '@/lib/store';
+import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';
 import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
@@ -15,6 +15,7 @@ import { getTheme } from '@/styles/themes';
 import { useStore } from '@/lib/store';
 import { useQueryState } from 'nuqs';
 import Link from 'next/link';
+import { Modal } from '@/components/ui/SharedUI';
 
 // Sub-componentes modularizados
 import { ProfileHero } from './profile/ProfileHero';
@@ -63,6 +64,7 @@ export function ThemedProfileLayout(props: Props) {
   const [isMounted, setIsMounted] = useState(false);
   const [areaFilter, setAreaFilter] = useQueryState('area');
   const { areaSkills, skills, experiences } = useStore();
+  const [selectedExp, setSelectedExp] = useState<Experience | null>(null);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -130,24 +132,58 @@ export function ThemedProfileLayout(props: Props) {
               </div>
               
               {props.areas.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredAreas.map((area) => (
-                    <Link key={area.id} href={`/${props.username}/${area.slug}`}>
-                      <div className="relative overflow-hidden rounded-[2.5rem] p-8 h-full bg-white dark:bg-slate-900 shadow-sm hover:shadow-2xl border border-slate-100 dark:border-slate-800" style={{ borderTop: `6px solid ${getTheme(area.slug).hex}` }}>
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white" style={{ backgroundColor: getTheme(area.slug).hex }}>
-                            <LucideIcons.Briefcase className="w-7 h-7" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {filteredAreas.map((area) => {
+                    const areaExps = userExperiences.filter(e => e.area_id === area.id);
+                    const theme = getTheme(area.slug);
+                    
+                    return (
+                      <div key={area.id} className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col">
+                        {/* Faixa Superior de Cor */}
+                        <div className="h-2 w-full" style={{ backgroundColor: theme.hex }} />
+                        
+                        <div className="p-8 flex flex-col h-full">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: theme.hex }}>
+                                <Briefcase className="w-7 h-7" />
+                              </div>
+                              <div>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{area.name}</h3>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{areaExps.length} Experiência{areaExps.length !== 1 ? 's' : ''}</span>
+                              </div>
+                            </div>
+                            <span className="text-4xl filter drop-shadow-md">{theme.emoji}</span>
                           </div>
-                          <span className="text-4xl">{getTheme(area.slug).emoji}</span>
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">{area.name}</h3>
-                        <div className="flex items-center text-sm font-black gap-2" style={{ color: getTheme(area.slug).hex }}>
-                          <span className="tracking-widest uppercase text-[10px]">Acessar</span>
-                          <ArrowRight className="w-4 h-4" />
+
+                          {/* Lista de Cargos */}
+                          <div className="space-y-3 mb-8 flex-1">
+                            {areaExps.slice(0, 3).map((exp) => (
+                              <button 
+                                key={exp.id}
+                                onClick={(e) => { e.preventDefault(); setSelectedExp(exp); }}
+                                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left group/item"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{exp.role}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{exp.company_name}</span>
+                                </div>
+                                <Info size={14} className="text-slate-300 group-hover/item:text-blue-500 transition-colors" />
+                              </button>
+                            ))}
+                            {areaExps.length > 3 && (
+                              <p className="text-[10px] font-black text-slate-400 uppercase text-center">+ {areaExps.length - 3} outros registros</p>
+                            )}
+                          </div>
+
+                          <Link href={`/${props.username}/${area.slug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
+                            Ver Currículo Completo
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
                         </div>
                       </div>
-                    </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -204,7 +240,7 @@ export function ThemedProfileLayout(props: Props) {
               />
             )}
 
-            {/* STATS SECTION - Dinâmica (apenas se houver dados para os gráficos) */}
+            {/* STATS SECTION - Dinâmica */}
             {(userExperiences.length > 0 || hasSkills) && (
               <section><Stats userId={props.user.id} /></section>
             )}
@@ -215,6 +251,36 @@ export function ThemedProfileLayout(props: Props) {
             )}
           </div>
         </LayoutGroup>
+
+        {/* Modal de Detalhes da Experiência */}
+        <Modal 
+          isOpen={!!selectedExp} 
+          onClose={() => setSelectedExp(null)} 
+          title="Resumo da Experiência"
+          maxWidth="max-w-xl"
+        >
+          {selectedExp && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800">
+                <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+                  <Briefcase size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{selectedExp.role}</h4>
+                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">{selectedExp.company_name}</p>
+                </div>
+              </div>
+              
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: selectedExp.description || 'Nenhuma descrição detalhada fornecida.' }} />
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <button onClick={() => setSelectedExp(null)} className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest">Fechar</button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     </SimpleBar>
   );
