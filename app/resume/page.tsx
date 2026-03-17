@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Loader2, Plus, Trash2, Wand2, Download, ArrowLeft, X,
   User, Briefcase, GraduationCap, Star, FileText,
-  Palette, Layers, GripVertical, Upload, FileCode, Save, Check, Sparkles
+  Palette, Layers, GripVertical, Upload, FileCode, Save, Check, Sparkles, BrainCircuit, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
@@ -32,7 +32,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { parseResumeText } from '@/src/ai/flows/parse-resume-text-flow';
 import { calcDuration } from '@/lib/utils';
 
 const ResumeTemplate = dynamic(() => import('@/components/ResumeTemplate'), { ssr: false });
@@ -85,13 +84,9 @@ export default function ResumeBuilderPage() {
   const searchParams = useSearchParams();
   const isSmartMode = searchParams.get('smart') === 'true';
   
-  const { currentUser, experiences: dbExperiences, education: dbEducation, portfolio: dbPortfolio, areaSkills, skills: dbSkills, addExperienceWithAutoArea, addEducation, updateUser } = useStore();
+  const { currentUser, experiences: dbExperiences, education: dbEducation, areaSkills, skills: dbSkills } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
-  const [isParsing, setIsParsing] = useState(false);
-  const [isSavingToProfile, setIsSavingToProfile] = useState(false);
-
-  // Resume Data State
+  const [activeTab, setActiveTab] = useState<'content' | 'style' | 'prep'>('content');
   const [name, setName] = useState(currentUser?.name || '');
   const [profession, setProfession] = useState(currentUser?.headline || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
@@ -105,6 +100,7 @@ export default function ResumeBuilderPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [addedSections, setAddedSections] = useState<SectionType[]>(['summary', 'experience', 'education', 'skill']);
+  const [interviewQuestions, setInterviewQuestions] = useState<{question: string, advice: string}[]>([]);
 
   // Theme State
   const [theme, setTheme] = useState<(ResumeTheme & { fontFamily?: string }) | null>(null);
@@ -117,7 +113,6 @@ export default function ResumeBuilderPage() {
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  // Carrega dados de match inteligente se disponível
   useEffect(() => {
     if (!isSmartMode) return;
 
@@ -126,7 +121,6 @@ export default function ResumeBuilderPage() {
       try {
         const matchData = JSON.parse(storedMatch);
         
-        // Filtra e mapeia os dados do banco baseados nos IDs selecionados pela IA
         const matchedExps = dbExperiences
           .filter(e => matchData.selectedExperienceIds.includes(e.id))
           .map(e => ({ company: e.company_name, role: e.role, duration: calcDuration(e.start_date, e.end_date) }));
@@ -144,6 +138,7 @@ export default function ResumeBuilderPage() {
         setSkills(matchedSkills);
         setSummary(matchData.tailoredSummary);
         setProfession(matchData.tailoredHeadline);
+        setInterviewQuestions(matchData.interviewQuestions || []);
         
         toast.success('Curadoria inteligente aplicada!');
       } catch (e) {
@@ -228,13 +223,16 @@ export default function ResumeBuilderPage() {
             </button>
           </div>
           <div className="flex p-1 bg-white/5 rounded-xl">
-            <button onClick={() => setActiveTab('content')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'content' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-400'}`}>Conteúdo</button>
-            <button onClick={() => setActiveTab('style')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'style' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-400'}`}>Estilo</button>
+            <button onClick={() => setActiveTab('content')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'content' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-400'}`}>Conteúdo</button>
+            <button onClick={() => setActiveTab('style')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'style' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-400'}`}>Estilo</button>
+            {isSmartMode && (
+              <button onClick={() => setActiveTab('prep')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'prep' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}>Preparação</button>
+            )}
           </div>
         </div>
 
         <div className="p-6 space-y-8">
-          {activeTab === 'content' ? (
+          {activeTab === 'content' && (
             <>
               {isSmartMode && (
                 <div className="bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl mb-6">
@@ -277,7 +275,9 @@ export default function ResumeBuilderPage() {
                 </DndContext>
               </div>
             </>
-          ) : (
+          )}
+
+          {activeTab === 'style' && (
             <div className="space-y-8">
               {theme && (
                 <>
@@ -296,6 +296,44 @@ export default function ResumeBuilderPage() {
                     <ChromePicker color={theme.primaryColor} onChange={(c) => setTheme({...theme, primaryColor: c.hex})} disableAlpha styles={{ default: { picker: { width: '100%', background: 'transparent', boxShadow: 'none' } } }} />
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'prep' && isSmartMode && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 text-blue-400 mb-4">
+                <BrainCircuit size={20} />
+                <h2 className="text-xs font-black uppercase tracking-widest">Guia de Estudo IA</h2>
+              </div>
+              
+              {interviewQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  {interviewQuestions.map((item, idx) => (
+                    <motion.div 
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="p-4 bg-white/5 border border-white/10 rounded-2xl group hover:border-blue-500/50 transition-all"
+                    >
+                      <h4 className="text-xs font-black text-blue-400 mb-2 uppercase tracking-tight flex items-center gap-2">
+                        <span className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white shrink-0">{idx + 1}</span>
+                        {item.question}
+                      </h4>
+                      <div className="pl-7 border-l-2 border-white/5">
+                        <p className="text-[11px] text-slate-400 italic leading-relaxed">
+                          <span className="text-emerald-400 font-bold not-italic">Dica: </span>
+                          {item.advice}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500">
+                  <p className="text-sm font-bold">Nenhuma pergunta gerada.</p>
+                </div>
               )}
             </div>
           )}
