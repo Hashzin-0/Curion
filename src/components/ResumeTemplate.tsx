@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
+import { ResumeTheme } from '@/ai/flows/generate-resume-theme-flow';
 
 export type ResumeData = {
   name: string;
@@ -59,7 +59,6 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
 
   useEffect(() => {
     if (theme.fontFamily) {
-      // Carregamento dinâmico do webfontloader para evitar erro de window no SSR
       import('webfontloader').then((WebFont) => {
         WebFont.load({
           google: {

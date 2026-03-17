@@ -1,12 +1,10 @@
-
 'use client';
 
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { ResumeData } from './ResumeTemplate';
-import { ResumeTheme } from '@/src/ai/flows/generate-resume-theme-flow';
+import { ResumeTheme } from '@/ai/flows/generate-resume-theme-flow';
 
-// Registrando fontes para o PDF
 Font.register({
   family: 'Inter',
   fonts: [
