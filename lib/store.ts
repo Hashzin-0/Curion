@@ -144,6 +144,9 @@ interface AppState {
   addArea: (area: Omit<ProfessionalArea, 'id' | 'user_id'>) => Promise<void>;
   updateArea: (area: ProfessionalArea) => Promise<void>;
   removeArea: (areaId: string) => Promise<void>;
+
+  addAreaSkill: (areaSkill: Omit<AreaSkill, 'id'>) => Promise<void>;
+  removeAreaSkill: (id: string) => Promise<void>;
   
   fetchData: () => Promise<void>;
 }
@@ -346,6 +349,15 @@ export const useStore = create<AppState>()(
       removeArea: async (id) => {
         await supabase.from('areas').delete().eq('id', id);
         set((state) => ({ areas: state.areas.filter(a => a.id !== id) }));
+      },
+
+      addAreaSkill: async (areaSkill) => {
+        const { data } = await supabase.from('area_skills').insert([areaSkill]).select().single();
+        if (data) set((state) => ({ areaSkills: [...state.areaSkills, data] }));
+      },
+      removeAreaSkill: async (id) => {
+        await supabase.from('area_skills').delete().eq('id', id);
+        set((state) => ({ areaSkills: state.areaSkills.filter(as => as.id !== id) }));
       },
       
       addAchievement: async (ach) => {

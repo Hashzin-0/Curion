@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -5,9 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus, Pencil, Trash2, GraduationCap, Folder, Award } from 'lucide-react';
+import { MapPin, ArrowRight, Wand as Wand2, Loader as Loader2, Plus, Pencil, Trash2, GraduationCap, Folder, Award, Star } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
-import { User, ProfessionalArea, Education, PortfolioItem, Certificate } from '@/lib/store';
+import { User, ProfessionalArea, Education, PortfolioItem, Certificate, AreaSkill, Skill } from '@/lib/store';
 import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
@@ -17,6 +18,7 @@ import { useQueryState } from 'nuqs';
 import SimpleBar from 'simplebar-react';
 import dynamic from 'next/dynamic';
 import { getTheme } from '@/styles/themes';
+import { useStore } from '@/lib/store';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
@@ -37,6 +39,7 @@ type Props = {
   onDeletePortfolio?: (id: string) => void;
   onEditCertificate?: (cert: Certificate) => void;
   onDeleteCertificate?: (id: string) => void;
+  onManageSkills?: () => void;
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
@@ -91,6 +94,7 @@ export function ThemedProfileLayout({
   onDeletePortfolio,
   onEditCertificate,
   onDeleteCertificate,
+  onManageSkills,
   theme,
   isLoadingTheme,
   username,
@@ -98,6 +102,7 @@ export function ThemedProfileLayout({
   const [isMounted, setIsMounted] = useState(false);
   const [showNotations, setShowNotations] = useState(false);
   const [areaFilter, setAreaFilter] = useQueryState('area');
+  const { areaSkills, skills } = useStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -122,6 +127,12 @@ export function ThemedProfileLayout({
   const accentColor = theme?.primaryHex || premium.palette.primary;
   const darkColor = theme?.darkHex || premium.palette.dark;
   const heroEmoji = theme?.heroEmoji || premium.heroEmoji;
+
+  // Habilidades agrupadas por área ou globais
+  const userAreaSkills = useMemo(() => {
+    const validAreaIds = areas.map(a => a.id);
+    return areaSkills.filter(as => validAreaIds.includes(as.area_id));
+  }, [areaSkills, areas]);
 
   return (
     <SimpleBar style={{ maxHeight: '100vh' }}>
@@ -323,6 +334,56 @@ export function ThemedProfileLayout({
                   </motion.div>
                 ))}
               </motion.div>
+            </section>
+
+            {/* HABILIDADES & COMPETÊNCIAS */}
+            <section>
+              <div className="flex items-center justify-between mb-10">
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4">
+                  <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: '#3b82f6' }} />
+                  Habilidades & Competências
+                </h2>
+                {isOwner && (
+                  <button 
+                    onClick={onManageSkills}
+                    className="flex items-center gap-2 px-6 py-2 rounded-full text-xs font-black text-blue-600 border-2 border-blue-100 hover:bg-blue-50 transition-all"
+                  >
+                    <Star className="w-4 h-4" /> Gerenciar Habilidades
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {userAreaSkills.map((as) => {
+                  const skill = skills.find(s => s.id === as.skill_id);
+                  const area = areas.find(a => a.id === as.area_id);
+                  if (!skill) return null;
+                  const areaTheme = getTheme(area?.slug || 'default');
+
+                  return (
+                    <motion.div 
+                      key={as.id} 
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl">{areaTheme.emoji}</span>
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{area?.name}</span>
+                      </div>
+                      <h4 className="font-black text-slate-900 dark:text-white">{skill.name}</h4>
+                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-1">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          whileInView={{ width: `${as.level}%` }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: areaTheme.hex }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-black text-right opacity-50">{as.level}%</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </section>
 
             {/* EDUCAÇÃO & FORMAÇÃO */}

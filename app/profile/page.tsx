@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore, User, ProfessionalArea, Education, PortfolioItem, Certificate } from '@/lib/store';
+import { useStore, User, ProfessionalArea, Education, PortfolioItem, Certificate, Skill } from '@/lib/store';
 import * as LucideIcons from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +13,7 @@ import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
 import { AddContentModal } from '@/components/AddContentModal';
 import { PhotoCropModal } from '@/components/PhotoCropModal';
 import { RichEditor } from '@/components/RichEditor';
+import { SkillSearch } from '@/components/SkillSearch';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
@@ -20,7 +22,7 @@ export default function Dashboard() {
     currentUser, areas, updateUser, isAuthReady, experiences, skills, 
     updateArea, removeArea, isLoading, education, portfolio, certificates,
     updateEducation, removeEducation, updatePortfolioItem, removePortfolioItem,
-    updateCertificate, removeCertificate
+    updateCertificate, removeCertificate, addAreaSkill, removeAreaSkill, areaSkills
   } = useStore();
   const router = useRouter();
 
@@ -39,6 +41,10 @@ export default function Dashboard() {
   // Estados para perfil
   const [isAddingContent, setIsAddingContent] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isManagingSkills, setIsManagingSkills] = useState(false);
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [skillLevel, setSkillLevel] = useState(80);
+
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
@@ -64,8 +70,9 @@ export default function Dashboard() {
         location: currentUser.location,
         photo_url: currentUser.photo_url,
       });
+      if (areas.length > 0) setSelectedAreaId(areas[0].id);
     }
-  }, [currentUser]);
+  }, [currentUser, areas]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -158,6 +165,24 @@ export default function Dashboard() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success('Link copiado!');
+  };
+
+  const handleAddSkill = async (skill: Skill) => {
+    if (!selectedAreaId) {
+      toast.error('Selecione uma área para vincular a habilidade.');
+      return;
+    }
+    const exists = areaSkills.find(as => as.area_id === selectedAreaId && as.skill_id === skill.id);
+    if (exists) {
+      toast.warning('Esta habilidade já está vinculada a esta área.');
+      return;
+    }
+    await addAreaSkill({
+      area_id: selectedAreaId,
+      skill_id: skill.id,
+      level: skillLevel
+    });
+    toast.success(`${skill.name} adicionada!`);
   };
 
   // Handlers de Edição Genéricos
@@ -268,6 +293,7 @@ export default function Dashboard() {
         onDeletePortfolio={removePortfolioItem}
         onEditCertificate={setEditingCert}
         onDeleteCertificate={removeCertificate}
+        onManageSkills={() => setIsManagingSkills(true)}
         theme={profileTheme}
         isLoadingTheme={isLoadingTheme}
         username={currentUser.username}
@@ -329,6 +355,74 @@ export default function Dashboard() {
                   <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl">Salvar Perfil</button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL GERENCIAR HABILIDADES */}
+      <AnimatePresence>
+        {isManagingSkills && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Habilidades & Competências</h3>
+                <button onClick={() => setIsManagingSkills(false)} className="p-2 text-slate-400 hover:text-slate-600"><LucideIcons.X className="w-6 h-6" /></button>
+              </div>
+
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Vincular à Área</label>
+                    <select 
+                      value={selectedAreaId} 
+                      onChange={(e) => setSelectedAreaId(e.target.value)}
+                      className={inputCls}
+                    >
+                      {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Nível de Domínio ({skillLevel}%)</label>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="100" 
+                      step="5"
+                      value={skillLevel}
+                      onChange={(e) => setSkillLevel(Number(e.target.value))}
+                      className="w-full h-12 accent-blue-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className={labelCls}>Buscar Habilidade</label>
+                  <SkillSearch onAdd={handleAddSkill} />
+                </div>
+
+                <div>
+                  <label className={labelCls}>Suas Habilidades Atuais</label>
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    {areaSkills.map((as) => {
+                      const skill = skills.find(s => s.id === as.skill_id);
+                      const area = areas.find(a => a.id === as.area_id);
+                      if (!skill) return null;
+                      return (
+                        <div key={as.id} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <span className="font-bold text-slate-700 dark:text-slate-200">{skill.name}</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-black uppercase">{area?.name || 'Geral'}</span>
+                          <button onClick={() => removeAreaSkill(as.id)} className="text-red-500 hover:scale-110 transition-transform"><LucideIcons.X size={14} /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-10">
+                <button onClick={() => setIsManagingSkills(false)} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold">Concluído</button>
+              </div>
             </motion.div>
           </motion.div>
         )}
