@@ -1,8 +1,8 @@
 'use client';
 
-import { useStore } from '@/lib/store';
+import { useStore, Experience, Education, ProfessionalArea } from '@/lib/store';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { getTheme } from '@/styles/themes';
@@ -12,6 +12,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { parseSafeDate } from '@/lib/utils';
 import { differenceInMonths, differenceInYears, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AnimatePresence, motion } from 'motion/react';
+import { toast } from 'sonner';
 
 function calcDuration(startDate: string, endDate: string | null): string {
   const start = parseSafeDate(startDate);
@@ -39,15 +41,27 @@ function DottedSeparator({ color }: { color: string }) {
 
 export default function AreaResume() {
   const { username, areaSlug } = useParams();
-  const { users, areas, experiences, skills, areaSkills, education, currentUser, isLoading } = useStore();
+  const { 
+    users, areas, experiences, skills, areaSkills, education, 
+    currentUser, isLoading, updateExperience, removeExperience,
+    updateEducation, removeEducation, updateArea
+  } = useStore();
   const router = useRouter();
   const pdfRef = useRef<HTMLDivElement>(null);
+  
   const [isMounted, setIsMounted] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportTheme, setExportTheme] = useState<ResumeTheme | null>(null);
   const [exportData, setExportData] = useState<ResumeData | null>(null);
   const [exportError, setExportError] = useState('');
   const [shouldExport, setShouldExport] = useState(false);
+
+  // Estados de Edição
+  const [editingExp, setEditingExp] = useState<Experience | null>(null);
+  const [editingEdu, setEditingEdu] = useState<Education | null>(null);
+  const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -175,8 +189,8 @@ export default function AreaResume() {
         firstName,
         lastName,
         profession: area.name,
-        phone: (user as any).phone || '',
-        email: (user as any).email || '',
+        phone: user.phone || '',
+        email: user.email || '',
         availableSince: format(new Date(), "dd/MM/yyyy", { locale: ptBR }),
         photoUrl: user.photo_url,
         summary: user.summary || '',
@@ -194,89 +208,101 @@ export default function AreaResume() {
     }
   };
 
+  const handleSaveExp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExp) return;
+    setIsSaving(true);
+    await updateExperience(editingExp);
+    setIsSaving(false);
+    setEditingExp(null);
+    toast.success('Experiência atualizada!');
+  };
+
+  const handleSaveEdu = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEdu) return;
+    setIsSaving(true);
+    await updateEducation(editingEdu);
+    setIsSaving(false);
+    setEditingEdu(null);
+    toast.success('Educação atualizada!');
+  };
+
+  const handleSaveArea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArea) return;
+    setIsSaving(true);
+    await updateArea(editingArea);
+    setIsSaving(false);
+    setEditingArea(null);
+    toast.success('Área atualizada!');
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f8f8', fontFamily: "'Arial Black', Arial, sans-serif" }}>
+    <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'Arial Black', Arial, sans-serif" }}>
 
-      <div style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        background: '#fff',
-        borderBottom: `3px solid ${theme.hex}`,
-        padding: '12px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-      }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 14,
-            color: '#555',
-          }}
-        >
-          <LucideIcons.ArrowLeft size={18} />
-          Voltar
-        </button>
+      <div className="sticky top-0 z-50 bg-white border-b-2 px-6 py-3 flex items-center justify-between shadow-sm" style={{ borderColor: theme.hex }}>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors"
+          >
+            <LucideIcons.ArrowLeft size={18} />
+            Voltar
+          </button>
+          
+          {isOwner && (
+            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Modo Edição</span>
+              <button 
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`w-12 h-6 rounded-full relative transition-all ${isEditMode ? 'bg-blue-600' : 'bg-slate-200'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isEditMode ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          )}
+        </div>
 
-        {isOwner && (
-          <div style={{ display: 'flex', gap: 12 }}>
+        <div className="flex gap-3">
+          {isOwner && (
             <button
-              onClick={handleExportThemed}
-              disabled={exporting}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 22px',
-                background: exporting ? '#ccc' : theme.hex,
-                color: '#fff',
-                border: 'none',
-                borderRadius: 999,
-                fontWeight: 900,
-                fontSize: 14,
-                cursor: exporting ? 'not-allowed' : 'pointer',
-                boxShadow: `0 4px 14px ${theme.hex}55`,
-                transition: 'all .2s',
-              }}
+              onClick={() => setEditingArea(area)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full font-black text-xs hover:bg-slate-200 transition-all"
             >
-              {exporting ? (
-                <>
-                  <LucideIcons.Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                  Gerando com IA...
-                </>
-              ) : (
-                <>
-                  <LucideIcons.Sparkles size={16} />
-                  Exportar Currículo Temático
-                </>
-              )}
+              <LucideIcons.Palette size={14} />
+              Configurações Visuais
             </button>
-          </div>
-        )}
+          )}
+          
+          <button
+            onClick={handleExportThemed}
+            disabled={exporting}
+            className={`flex items-center gap-2 px-6 py-2 text-white rounded-full font-black text-sm shadow-lg transition-all ${exporting ? 'bg-slate-400 cursor-not-allowed' : 'hover:scale-105'}`}
+            style={{ backgroundColor: exporting ? '#ccc' : theme.hex }}
+          >
+            {exporting ? (
+              <>
+                <LucideIcons.Loader2 size={16} className="animate-spin" />
+                IA Trabalhando...
+              </>
+            ) : (
+              <>
+                <LucideIcons.Sparkles size={16} />
+                Exportar PDF
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {exportError && (
-        <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px 24px', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
+        <div className="bg-red-50 text-red-600 p-3 text-center font-bold text-sm border-b border-red-100">
           {exportError}
         </div>
       )}
 
-      <div style={{
-        maxWidth: 800,
-        margin: '32px auto',
-        background: '#fff',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
-        overflow: 'hidden',
-      }}>
+      <div className="max-w-[800px] mx-auto my-8 bg-white shadow-2xl overflow-hidden relative">
 
         <div style={{ height: 14, background: theme.hex }} />
 
@@ -289,411 +315,311 @@ export default function AreaResume() {
           position: 'relative',
           overflow: 'hidden',
         }}>
-          <div style={{
-            position: 'absolute', top: -40, right: -40,
-            width: 160, height: 160,
-            background: 'rgba(255,255,255,0.12)',
-            borderRadius: '50%',
-          }} />
-          <div style={{
-            position: 'absolute', bottom: -30, left: '30%',
-            width: 80, height: 80,
-            background: 'rgba(0,0,0,0.1)',
-            borderRadius: '50%',
-          }} />
+          <div className="absolute top-[-40px] right-[-40px] w-40 h-40 bg-white/10 rounded-full" />
+          <div className="absolute bottom-[-30px] left-[30%] w-20 h-20 bg-black/10 rounded-full" />
 
           {user.photo_url && (
-            <div style={{
-              width: 120,
-              height: 120,
-              borderRadius: 16,
-              overflow: 'hidden',
-              flexShrink: 0,
-              border: `4px solid ${theme.hexSecondary}`,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-              position: 'relative',
-              zIndex: 1,
-            }}>
+            <div className="relative z-10 w-32 h-32 rounded-2xl overflow-hidden shrink-0 border-4 border-white/20 shadow-2xl">
               <Image
                 src={user.photo_url}
                 alt={user.name}
-                width={120}
-                height={120}
-                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
                 referrerPolicy="no-referrer"
               />
             </div>
           )}
 
-          <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-            <div style={{
-              fontSize: 44,
-              fontWeight: 900,
-              lineHeight: 1.05,
-              color: '#fff',
-              textTransform: 'uppercase',
-              letterSpacing: -1,
-              textShadow: `3px 3px 0 ${theme.hexDark}`,
-            }}>
+          <div className="flex-1 relative z-10">
+            <div className="text-[44px] font-black leading-[1.05] text-white uppercase tracking-tighter" style={{ textShadow: `3px 3px 0 ${theme.hexDark}` }}>
               {firstName}
             </div>
-            <div style={{
-              fontSize: 38,
-              fontWeight: 900,
-              lineHeight: 1.1,
-              color: theme.hexSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: -1,
-              textShadow: `2px 2px 0 ${theme.hexDark}`,
-            }}>
+            <div className="text-[38px] font-black leading-[1.1] uppercase tracking-tighter" style={{ color: theme.hexSecondary, textShadow: `2px 2px 0 ${theme.hexDark}` }}>
               {lastName}
             </div>
           </div>
 
-          <div style={{
-            fontSize: 72,
-            lineHeight: 1,
-            filter: 'drop-shadow(3px 4px 8px rgba(0,0,0,0.3))',
-            position: 'relative',
-            zIndex: 1,
-          }}>
+          <div className="text-7xl leading-none drop-shadow-2xl relative z-10">
             {theme.emoji}
           </div>
         </div>
 
         <div style={{ height: 10, background: theme.hexSecondary }} />
 
-        <div style={{
-          background: '#fff',
-          padding: '14px 36px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 20,
-          flexWrap: 'wrap',
-          borderBottom: `3px solid ${theme.hex}`,
-        }}>
-          <div style={{ fontWeight: 900, fontSize: 13, color: '#333', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+        <div className="bg-white px-9 py-4 flex items-center gap-5 flex-wrap border-b-2" style={{ borderColor: theme.hex }}>
+          <div className="font-black text-[13px] text-slate-800 uppercase tracking-[0.1em]">
             {area.name}
           </div>
           {user.location && (
             <>
-              <div style={{ width: 1, height: 20, background: '#ddd' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#555' }}>
-                <LucideIcons.MapPin size={14} color={theme.hex} />
+              <div className="w-px h-5 bg-slate-200" />
+              <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-500 uppercase">
+                <LucideIcons.MapPin size={14} style={{ color: theme.hex }} />
                 {user.location}
               </div>
             </>
           )}
-          {(user as any).email && (
+          {user.email && (
             <>
-              <div style={{ width: 1, height: 20, background: '#ddd' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#555' }}>
-                <LucideIcons.Mail size={14} color={theme.hex} />
-                {(user as any).email}
-              </div>
-            </>
-          )}
-          {(user as any).phone && (
-            <>
-              <div style={{ width: 1, height: 20, background: '#ddd' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#555' }}>
-                <LucideIcons.Phone size={14} color={theme.hex} />
-                {(user as any).phone}
+              <div className="w-px h-5 bg-slate-200" />
+              <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-500 uppercase">
+                <LucideIcons.Mail size={14} style={{ color: theme.hex }} />
+                {user.email}
               </div>
             </>
           )}
         </div>
 
         {user.summary && (
-          <div style={{
-            padding: '20px 36px',
-            display: 'flex',
-            gap: 16,
-            alignItems: 'flex-start',
-            background: '#fafafa',
-            borderBottom: `2px solid #eee`,
-          }}>
-            <div style={{ fontSize: 40, flexShrink: 0, lineHeight: 1 }}>💬</div>
-            <div style={{
-              margin: 0,
-              fontSize: 12,
-              fontWeight: 700,
-              lineHeight: 1.7,
-              color: '#222',
-              textTransform: 'uppercase',
-              letterSpacing: 0.4,
-            }} dangerouslySetInnerHTML={{ __html: user.summary }} />
+          <div className="px-9 py-6 flex gap-6 items-start bg-slate-50 border-b border-slate-100">
+            <div className="text-4xl shrink-0">💬</div>
+            <div className="text-[12px] font-bold leading-relaxed text-slate-800 uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: user.summary }} />
           </div>
         )}
 
-        {areaExperiences.length > 0 && (
-          <div style={{ padding: '0 36px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '28px 0 20px' }}>
-              <div style={{
-                background: theme.hexSecondary,
-                borderRadius: 12,
-                width: 54,
-                height: 54,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-                flexShrink: 0,
-              }}>
-                🏢
-              </div>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
-              <h2 style={{
-                margin: 0,
-                fontSize: 32,
-                fontWeight: 900,
-                color: '#1a1a1a',
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-              }}>
-                EXPERIÊNCIAS
-              </h2>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
+        {/* EXPERIÊNCIAS */}
+        <section className="px-9">
+          <div className="flex items-center gap-4 my-8">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0" style={{ backgroundColor: theme.hexSecondary }}>
+              🏢
             </div>
+            <div className="flex-1 h-0.5 bg-slate-100" />
+            <h2 className="text-3xl font-black text-slate-900 tracking-widest uppercase whitespace-nowrap">
+              Experiências
+            </h2>
+            <div className="flex-1 h-0.5 bg-slate-100" />
+          </div>
 
-            <div style={{ paddingBottom: 8 }}>
-              {areaExperiences.map((exp, i) => {
-                const duration = calcDuration(exp.start_date, exp.end_date);
-                return (
-                  <div key={exp.id} style={{ marginBottom: 18 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{
-                        fontWeight: 900,
-                        fontSize: 13,
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.5,
-                        whiteSpace: 'nowrap',
-                        color: '#1a1a1a',
-                      }}>
-                        {exp.company_name}
-                      </span>
-                      <span style={{ fontSize: 16, color: theme.hex, margin: '0 4px', flexShrink: 0 }}>
-                        {theme.emoji}
-                      </span>
-                      <DottedSeparator color={theme.hex} />
-                      <span style={{
-                        fontWeight: 900,
-                        fontSize: 13,
-                        letterSpacing: 3,
-                        whiteSpace: 'nowrap',
-                        color: '#555',
-                        textTransform: 'uppercase',
-                      }}>
-                        {duration}
-                      </span>
-                    </div>
-                    <div style={{
-                      fontSize: 11,
-                      color: '#777',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
-                      paddingLeft: 8,
-                      marginTop: 3,
-                    }}>
-                      {exp.role}
-                      {exp.description && (
-                        <span dangerouslySetInnerHTML={{ __html: ` — ${exp.description}` }} />
-                      )}
-                    </div>
+          <div className="space-y-6 pb-6">
+            {areaExperiences.map((exp) => (
+              <div key={exp.id} className="relative group">
+                {isEditMode && (
+                  <div className="absolute -left-4 top-0 z-20 flex flex-col gap-1">
+                    <button onClick={() => setEditingExp(exp)} className="p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all">
+                      <LucideIcons.Pencil size={12} />
+                    </button>
+                    <button onClick={() => removeExperience(exp.id)} className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all">
+                      <LucideIcons.Trash2 size={12} />
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-[13px] uppercase tracking-wider text-slate-900 whitespace-nowrap">
+                    {exp.company_name}
+                  </span>
+                  <span className="text-base mx-1" style={{ color: theme.hex }}>{theme.emoji}</span>
+                  <DottedSeparator color={theme.hex} />
+                  <span className="font-black text-[13px] tracking-[0.2em] text-slate-500 uppercase whitespace-nowrap">
+                    {calcDuration(exp.start_date, exp.end_date)}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider pl-2 mt-1">
+                  {exp.role}
+                  {exp.description && (
+                    <span className="opacity-70" dangerouslySetInnerHTML={{ __html: ` — ${exp.description}` }} />
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </section>
 
+        {/* EDUCAÇÃO */}
         {userEducation.length > 0 && (
-          <div style={{ padding: '0 36px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '20px 0 16px' }}>
-              <div style={{
-                background: theme.hexSecondary,
-                borderRadius: 12,
-                width: 54,
-                height: 54,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-                flexShrink: 0,
-              }}>
+          <section className="px-9">
+            <div className="flex items-center gap-4 my-8">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0" style={{ backgroundColor: theme.hexSecondary }}>
                 🎓
               </div>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
-              <h2 style={{
-                margin: 0,
-                fontSize: 32,
-                fontWeight: 900,
-                color: '#1a1a1a',
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-              }}>
-                FORMAÇÃO
+              <div className="flex-1 h-0.5 bg-slate-100" />
+              <h2 className="text-3xl font-black text-slate-900 tracking-widest uppercase whitespace-nowrap">
+                Formação
               </h2>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
+              <div className="flex-1 h-0.5 bg-slate-100" />
             </div>
 
-            <div style={{ paddingBottom: 8 }}>
+            <div className="space-y-4 pb-6">
               {userEducation.map((edu) => (
-                <div key={edu.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
-                  <span style={{
-                    fontWeight: 900,
-                    fontSize: 13,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    whiteSpace: 'nowrap',
-                    color: '#1a1a1a',
-                  }}>
-                    {edu.course}
-                  </span>
-                  <DottedSeparator color={theme.hex} />
-                  <span style={{
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: '#666',
-                    whiteSpace: 'nowrap',
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                  }}>
-                    {edu.institution} · {parseSafeDate(edu.start_date).getFullYear()}
-                    {edu.end_date ? `–${parseSafeDate(edu.end_date).getFullYear()}` : '–ATUAL'}
-                  </span>
+                <div key={edu.id} className="relative group">
+                  {isEditMode && (
+                    <div className="absolute -left-4 top-0 z-20 flex flex-col gap-1">
+                      <button onClick={() => setEditingEdu(edu)} className="p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all">
+                        <LucideIcons.Pencil size={12} />
+                      </button>
+                      <button onClick={() => removeEducation(edu.id)} className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all">
+                        <LucideIcons.Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-[13px] uppercase tracking-wider text-slate-900 whitespace-nowrap">
+                      {edu.course}
+                    </span>
+                    <DottedSeparator color={theme.hex} />
+                    <span className="font-black text-[12px] text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      {parseSafeDate(edu.start_date).getFullYear()}
+                      {edu.end_date ? `–${parseSafeDate(edu.end_date).getFullYear()}` : '–ATUAL'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider pl-2 mt-1">
+                    {edu.institution}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
+        {/* COMPETÊNCIAS */}
         {allAreaSkillDetails.length > 0 && (
-          <div style={{ padding: '0 36px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '20px 0 16px' }}>
-              <div style={{
-                background: theme.hexSecondary,
-                borderRadius: 12,
-                width: 54,
-                height: 54,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-                flexShrink: 0,
-              }}>
+          <section className="px-9">
+            <div className="flex items-center gap-4 my-8">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0" style={{ backgroundColor: theme.hexSecondary }}>
                 ⭐
               </div>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
-              <h2 style={{
-                margin: 0,
-                fontSize: 32,
-                fontWeight: 900,
-                color: '#1a1a1a',
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-              }}>
-                COMPETÊNCIAS
+              <div className="flex-1 h-0.5 bg-slate-100" />
+              <h2 className="text-3xl font-black text-slate-900 tracking-widest uppercase whitespace-nowrap">
+                Competências
               </h2>
-              <div style={{ flex: 1, height: 3, background: '#e2e8f0' }} />
+              <div className="flex-1 h-0.5 bg-slate-100" />
             </div>
 
-            <div style={{ paddingBottom: 8 }}>
+            <div className="space-y-6 pb-12">
               {allAreaSkillDetails.map((s) => (
-                <div key={s.id} style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 16, color: theme.hex, flexShrink: 0 }}>
-                      {theme.emoji}
-                    </span>
+                <div key={s.id} className="group">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-base shrink-0" style={{ color: theme.hex }}>{theme.emoji}</span>
                     <DottedSeparator color={theme.hex} />
-                    <span style={{
-                      fontWeight: 900,
-                      fontSize: 13,
-                      letterSpacing: 3,
-                      textTransform: 'uppercase',
-                      whiteSpace: 'nowrap',
-                      color: '#1a1a1a',
-                    }}>
+                    <span className="font-black text-[13px] tracking-[0.2em] text-slate-900 uppercase whitespace-nowrap">
                       {s.skill!.name}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 24, marginTop: 4 }}>
-                    <div style={{
-                      flex: 1,
-                      height: 8,
-                      background: '#e2e8f0',
-                      borderRadius: 999,
-                      overflow: 'hidden',
-                    }}>
-                      <div style={{
-                        width: `${s.level}%`,
-                        height: '100%',
-                        background: `linear-gradient(to right, ${theme.hex}, ${theme.hexSecondary})`,
-                        borderRadius: 999,
-                        transition: 'width 1s ease',
-                      }} />
+                  <div className="flex items-center gap-4 pl-6">
+                    <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                      <div 
+                        className="h-full rounded-full transition-all duration-1000" 
+                        style={{ 
+                          width: `${s.level}%`,
+                          background: `linear-gradient(to right, ${theme.hex}, ${theme.hexSecondary})`
+                        }} 
+                      />
                     </div>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 900,
-                      color: theme.hex,
-                      whiteSpace: 'nowrap',
-                    }}>
+                    <span className="text-[11px] font-black w-10 text-right" style={{ color: theme.hex }}>
                       {s.level}%
                     </span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        <div style={{ height: 8, background: theme.hex, marginTop: 24 }} />
+        <div style={{ height: 8, background: theme.hex }} />
         <div style={{ height: 5, background: theme.hexSecondary }} />
 
-        <div style={{
-          background: '#1a1a1a',
-          padding: '20px 36px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 20,
-        }}>
+        <div className="bg-slate-900 p-8 flex items-center justify-between gap-10">
           <div>
-            {(user as any).email && (
-              <div style={{
-                color: '#fff',
-                fontWeight: 900,
-                fontSize: 16,
-                letterSpacing: 1,
-                marginBottom: 4,
-              }}>
-                {(user as any).email}
+            {user.email && (
+              <div className="text-white font-black text-lg tracking-wider mb-1">
+                {user.email}
               </div>
             )}
-            <div style={{ color: '#888', fontSize: 12, fontWeight: 700 }}>
-              Escaneie o QR Code para ver a versão interativa
+            <div className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              Escaneie para versão interativa
             </div>
           </div>
-          <div style={{ background: '#fff', padding: 8, borderRadius: 10 }}>
+          <div className="bg-white p-2 rounded-xl shadow-2xl">
             <QRCodeSVG value={currentUrl} size={80} fgColor="#0f172a" />
           </div>
         </div>
       </div>
 
+      {/* MODAIS DE EDIÇÃO */}
+      <AnimatePresence>
+        {editingExp && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form 
+              onSubmit={handleSaveExp}
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl overflow-y-auto max-h-[90vh]"
+            >
+              <h3 className="text-2xl font-black mb-8">Editar Experiência</h3>
+              <div className="space-y-6">
+                <div><label className="text-xs font-black uppercase text-slate-400 mb-2 block">Empresa</label><input required value={editingExp.company_name} onChange={e => setEditingExp({...editingExp, company_name: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold" /></div>
+                <div><label className="text-xs font-black uppercase text-slate-400 mb-2 block">Cargo</label><input required value={editingExp.role} onChange={e => setEditingExp({...editingExp, role: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold" /></div>
+                <div><label className="text-xs font-black uppercase text-slate-400 mb-2 block">Descrição</label><textarea rows={5} value={editingExp.description} onChange={e => setEditingExp({...editingExp, description: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold resize-none" /></div>
+              </div>
+              <div className="flex gap-4 mt-10">
+                <button type="button" onClick={() => setEditingExp(null)} className="flex-1 py-4 font-black text-slate-400">Cancelar</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:scale-105 transition-all">
+                  {isSaving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
+        {editingEdu && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form 
+              onSubmit={handleSaveEdu}
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl"
+            >
+              <h3 className="text-2xl font-black mb-8">Editar Formação</h3>
+              <div className="space-y-6">
+                <div><label className="text-xs font-black uppercase text-slate-400 mb-2 block">Instituição</label><input required value={editingEdu.institution} onChange={e => setEditingEdu({...editingEdu, institution: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold" /></div>
+                <div><label className="text-xs font-black uppercase text-slate-400 mb-2 block">Curso</label><input required value={editingEdu.course} onChange={e => setEditingEdu({...editingEdu, course: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold" /></div>
+              </div>
+              <div className="flex gap-4 mt-10">
+                <button type="button" onClick={() => setEditingEdu(null)} className="flex-1 py-4 font-black text-slate-400">Cancelar</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:scale-105 transition-all">
+                  {isSaving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+
+        {editingArea && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.form 
+              onSubmit={handleSaveArea}
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl"
+            >
+              <h3 className="text-2xl font-black mb-8">Estilo da Área</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-black uppercase text-slate-400 mb-2 block">Nome da Área</label>
+                  <input required value={editingArea.name} onChange={e => setEditingArea({...editingArea, name: e.target.value})} className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold" />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase text-slate-400 mb-2 block">Cor Principal</label>
+                  <div className="flex gap-4 items-center">
+                    <input type="color" value={editingArea.theme_color} onChange={e => setEditingArea({...editingArea, theme_color: e.target.value})} className="w-16 h-16 rounded-xl cursor-pointer border-0 p-0 overflow-hidden" />
+                    <input value={editingArea.theme_color} onChange={e => setEditingArea({...editingArea, theme_color: e.target.value})} className="flex-1 p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-sm" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-10">
+                <button type="button" onClick={() => setEditingArea(null)} className="flex-1 py-4 font-black text-slate-400">Cancelar</button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:scale-105 transition-all">
+                  {isSaving ? 'Aplicar Estilo' : 'Aplicar'}
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {exportTheme && exportData && (
-        <div style={{ position: 'fixed', left: -9999, top: -9999, zIndex: -1 }}>
+        <div className="fixed left-[-9999px] top-[-9999px] invisible pointer-events-none">
           <ResumeTemplate ref={pdfRef} data={exportData} theme={exportTheme} profileUrl={currentUrl} />
         </div>
       )}
 
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }
