@@ -62,7 +62,7 @@ function Particle({ emoji, x, size, speed, delay }: any) {
 export function ThemedProfileLayout(props: Props) {
   const [isMounted, setIsMounted] = useState(false);
   const [areaFilter, setAreaFilter] = useQueryState('area');
-  const { areaSkills, skills } = useStore();
+  const { areaSkills, skills, experiences } = useStore();
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -84,6 +84,15 @@ export function ThemedProfileLayout(props: Props) {
     const validAreaIds = props.areas.map(a => a.id);
     return areaSkills.filter(as => validAreaIds.includes(as.area_id));
   }, [areaSkills, props.areas]);
+
+  const userExperiences = useMemo(() => {
+    return experiences.filter(e => e.user_id === props.user.id);
+  }, [experiences, props.user.id]);
+
+  const hasEducation = props.education && props.education.length > 0;
+  const hasPortfolio = props.portfolio && props.portfolio.length > 0;
+  const hasSkills = userAreaSkills.length > 0;
+  const hasTimeline = userExperiences.length > 0 || hasEducation;
 
   return (
     <SimpleBar style={{ maxHeight: '100vh' }}>
@@ -119,58 +128,91 @@ export function ThemedProfileLayout(props: Props) {
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredAreas.map((area) => (
-                  <Link key={area.id} href={`/${props.username}/${area.slug}`}>
-                    <div className="relative overflow-hidden rounded-[2.5rem] p-8 h-full bg-white dark:bg-slate-900 shadow-sm hover:shadow-2xl border border-slate-100 dark:border-slate-800" style={{ borderTop: `6px solid ${getTheme(area.slug).hex}` }}>
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white" style={{ backgroundColor: getTheme(area.slug).hex }}>
-                          <LucideIcons.Briefcase className="w-7 h-7" />
+              
+              {props.areas.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filteredAreas.map((area) => (
+                    <Link key={area.id} href={`/${props.username}/${area.slug}`}>
+                      <div className="relative overflow-hidden rounded-[2.5rem] p-8 h-full bg-white dark:bg-slate-900 shadow-sm hover:shadow-2xl border border-slate-100 dark:border-slate-800" style={{ borderTop: `6px solid ${getTheme(area.slug).hex}` }}>
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white" style={{ backgroundColor: getTheme(area.slug).hex }}>
+                            <LucideIcons.Briefcase className="w-7 h-7" />
+                          </div>
+                          <span className="text-4xl">{getTheme(area.slug).emoji}</span>
                         </div>
-                        <span className="text-4xl">{getTheme(area.slug).emoji}</span>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">{area.name}</h3>
+                        <div className="flex items-center text-sm font-black gap-2" style={{ color: getTheme(area.slug).hex }}>
+                          <span className="tracking-widest uppercase text-[10px]">Acessar</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">{area.name}</h3>
-                      <div className="flex items-center text-sm font-black gap-2" style={{ color: getTheme(area.slug).hex }}>
-                        <span className="tracking-widest uppercase text-[10px]">Acessar</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                  <p className="text-slate-500 font-bold">Nenhuma área cadastrada ainda.</p>
+                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências para gerar áreas automaticamente.</p>}
+                </div>
+              )}
             </section>
 
-            {/* SKILLS SECTION */}
-            <section>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
-                <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: '#3b82f6' }} />
-                Habilidades
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {userAreaSkills.map((as) => {
-                  const skill = skills.find(s => s.id === as.skill_id);
-                  const theme = getTheme(props.areas.find(a => a.id === as.area_id)?.slug || 'default');
-                  return (
-                    <div key={as.id} className="bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xl">{theme.emoji}</span>
-                        <span className="text-[10px] font-black uppercase text-slate-400">{skill?.name}</span>
+            {/* SKILLS SECTION - Dinâmica */}
+            {hasSkills && (
+              <section>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
+                  <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: '#3b82f6' }} />
+                  Habilidades
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {userAreaSkills.map((as) => {
+                    const skill = skills.find(s => s.id === as.skill_id);
+                    const theme = getTheme(props.areas.find(a => a.id === as.area_id)?.slug || 'default');
+                    return (
+                      <div key={as.id} className="bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xl">{theme.emoji}</span>
+                          <span className="text-[10px] font-black uppercase text-slate-400">{skill?.name}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} whileInView={{ width: `${as.level}%` }} className="h-full" style={{ backgroundColor: theme.hex }} />
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} whileInView={{ width: `${as.level}%` }} className="h-full" style={{ backgroundColor: theme.hex }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-            {/* MODULARIZED SECTIONS */}
-            <EducationSection education={props.education} isOwner={props.isOwner} onEditEdu={props.onEditEducation} onDeleteEdu={props.onDeleteEducation} />
-            <PortfolioSection portfolio={props.portfolio} isOwner={props.isOwner} onEditPort={props.onEditPortfolio} onDeletePort={props.onDeletePortfolio} />
+            {/* EDUCATION SECTION - Dinâmica */}
+            {hasEducation && (
+              <EducationSection 
+                education={props.education} 
+                isOwner={props.isOwner} 
+                onEditEdu={props.onEditEducation} 
+                onDeleteEdu={props.onDeleteEducation} 
+              />
+            )}
 
-            <section><Stats userId={props.user.id} /></section>
-            <section><Timeline userId={props.user.id} readOnly={!props.isOwner} /></section>
+            {/* PORTFOLIO SECTION - Dinâmica */}
+            {hasPortfolio && (
+              <PortfolioSection 
+                portfolio={props.portfolio} 
+                isOwner={props.isOwner} 
+                onEditPort={props.onEditPortfolio} 
+                onDeletePort={props.onDeletePortfolio} 
+              />
+            )}
+
+            {/* STATS SECTION - Dinâmica (apenas se houver dados para os gráficos) */}
+            {(userExperiences.length > 0 || hasSkills) && (
+              <section><Stats userId={props.user.id} /></section>
+            )}
+
+            {/* TIMELINE SECTION - Dinâmica */}
+            {hasTimeline && (
+              <section><Timeline userId={props.user.id} readOnly={!props.isOwner} /></section>
+            )}
           </div>
         </LayoutGroup>
       </div>

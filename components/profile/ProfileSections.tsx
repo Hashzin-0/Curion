@@ -23,6 +23,8 @@ type Props = {
 };
 
 export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }: Partial<Props>) {
+  if (!education || education.length === 0) return null;
+
   return (
     <section>
       <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
@@ -30,7 +32,7 @@ export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }:
         Formação Acadêmica
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {education?.map((edu) => (
+        {education.map((edu) => (
           <div key={edu.id} className="relative group bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all">
             {isOwner && (
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -55,6 +57,8 @@ export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }:
 }
 
 export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort }: Partial<Props>) {
+  if (!portfolio || portfolio.length === 0) return null;
+
   return (
     <section>
       <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
@@ -62,7 +66,7 @@ export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort 
         Portfólio & Projetos
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {portfolio?.map((item) => (
+        {portfolio.map((item) => (
           <div key={item.id} className="relative group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all">
             {isOwner && (
               <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
