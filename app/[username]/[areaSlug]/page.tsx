@@ -14,6 +14,11 @@ import { Button, Modal, inputCls, labelCls } from '@/components/ui/SharedUI';
 import { ExperienceItem, EducationCard } from '@/components/shared/ProfileSections';
 import { RichEditor } from '@/components/RichEditor';
 
+/**
+ * @fileOverview Página de currículo específica por área de atuação.
+ * Permite visualização, edição de conteúdo e exportação PDF temática.
+ */
+
 export default function AreaResume() {
   const { username, areaSlug } = useParams();
   const { 
@@ -59,7 +64,7 @@ export default function AreaResume() {
     if (!area || !user) return;
     setExporting(true);
     
-    // Agora gera o tema localmente usando o sistema determinístico em vez de IA
+    // Gera o tema usando o sistema determinístico de design
     const theme = generateSystemResumeTheme(user.name, area.name);
     
     setExportTheme(theme);
@@ -79,17 +84,20 @@ export default function AreaResume() {
     setShouldExport(true);
   };
 
+  // Efeito de exportação PDF corrigido para evitar erros de tipo no Element
   useEffect(() => {
-    if (!shouldExport || !pdfRef.current) return;
+    const element = pdfRef.current;
+    if (!shouldExport || !element) return;
+    
     const run = async () => {
       try {
         const html2pdf = (await import('html2pdf.js')).default;
         await html2pdf().set({ 
           margin: 0, 
-          filename: `cv-${area?.slug}.pdf`, 
+          filename: `cv-${areaSlug}.pdf`, 
           jsPDF: { format: [794, 1123], unit: 'px' },
           html2canvas: { scale: 2, useCORS: true }
-        }).from(pdfRef.current).save();
+        }).from(element).save();
       } catch (err) {
         toast.error('Erro ao gerar PDF');
       } finally {
@@ -98,7 +106,7 @@ export default function AreaResume() {
       }
     };
     run();
-  }, [shouldExport, area]);
+  }, [shouldExport, areaSlug]);
 
   if (!isMounted || !user || !area) return <div className="min-h-screen flex items-center justify-center"><LucideIcons.Loader2 className="animate-spin" /></div>;
 
@@ -112,9 +120,9 @@ export default function AreaResume() {
           {isOwner && (
             <>
               <Button variant={isEditMode ? 'primary' : 'outline'} onClick={() => setIsEditMode(!isEditMode)}>
-                {isEditMode ? 'Visualizar' : 'Editar Conteúdo'}
+                {isEditMode ? 'Visualizar' : 'Modo Edição'}
               </Button>
-              <Button variant="secondary" onClick={() => setEditingArea(area)}>Visual</Button>
+              <Button variant="secondary" onClick={() => setEditingArea(area)}>Configurações Visuais</Button>
             </>
           )}
           <Button onClick={handleExportThemed} disabled={exporting}>
@@ -148,21 +156,19 @@ export default function AreaResume() {
           </div>
         </section>
 
-        <section className="mb-12">
-          <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white">Formação</h2>
-            <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {userEducation.length > 0 ? (
-              userEducation.map(edu => (
+        {userEducation.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center gap-4 mb-8">
+              <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white">Formação</h2>
+              <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {userEducation.map(edu => (
                 <EducationCard key={edu.id} edu={edu} isOwner={isEditMode} onEdit={setEditingEdu} onDelete={removeEducation} />
-              ))
-            ) : (
-              <p className="text-slate-400 italic">Nenhuma formação registrada.</p>
-            )}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
         <footer className="mt-20 pt-12 border-t dark:border-slate-800 flex justify-between items-center">
           <div className="text-xs font-black uppercase text-slate-400">
@@ -184,10 +190,14 @@ export default function AreaResume() {
         </form>
       </Modal>
 
-      <Modal isOpen={!!editingArea} onClose={() => setEditingArea(null)} title="Estilo Visual">
+      <Modal isOpen={!!editingArea} onClose={() => setEditingArea(null)} title="Configurações Visuais">
         <div className="space-y-4">
-          <div><label className={labelCls}>Cor Principal</label><input type="color" value={area?.theme_color || theme.hex} onChange={async e => await updateArea({...area!, theme_color: e.target.value})} className="w-full h-12 rounded-xl cursor-pointer" /></div>
-          <Button className="w-full" onClick={() => setEditingArea(null)}>Fechar</Button>
+          <div><label className={labelCls}>Nome da Área</label><input className={inputCls} value={editingArea?.name || ''} onChange={e => setEditingArea(p => p ? {...p, name: e.target.value} : null)} /></div>
+          <div>
+            <label className={labelCls}>Cor Principal</label>
+            <input type="color" value={editingArea?.theme_color || theme.hex} onChange={e => setEditingArea(p => p ? {...p, theme_color: e.target.value} : null)} className="w-full h-12 rounded-xl cursor-pointer" />
+          </div>
+          <Button className="w-full" onClick={async () => { if(editingArea) { await updateArea(editingArea); setEditingArea(null); toast.success('Estilo atualizado!'); } }}>Salvar Configurações</Button>
         </div>
       </Modal>
 
