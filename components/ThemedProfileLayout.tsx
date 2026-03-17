@@ -17,6 +17,7 @@ import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { useQueryState } from 'nuqs';
 import SimpleBar from 'simplebar-react';
 import dynamic from 'next/dynamic';
+import { getTheme } from '@/styles/themes';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
@@ -33,29 +34,30 @@ type Props = {
   username: string;
 };
 
-function PremiumParticle({ emoji, x, y, size, speed, delay }: { 
+function PremiumParticle({ emoji, x, size, speed, delay }: { 
   emoji: string; 
   x: number; 
-  y: number; 
   size: number; 
   speed: number; 
   delay: number 
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 0, y: '110%' }}
       animate={{ 
-        opacity: 0.15,
-        y: [y + '%', (y - 5) + '%', y + '%'],
+        opacity: [0, 0.2, 0.2, 0],
+        y: ['110%', '-20%'],
+        x: [`${x}%`, `${x + (Math.random() * 10 - 5)}%`]
       }}
       transition={{ 
-        opacity: { duration: 1 },
-        y: { duration: speed, repeat: Infinity, ease: "easeInOut", delay: delay }
+        duration: speed * 2.5, 
+        repeat: Infinity, 
+        ease: "linear", 
+        delay: delay 
       }}
       className="absolute pointer-events-none select-none z-0"
       style={{
         left: `${x}%`,
-        top: `${y}%`,
         fontSize: `${size}px`,
       }}
     >
@@ -94,6 +96,12 @@ export function ThemedProfileLayout({
     return areas.filter(a => a.slug === areaFilter);
   }, [areas, areaFilter]);
 
+  // Emojis das áreas para o waterfall
+  const waterfallEmojis = useMemo(() => {
+    if (areas.length === 0) return premium.particles.map(p => p.emoji);
+    return areas.map(a => getTheme(a.slug).emoji);
+  }, [areas, premium.particles]);
+
   const heroBackground = premium.meshGradient;
   const accentColor = theme?.primaryHex || premium.palette.primary;
   const darkColor = theme?.darkHex || premium.palette.dark;
@@ -107,15 +115,14 @@ export function ThemedProfileLayout({
             className="relative overflow-hidden"
             style={{ background: heroBackground, minHeight: '520px' }}
           >
-            {isMounted && premium.particles.map((p, i) => (
+            {isMounted && Array.from({ length: 15 }).map((_, i) => (
               <PremiumParticle 
                 key={i} 
-                emoji={p.emoji} 
-                x={p.x} 
-                y={p.y} 
-                size={p.size} 
-                speed={p.speed} 
-                delay={p.delay} 
+                emoji={waterfallEmojis[i % waterfallEmojis.length]} 
+                x={(i * 7.5) % 100} 
+                size={20 + (i * 5) % 30} 
+                speed={5 + (i * 2) % 10} 
+                delay={i * 0.8} 
               />
             ))}
 
@@ -303,7 +310,7 @@ export function ThemedProfileLayout({
                   <AnimatePresence mode="popLayout">
                     {filteredAreas.map((area, i) => {
                       const Icon = (LucideIcons as any)[area.icon] || LucideIcons.Briefcase;
-                      const areaEmoji = theme?.areaEmojis?.[area.name] || premium.particles[i % premium.particles.length].emoji;
+                      const areaEmoji = getTheme(area.slug).emoji;
 
                       return (
                         <motion.div
