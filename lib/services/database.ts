@@ -29,6 +29,14 @@ export const DatabaseService = {
     return data as User;
   },
 
+  async fetchPublicProfiles() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, areas(*)');
+    if (error) throw error;
+    return data;
+  },
+
   // Áreas
   async upsertArea(area: Partial<ProfessionalArea>) {
     const { data, error } = await supabase.from('areas').upsert(area).select().single();
