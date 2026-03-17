@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
-import * as LucideIcons from 'lucide-react';
 import { Plus, ArrowRight, Briefcase, ChevronDown } from 'lucide-react';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';

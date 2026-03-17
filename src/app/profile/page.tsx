@@ -23,7 +23,7 @@ export default function Dashboard() {
     updateArea, removeArea, isLoading, education, portfolio,
     updateEducation, removeEducation, updatePortfolioItem, removePortfolioItem,
     updateExperience, removeExperience,
-    areaSkills, removeAreaSkill
+    areaSkills
   } = useStore();
   const router = useRouter();
 
