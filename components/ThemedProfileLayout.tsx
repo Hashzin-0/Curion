@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
-import { Plus, Pencil, Trash2, ArrowRight, Briefcase, FileText, X, Info } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowRight, Briefcase, FileText, X, Info, ChevronDown } from 'lucide-react';
 import { ProfileTheme } from '@/src/ai/flows/generate-profile-theme-flow';
 import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';
 import { Stats } from '@/components/Stats';
@@ -15,7 +15,7 @@ import { getTheme } from '@/styles/themes';
 import { useStore } from '@/lib/store';
 import { useQueryState } from 'nuqs';
 import Link from 'next/link';
-import { Modal } from '@/components/ui/SharedUI';
+import { cn } from '@/lib/utils';
 
 // Sub-componentes modularizados
 import { ProfileHero } from './profile/ProfileHero';
@@ -64,7 +64,7 @@ export function ThemedProfileLayout(props: Props) {
   const [isMounted, setIsMounted] = useState(false);
   const [areaFilter, setAreaFilter] = useQueryState('area');
   const { areaSkills, skills, experiences } = useStore();
-  const [selectedExp, setSelectedExp] = useState<Experience | null>(null);
+  const [expandedExpId, setExpandedExpId] = useState<string | null>(null);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -95,6 +95,10 @@ export function ThemedProfileLayout(props: Props) {
   const hasPortfolio = props.portfolio && props.portfolio.length > 0;
   const hasSkills = userAreaSkills.length > 0;
   const hasTimeline = userExperiences.length > 0 || hasEducation;
+
+  const toggleExpand = (id: string) => {
+    setExpandedExpId(expandedExpId === id ? null : id);
+  };
 
   return (
     <SimpleBar style={{ maxHeight: '100vh' }}>
@@ -138,7 +142,11 @@ export function ThemedProfileLayout(props: Props) {
                     const theme = getTheme(area.slug);
                     
                     return (
-                      <div key={area.id} className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col">
+                      <motion.div 
+                        key={area.id} 
+                        layout
+                        className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
+                      >
                         {/* Faixa Superior de Cor */}
                         <div className="h-2 w-full" style={{ backgroundColor: theme.hex }} />
                         
@@ -156,21 +164,62 @@ export function ThemedProfileLayout(props: Props) {
                             <span className="text-4xl filter drop-shadow-md">{theme.emoji}</span>
                           </div>
 
-                          {/* Lista de Cargos */}
+                          {/* Lista de Cargos Expandível */}
                           <div className="space-y-3 mb-8 flex-1">
-                            {areaExps.slice(0, 3).map((exp) => (
-                              <button 
-                                key={exp.id}
-                                onClick={(e) => { e.preventDefault(); setSelectedExp(exp); }}
-                                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-left group/item"
-                              >
-                                <div className="flex flex-col">
-                                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{exp.role}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{exp.company_name}</span>
-                                </div>
-                                <Info size={14} className="text-slate-300 group-hover/item:text-blue-500 transition-colors" />
-                              </button>
-                            ))}
+                            {areaExps.slice(0, 3).map((exp) => {
+                              const isExpanded = expandedExpId === exp.id;
+                              return (
+                                <motion.div 
+                                  key={exp.id} 
+                                  layout
+                                  className={cn(
+                                    "w-full rounded-2xl transition-all border overflow-hidden",
+                                    isExpanded 
+                                      ? "bg-slate-100/80 dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-inner" 
+                                      : "bg-slate-50 dark:bg-slate-800/50 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+                                  )}
+                                >
+                                  <button 
+                                    onClick={() => toggleExpand(exp.id)}
+                                    className="w-full flex items-center justify-between p-4 text-left group/item"
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{exp.role}</span>
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{exp.company_name}</span>
+                                    </div>
+                                    <motion.div
+                                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                      className="text-slate-300 group-hover/item:text-blue-500"
+                                    >
+                                      <ChevronDown size={16} />
+                                    </motion.div>
+                                  </button>
+
+                                  <AnimatePresence initial={false}>
+                                    {isExpanded && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ 
+                                          height: { type: "spring", stiffness: 400, damping: 30 },
+                                          opacity: { duration: 0.2 }
+                                        }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="px-4 pb-4 pt-2">
+                                          <div 
+                                            className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium prose prose-sm dark:prose-invert"
+                                            dangerouslySetInnerHTML={{ __html: exp.description || 'Nenhuma descrição detalhada fornecida.' }}
+                                          />
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </motion.div>
+                              );
+                            })}
                             {areaExps.length > 3 && (
                               <p className="text-[10px] font-black text-slate-400 uppercase text-center">+ {areaExps.length - 3} outros registros</p>
                             )}
@@ -181,7 +230,7 @@ export function ThemedProfileLayout(props: Props) {
                             <ArrowRight className="w-4 h-4" />
                           </Link>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
@@ -251,36 +300,6 @@ export function ThemedProfileLayout(props: Props) {
             )}
           </div>
         </LayoutGroup>
-
-        {/* Modal de Detalhes da Experiência */}
-        <Modal 
-          isOpen={!!selectedExp} 
-          onClose={() => setSelectedExp(null)} 
-          title="Resumo da Experiência"
-          maxWidth="max-w-xl"
-        >
-          {selectedExp && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800">
-                <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white">
-                  <Briefcase size={24} />
-                </div>
-                <div>
-                  <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{selectedExp.role}</h4>
-                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">{selectedExp.company_name}</p>
-                </div>
-              </div>
-              
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: selectedExp.description || 'Nenhuma descrição detalhada fornecida.' }} />
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <button onClick={() => setSelectedExp(null)} className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest">Fechar</button>
-              </div>
-            </div>
-          )}
-        </Modal>
       </div>
     </SimpleBar>
   );
