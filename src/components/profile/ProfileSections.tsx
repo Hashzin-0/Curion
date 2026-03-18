@@ -5,20 +5,14 @@ import { Education, PortfolioItem, Certificate } from '@/lib/store';
 import { GraduationCap, Folder, ArrowRight } from 'lucide-react';
 import { CardActions } from '@/components/shared/CardActions';
 
-type Props = {
+type EducationSectionProps = {
   education: Education[];
-  portfolio: PortfolioItem[];
-  certificates?: Certificate[];
   isOwner?: boolean;
   onEditEdu?: (e: Education) => void;
   onDeleteEdu?: (id: string) => void;
-  onEditPort?: (p: PortfolioItem) => void;
-  onDeletePort?: (id: string) => void;
-  onEditCert?: (c: Certificate) => void;
-  onDeleteCert?: (id: string) => void;
 };
 
-export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }: Props) {
+export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }: EducationSectionProps) {
   if (!education || education.length === 0) return null;
 
   return (
@@ -53,7 +47,14 @@ export function EducationSection({ education, isOwner, onEditEdu, onDeleteEdu }:
   );
 }
 
-export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort }: Props) {
+type PortfolioSectionProps = {
+  portfolio: PortfolioItem[];
+  isOwner?: boolean;
+  onEditPort?: (p: PortfolioItem) => void;
+  onDeletePort?: (id: string) => void;
+};
+
+export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort }: PortfolioSectionProps) {
   if (!portfolio || portfolio.length === 0) return null;
 
   return (
