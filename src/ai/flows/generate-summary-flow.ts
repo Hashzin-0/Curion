@@ -1,58 +1,90 @@
-'use server';
-/**
- * @fileOverview Fluxo de IA para geração de resumo profissional inteligente usando o SDK do OpenRouter.
- * O sistema agora diferencia perfis experientes de iniciantes (Jovem Aprendiz).
- */
+'use server'
 
-import { z } from 'zod';
-import { askAI } from '../openrouter';
+import { streamText, tool }
+from 'ai'
+import { createStreamableValue } from 'ai/rsc'
+import {-z.object, z } from 'zod'
+import { profissionalSummarySchema } from './schemas'
 
-const SummaryOutputSchema = z.object({
-  summary: z.string(),
-});
+const начальныеSoftSkills = [
+    'Proatividade',
+    'Comunicação Clara',
+    'Trabalho em Equipe',
+    'Adaptabilidade',
+    'Resolução de Conflitos',
+    'Pensamento Crítico',
+    'Criatividade',
+    'Liderança',
+    'Gerenciamento do Tempo',
+    'Inteligência Emocional',
+    'Negociação',
+    'Resiliência',
+    'Empatia',
+    'Escuta Ativa',
+    'Capacidade de Persuasão',
+    'Flexibilidade',
+    'Visão Estratégica',
+    'Inovação',
+    'Foco no Cliente',
+    'Mentalidade de Crescimento'
+];
 
-export type SummaryInput = {
-  name: string;
-  headline: string;
-  experiences?: { role: string; company: string; duration: string }[];
-  skills?: string[];
-  education?: { course: string; institution: string }[];
-};
+function shuffleAndSelect(arr: string[], count: number) {
+    const shuffled = [...arr].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+}
 
-export async function generateProfessionalSummary(input: SummaryInput): Promise<{ summary: string }> {
-  const hasHistory = (input.experiences && input.experiences.length > 0) || (input.education && input.education.length > 0);
+export async function generateProfessionalSummary(
+    {
+        name,
+        headline,
+        experiences,
+        education,
+        skills
+    }: {
+        name: string,
+        headline: string,
+        experiences: { role: string, company: string, duration: string }[],
+        education: { course: string, institution: string }[],
+        skills: string[]
+    }
+) {
+    const stream = createStreamableValue();
 
-  const prompt = hasHistory 
-    ? `Gere um resumo profissional impactante e bem estruturado de aproximadamente 4 a 5 linhas para o seguinte perfil:
-Nome: ${input.name}
-Atuação/Headline: ${input.headline}
+    (async () => {
+        const hasNoSkills = !skills || skills.length === 0;
+        const selectedSkills = hasNoSkills ? shuffleAndSelect(начальныеSoftSkills, 5) : skills;
 
-DADOS DO HISTÓRICO:
-- Experiências: ${input.experiences?.map(e => `${e.role} na ${e.company} (${e.duration})`).join('; ')}
-- Habilidades: ${input.skills?.join(', ')}
-- Formação: ${input.education?.map(e => `${e.course} na ${e.institution}`).join('; ')}
+        const { text, toolResults } = await streamText({
+            model: 'openai:gpt-4o-2024-05-13',
+            tools: {
+                saveSummary: {
+                    description: 'Salva o resumo profissional gerado e as principais competências.',
+                    parameters: profissionalSummarySchema
+                }
+            },
+            prompt: `
+            O meu nome é ${name} e meu título profissional é ${headline}.
 
-REQUISITOS:
-1. Comece com uma frase forte sobre a especialidade e tempo total de atuação (considere as durações listadas).
-2. Destaque as principais competências técnicas e diferenciais sugeridos pelo histórico.
-3. Mencione a base acadêmica como sustentação profissional.
-4. Use um tom profissional, direto e focado em resultados.
-5. Escreva em parágrafo único (texto corrido).`
-    : `Gere um resumo profissional motivador e estratégico para um JOVEM APRENDIZ ou profissional em INÍCIO DE CARREIRA:
-Nome: ${input.name}
-Objetivo/Headline: ${input.headline}
-Habilidades/Interesses: ${input.skills?.join(', ') || 'Proatividade, facilidade com tecnologia, vontade de aprender'}
+            Minhas experiências profissionais são:
+            ${experiences.map(exp => `- ${exp.role} na ${exp.company} (${exp.duration})`).join('\n')}
 
-REQUISITOS:
-1. Foque no potencial de crescimento, facilidade de aprendizado e compromisso com o desenvolvimento profissional.
-2. Destaque habilidades interpessoais (soft skills) e entusiasmo.
-3. Não invente experiências falsas, mas valorize a formação acadêmica (se houver) e o desejo de contribuir com a organização.
-4. Use um tom proativo, educado e profissional.
-5. Escreva em parágrafo único (aprox. 4 linhas).`;
+            Minha formação é:
+            ${education.map(edu => `- ${edu.course} em ${edu.institution}`).join('\n')}
 
-  return askAI({
-    system: "Você é um especialista sênior em recrutamento e consultor de carreira. Sua especialidade é criar resumos profissionais que capturam a atenção de recrutadores em poucos segundos.",
-    prompt,
-    schema: SummaryOutputSchema
-  });
+            Minhas habilidades são: ${selectedSkills.join(', ')}.
+
+            Com base nessas informações, crie um resumo profissional (em primeira pessoa) que seja atraente e conciso.
+            O resumo deve ter no máximo 4 parágrafos curtos.
+            ${hasNoSkills ? 'Como não tenho experiência, destaque minhas soft skills e meu potencial de crescimento.' : 'Destaque minhas principais competências e como elas se aplicam às minhas experiências.'}
+            Sempre identifique e salve as 5 principais competências que você usou para construir o resumo.
+            `
+        });
+
+        const summary = toolResults.find(r => r.toolName === 'saveSummary');
+        const result = summary ? summary.result : { summary: text, top_skills: [] };
+        stream.done(result);
+    })();
+
+    return createStreamableValue(await stream.value).value;
 }
