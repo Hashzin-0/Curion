@@ -1,9 +1,8 @@
 'use server'
 
-import { streamText, tool }
-from 'ai'
+import { streamText, tool } from 'ai'
 import { createStreamableValue } from 'ai/rsc'
-import {-z.object, z } from 'zod'
+import { z } from 'zod'
 import { profissionalSummarySchema } from './schemas'
 
 const начальныеSoftSkills = [

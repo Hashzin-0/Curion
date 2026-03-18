@@ -1,7 +1,7 @@
 'use client';
 
 import { useRealtimeInterview } from '@/hooks/useRealtimeInterview';
-import { Button } from '@/components/ui/SharedUI';
+import { Button } from '@/components/ui/Button';
 import { Mic, Square, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 

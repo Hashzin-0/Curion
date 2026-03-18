@@ -10,7 +10,10 @@ import { generateSystemResumeTheme } from '@/lib/premium-themes';
 import { QRCodeSVG } from 'qrcode.react';
 import { calcDuration } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Button, Modal, inputCls, labelCls } from '@/components/ui/SharedUI';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/feedback/Modal';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
 import { ExperienceItem, EducationCard } from '@/components/shared/ProfileSections';
 import { RichEditor } from '@/components/RichEditor';
 
@@ -64,7 +67,6 @@ export default function AreaResume() {
     if (!area || !user) return;
     setExporting(true);
     
-    // Gera o tema usando o sistema determinístico de design
     const theme = generateSystemResumeTheme(user.name, area.name);
     
     setExportTheme(theme);
@@ -84,7 +86,6 @@ export default function AreaResume() {
     setShouldExport(true);
   };
 
-  // Efeito de exportação PDF corrigido para evitar erros de tipo no Element
   useEffect(() => {
     const element = pdfRef.current;
     if (!shouldExport || !element) return;
@@ -183,18 +184,18 @@ export default function AreaResume() {
 
       <Modal isOpen={!!editingExp} onClose={() => setEditingExp(null)} title="Editar Experiência">
         <form onSubmit={async (e) => { e.preventDefault(); if(editingExp) { await updateExperience(editingExp); setEditingExp(null); toast.success('Salvo!'); } }} className="space-y-4">
-          <div><label className={labelCls}>Cargo</label><input className={inputCls} value={editingExp?.role || ''} onChange={e => setEditingExp(p => p ? {...p, role: e.target.value} : null)} /></div>
-          <div><label className={labelCls}>Empresa</label><input className={inputCls} value={editingExp?.company_name || ''} onChange={e => setEditingExp(p => p ? {...p, company_name: e.target.value} : null)} /></div>
-          <div><label className={labelCls}>Descrição</label><RichEditor content={editingExp?.description || ''} onChange={v => setEditingExp(p => p ? {...p, description: v} : null)} /></div>
+          <div><Label>Cargo</Label><Input value={editingExp?.role || ''} onChange={e => setEditingExp(p => p ? {...p, role: e.target.value} : null)} /></div>
+          <div><Label>Empresa</Label><Input value={editingExp?.company_name || ''} onChange={e => setEditingExp(p => p ? {...p, company_name: e.target.value} : null)} /></div>
+          <div><Label>Descrição</Label><RichEditor content={editingExp?.description || ''} onChange={v => setEditingExp(p => p ? {...p, description: v} : null)} /></div>
           <Button className="w-full" type="submit">Atualizar</Button>
         </form>
       </Modal>
 
       <Modal isOpen={!!editingArea} onClose={() => setEditingArea(null)} title="Configurações Visuais">
         <div className="space-y-4">
-          <div><label className={labelCls}>Nome da Área</label><input className={inputCls} value={editingArea?.name || ''} onChange={e => setEditingArea(p => p ? {...p, name: e.target.value} : null)} /></div>
+          <div><Label>Nome da Área</Label><Input value={editingArea?.name || ''} onChange={e => setEditingArea(p => p ? {...p, name: e.target.value} : null)} /></div>
           <div>
-            <label className={labelCls}>Cor Principal</label>
+            <Label>Cor Principal</Label>
             <input type="color" value={editingArea?.theme_color || theme.hex} onChange={e => setEditingArea(p => p ? {...p, theme_color: e.target.value} : null)} className="w-full h-12 rounded-xl cursor-pointer" />
           </div>
           <Button className="w-full" onClick={async () => { if(editingArea) { await updateArea(editingArea); setEditingArea(null); toast.success('Estilo atualizado!'); } }}>Salvar Configurações</Button>

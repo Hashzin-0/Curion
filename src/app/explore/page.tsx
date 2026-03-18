@@ -2,14 +2,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Users, Briefcase, Filter, ArrowRight, Sparkles, MapPin, Star } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { DatabaseService } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button, SectionTitle } from '@/components/ui/SharedUI';
+import { Button } from '@/components/ui/Button';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 
 /**
  * @fileOverview Discovery Hub - Central de Exploração de Talentos e Vagas.
