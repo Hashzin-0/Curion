@@ -285,21 +285,25 @@ export function ThemedProfileLayout(props: Props) {
             )}
 
             {hasEducation && (
-              <EducationSection 
-                education={props.education} 
-                isOwner={props.isOwner} 
-                onEditEdu={props.onEditEducation} 
-                onDeleteEdu={props.onDeleteEducation} 
-              />
+              <section>
+                <EducationSection 
+                  education={props.education || []} 
+                  isOwner={props.isOwner} 
+                  onEditEdu={props.onEditEducation} 
+                  onDeleteEdu={props.onDeleteEducation} 
+                />
+              </section>
             )}
 
             {hasPortfolio && (
-              <PortfolioSection 
-                portfolio={props.portfolio} 
-                isOwner={props.isOwner} 
-                onEditPort={props.onEditPortfolio} 
-                onDeletePort={props.onDeletePortfolio} 
-              />
+              <section>
+                <PortfolioSection 
+                  portfolio={props.portfolio || []} 
+                  isOwner={props.isOwner} 
+                  onEditPort={props.onEditPortfolio} 
+                  onDeletePort={props.onDeletePortfolio} 
+                />
+              </section>
             )}
 
             {(userExperiences.length > 0 || hasSkills) && (
