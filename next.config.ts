@@ -1,15 +1,10 @@
-
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Otimização de imagens com Sharp ativada automaticamente pelas dependências
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
