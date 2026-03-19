@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -71,7 +72,7 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
         portfolio: portfolio.filter(p => p.user_id === currentUser.id),
         skills: areaSkills
           .filter(as => areas.some(a => a.id === as.area_id && a.user_id === currentUser.id))
-          .map(as => ({ id: as.id, name: skills.find(s => s.id === as.skill_id)?.name }))
+          .map(as => ({ id: as.skill_id, name: skills.find(s => s.id === as.skill_id)?.name }))
       };
 
       const res = await fetch('/api/resume/match', {
