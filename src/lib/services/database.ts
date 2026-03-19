@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Camada de serviço para interações com o Supabase seguindo o schema oficial.
  */
@@ -70,19 +71,33 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Analytics (Page Views)
-  async recordProfileView(userId: string) {
+  // Analytics (Page Views e Eventos)
+  async recordProfileView(userId: string, eventType: string = 'page_view', metadata: any = {}) {
     if (!userId) return;
+    
+    // Captura metadados básicos automaticamente se estiver no browser
+    const enrichedMetadata = {
+      ...metadata,
+      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
+      referrer: typeof document !== 'undefined' ? document.referrer : 'direct',
+      screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown'
+    };
+
     const { error } = await supabase
       .from('page_views')
-      .insert([{ user_id: userId, viewed_at: new Date().toISOString() }]);
-    if (error) console.warn('DatabaseService: Erro ao gravar view:', error.message);
+      .insert([{ 
+        user_id: userId, 
+        viewed_at: new Date().toISOString(),
+        event_type: eventType,
+        metadata: enrichedMetadata
+      }]);
+    if (error) console.warn('DatabaseService: Erro ao gravar evento:', error.message);
   },
 
   async fetchProfileStats(userId: string) {
     const { data, error } = await supabase
       .from('page_views')
-      .select('viewed_at')
+      .select('*')
       .eq('user_id', userId);
     if (error) throw error;
     return data;
@@ -102,7 +117,6 @@ export const DatabaseService = {
   },
 
   async createJob(job: Omit<JobVacancy, 'id' | 'created_at'>) {
-    // Usamos insert sem single() inicialmente para evitar travamentos se o select falhar por RLS
     const { data, error } = await supabase
       .from('jobs')
       .insert([job])
