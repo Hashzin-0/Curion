@@ -30,7 +30,9 @@ const nextConfig: NextConfig = {
     '@genkit-ai/google-genai',
     'genkitx-openai',
     'pdfjs-dist',
-    '@cfworker/json-schema'
+    '@cfworker/json-schema',
+    'fluent-ffmpeg',
+    '@ffmpeg-installer/ffmpeg'
   ],
   transpilePackages: ['motion'],
   experimental: {
