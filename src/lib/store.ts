@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Gerenciamento de estado global com Zustand.
  * Centraliza a lógica de negócios e sincronização com o banco de dados seguindo o schema oficial.
@@ -145,14 +146,26 @@ export const useStore = create<AppState>()(
 
       syncUserWithDatabase: async (userData) => {
         try {
-          const data = await DatabaseService.syncUser(userData);
-          const contacts = await DatabaseService.fetchUserContacts(data.id);
+          // Busca o usuário existente no banco para não sobrescrever dados customizados
+          const existingUser = await DatabaseService.getUserById(userData.id!);
+          
+          let userRecord;
+          if (existingUser) {
+            // Se já existe, usamos os dados do banco (mantém foto, headline, etc customizados)
+            userRecord = existingUser;
+          } else {
+            // Se for novo usuário, cria com os dados do OAuth (Google)
+            userRecord = await DatabaseService.syncUser(userData);
+          }
+
+          const contacts = await DatabaseService.fetchUserContacts(userRecord.id);
           const mergedUser = { 
-            ...data, 
+            ...userRecord, 
             email: contacts?.email || userData.email, 
             phone: contacts?.phone || userData.phone,
             website: contacts?.website
           };
+          
           set({ currentUser: mergedUser });
           return mergedUser;
         } catch (error) {
@@ -175,7 +188,7 @@ export const useStore = create<AppState>()(
           });
         }
 
-        set({ currentUser: { ...currentUser, ...data, ...userData } });
+        set({ currentUser: { ...currentUser, ...data } });
       },
 
       fetchData: async () => {

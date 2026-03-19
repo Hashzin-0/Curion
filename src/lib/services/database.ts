@@ -36,11 +36,21 @@ export const DatabaseService = {
     return data as User;
   },
 
-  async updateUser(userId: string, userData: Partial<User>) {
-    const { username, name, headline, summary, avatar_path, location } = userData;
+  async getUserById(userId: string) {
     const { data, error } = await supabase
       .from('users')
-      .update({ username, name, headline, summary, avatar_path, location })
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data as User | null;
+  },
+
+  async updateUser(userId: string, userData: Partial<User>) {
+    const { username, name, headline, summary, avatar_path, location, availability_status } = userData;
+    const { data, error } = await supabase
+      .from('users')
+      .update({ username, name, headline, summary, avatar_path, location, availability_status })
       .eq('id', userId)
       .select()
       .single();
@@ -50,7 +60,6 @@ export const DatabaseService = {
 
   async fetchPublicProfiles() {
     // Busca perfis incluindo áreas e habilidades (via area_skills)
-    // Usamos uma query mais profunda para pegar os nomes das skills e contagem de endossos
     const { data, error } = await supabase
       .from('users')
       .select(`
