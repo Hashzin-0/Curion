@@ -1,9 +1,9 @@
 'use server'
 
-import { streamText, tool } from 'ai'
 import { createStreamableValue } from 'ai/rsc'
 import { z } from 'zod'
 import { profissionalSummarySchema } from './schemas'
+import { askAI } from '../openrouter';
 
 const начальныеSoftSkills = [
     'Proatividade',
@@ -54,15 +54,7 @@ export async function generateProfessionalSummary(
         const hasNoSkills = !skills || skills.length === 0;
         const selectedSkills = hasNoSkills ? shuffleAndSelect(начальныеSoftSkills, 5) : skills;
 
-        const { text, toolResults } = await streamText({
-            model: 'openai:gpt-4o-2024-05-13',
-            tools: {
-                saveSummary: {
-                    description: 'Salva o resumo profissional gerado e as principais competências.',
-                    parameters: profissionalSummarySchema
-                }
-            },
-            prompt: `
+        const prompt = `
             O meu nome é ${name} e meu título profissional é ${headline}.
 
             Minhas experiências profissionais são:
@@ -77,11 +69,13 @@ export async function generateProfessionalSummary(
             O resumo deve ter no máximo 4 parágrafos curtos.
             ${hasNoSkills ? 'Como não tenho experiência, destaque minhas soft skills e meu potencial de crescimento.' : 'Destaque minhas principais competências e como elas se aplicam às minhas experiências.'}
             Sempre identifique e salve as 5 principais competências que você usou para construir o resumo.
-            `
+        `;
+
+        const result = await askAI({
+            prompt,
+            schema: profissionalSummarySchema,
         });
 
-        const summary = toolResults.find(r => r.toolName === 'saveSummary');
-        const result = summary ? summary.result : { summary: text, top_skills: [] };
         stream.done(result);
     })();
 

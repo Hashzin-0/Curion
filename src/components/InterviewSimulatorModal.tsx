@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Modal, Button } from './ui/SharedUI';
+import { Modal } from '@/components/feedback/Modal';
+import { Button } from '@/components/ui/Button';
 import { Mic, Send, Loader2, Volume2, VolumeX, User, Bot, PlayCircle, Square, Sparkles } from 'lucide-react';
 import { simulateInterview } from '@/ai/flows/interview-simulation-flow';
 import { useStore } from '@/lib/store';

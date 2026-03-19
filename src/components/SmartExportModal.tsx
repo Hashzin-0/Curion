@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Modal, Button, inputCls, labelCls } from './ui/SharedUI';
+import { Modal } from '@/components/feedback/Modal';
+import { Button } from '@/components/ui/Button';
+import { inputCls, labelCls } from '@/components/ui/SharedUI';
 import { useStore } from '@/lib/store';
 import { Sparkles, Loader2, FileText, Upload, BrainCircuit, FileUp, Type } from 'lucide-react';
 import { toast } from 'sonner';

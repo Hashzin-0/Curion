@@ -1,6 +1,8 @@
 'use client';
 
-import { Modal, Button, inputCls, labelCls } from "@/components/ui/SharedUI";
+import { Modal } from "@/components/feedback/Modal";
+import { Button } from "@/components/ui/Button";
+import { inputCls, labelCls } from "@/components/ui/SharedUI";
 import { RichEditor } from "@/components/RichEditor";
 
 const EditModal = ({ isOpen, onClose, title, children, onSubmit, submitText }: any) => (

@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Modal, Button, inputCls, labelCls } from "@/components/ui/SharedUI";
+import { Modal } from "@/components/feedback/Modal";
+import { Button } from "@/components/ui/Button";
+import { inputCls, labelCls } from "@/components/ui/SharedUI";
 import { RichEditor } from "@/components/RichEditor";
 import * as LucideIcons from 'lucide-react';
 import { cn } from "@/lib/utils";

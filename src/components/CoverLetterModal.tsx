@@ -2,7 +2,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Modal, Button, inputCls, labelCls } from './ui/SharedUI';
+import { Modal } from '@/components/feedback/Modal';
+import { Button } from '@/components/ui/Button/index';
+import { inputCls, labelCls } from '@/components/ui/SharedUI';
 import { useStore } from '@/lib/store';
 import { FileText, Loader2, Sparkles, Copy, Check, Mail } from 'lucide-react';
 import { toast } from 'sonner';

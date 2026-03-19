@@ -1,166 +1,113 @@
-
-'use client';
+'use client'
 
 import { useState } from 'react';
-import { Modal, Button, inputCls, labelCls } from './ui/SharedUI';
+import { Modal } from './feedback/Modal';
+import { inputCls, labelCls } from './ui/SharedUI';
 import { FileUp, Type, Loader2, Sparkles, FileText, BrainCircuit } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 import { parseResumeText } from '@/ai/flows/parse-resume-text-flow';
-import { matchJobRequirements } from '@/ai/flows/match-job-requirements-flow';
-import * as pdfjs from 'pdfjs-dist';
-import Tesseract from 'tesseract.js';
 
-// Configuração do PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
-type Props = {
+interface ImportResumeModalProps {
   isOpen: boolean;
   onClose: () => void;
-};
+}
 
-export function ImportResumeModal({ isOpen, onClose }: Props) {
-  const router = useRouter();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [inputMode, setInputMode] = useState<'text' | 'file'>('file');
-  const [resumeText, setResumeText] = useState('');
-  const [jobText, setJobText] = useState('');
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
+export function ImportResumeModal({ isOpen, onClose }: ImportResumeModalProps) {
+  const [text, setText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('file');
 
-  const extractTextFromFile = async (file: File): Promise<string> => {
-    if (file.type === 'application/pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+  const onDrop = async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setFileName(file.name);
+      setIsLoading(true);
+      try {
+        if (file.type === 'application/pdf') {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            if (arrayBuffer) {
+              const pdfjs = await import('pdfjs-dist/build/pdf');
+              pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+              const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+              let fullText = '';
+              for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(' ');
+              }
+              setText(fullText);
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            setText(result);
+          };
+          reader.readAsText(file);
+        }
+      } catch (error) {
+        toast.error('Error reading file. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-      return fullText;
-    } else if (file.type.startsWith('image/')) {
-      const result = await Tesseract.recognize(file, 'por');
-      return result.data.text;
     }
-    return '';
   };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false });
 
   const handleImport = async () => {
-    setIsProcessing(true);
-    const toastId = toast.loading('Processando currículo com IA...');
-
+    setIsLoading(true);
     try {
-      let finalResumeText = resumeText;
-      if (inputMode === 'file' && resumeFile) {
-        finalResumeText = await extractTextFromFile(resumeFile);
-      }
-
-      if (!finalResumeText) {
-        throw new Error('Por favor, forneça o texto ou arquivo do currículo.');
-      }
-
-      // Chama a IA para extrair dados estruturados do currículo
-      const parsedData = await parseResumeText({ text: finalResumeText });
-
-      // Se houver detalhes da vaga, fazemos o match também
-      let matchResult = null;
-      if (jobText) {
-        matchResult = await matchJobRequirements({ 
-          jobDescription: jobText, 
-          profile: { 
-            experiences: parsedData.experiences || [], 
-            education: parsedData.education || [], 
-            skills: parsedData.skills || [] 
-          } 
-        });
-      }
-
-      // Salva no localStorage para a página /resume consumir
-      localStorage.setItem('career_canvas_import_data', JSON.stringify({
-        parsedData,
-        matchResult,
-        jobDescription: jobText,
-        timestamp: Date.now()
-      }));
-
-      toast.success('Currículo processado! Abrindo visualização...', { id: toastId });
+      const parsedData = await parseResumeText({ text });
+      // TODO: Do something with the parsed data
+      toast.success('Resume imported and parsed successfully!');
       onClose();
-      router.push('/resume?imported=true');
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || 'Erro ao processar importação.', { id: toastId });
+    } catch (error) {
+      toast.error('Failed to parse resume. Please check the content.');
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (files) => setResumeFile(files[0]),
-    accept: { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg'] },
-    multiple: false
-  });
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Importar Currículo">
-      <div className="space-y-6">
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-          <button 
-            onClick={() => setInputMode('file')}
-            className={`flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all ${inputMode === 'file' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-400'}`}
-          >
-            <FileUp className="w-4 h-4 inline mr-2" /> Arquivo (PDF/Imagem)
-          </button>
-          <button 
-            onClick={() => setInputMode('text')}
-            className={`flex-1 py-2 text-xs font-black uppercase rounded-lg transition-all ${inputMode === 'text' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-400'}`}
-          >
-            <Type className="w-4 h-4 inline mr-2" /> Texto Copiado
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Import Resume">
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <button onClick={() => setActiveTab('file')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'file' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>Upload File</button>
+        <button onClick={() => setActiveTab('text')} className={`px-4 py-2 rounded-lg font-bold ${activeTab === 'text' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>Paste Text</button>
+      </div>
 
-        {inputMode === 'file' ? (
-          <div {...getRootProps()} className={`border-2 border-dashed rounded-3xl p-10 text-center transition-all cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300'}`}>
-            <input {...getInputProps()} />
-            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-sm font-bold text-slate-600">
-              {resumeFile ? resumeFile.name : 'Arraste seu currículo aqui ou clique para selecionar'}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-2 uppercase">PDF, PNG ou JPG</p>
-          </div>
-        ) : (
-          <textarea 
-            value={resumeText} 
-            onChange={(e) => setResumeText(e.target.value)} 
-            className={inputCls + " min-h-[150px] text-xs"} 
-            placeholder="Cole aqui o texto do seu currículo atual..." 
+      {activeTab === 'file' ? (
+        <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-xl text-center cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 dark:border-slate-600'}`}>
+          <input {...getInputProps()} />
+          <FileUp className="mx-auto text-slate-400 mb-2" size={40} />
+          <p className="font-bold text-slate-900 dark:text-white">{fileName || 'Drag & drop a file here, or click to select'}</p>
+          <p className="text-sm text-slate-500">PDF, DOCX, TXT</p>
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="resume-text" className={labelCls}>Paste your resume content below:</label>
+          <textarea
+            id="resume-text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className={`${inputCls} min-h-[200px] mt-2`}
+            placeholder="Paste your resume content here..."
           />
-        )}
-
-        <div className="space-y-2">
-          <label className={labelCls}>Detalhes da Vaga (Opcional)</label>
-          <textarea 
-            value={jobText} 
-            onChange={(e) => setJobText(e.target.value)} 
-            className={inputCls + " min-h-[100px] text-xs"} 
-            placeholder="Cole aqui os requisitos da vaga para otimizar o currículo..." 
-          />
-          <p className="text-[10px] font-bold text-blue-500 uppercase flex items-center gap-1">
-            <BrainCircuit size={12} /> IA selecionará os melhores pontos para esta vaga
-          </p>
         </div>
+      )}
 
-        <div className="flex gap-4">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button 
-            className="flex-1" 
-            onClick={handleImport}
-            disabled={isProcessing || (inputMode === 'file' && !resumeFile && !resumeText)}
-          >
-            {isProcessing ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {isProcessing ? 'Processando...' : 'Importar e Visualizar'}
-          </Button>
-        </div>
+      <div className="mt-8 flex justify-end items-center gap-4">
+        <button onClick={onClose} className="font-bold text-slate-600 dark:text-slate-300">Cancel</button>
+        <button onClick={handleImport} disabled={!text || isLoading} className="px-6 py-3 rounded-xl bg-blue-500 text-white font-bold flex items-center gap-2 disabled:bg-slate-400 disabled:cursor-not-allowed">
+          {isLoading ? <Loader2 className="animate-spin"/> : <BrainCircuit />}
+          Import & Analyze
+        </button>
       </div>
     </Modal>
   );
