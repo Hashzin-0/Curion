@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Cliente utilitário para o OpenRouter configurado para Curion X.
  * Executa exclusivamente no servidor para garantir segurança da API Key e compatibilidade com Server Actions.
@@ -6,6 +7,7 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { AI_CONFIG } from './config';
 
 const getClient = () => {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -16,7 +18,6 @@ const getClient = () => {
   return new OpenAI({
     apiKey: apiKey || 'placeholder',
     baseURL: 'https://openrouter.ai/api/v1',
-    // dangerouslyAllowBrowser removido pois agora roda apenas no servidor
     defaultHeaders: {
       'HTTP-Referer': 'https://curionx.vercel.app',
       'X-Title': 'Curion X',
@@ -31,11 +32,12 @@ export async function askAI<T>(params: {
   imageUri?: string;
 }): Promise<T> {
   const client = getClient();
-  const primaryModel = process.env.NEXT_PUBLIC_AI_MODEL || 'stepfun/step-3.5-flash:free';
   
-  const models = params.imageUri 
-    ? ['google/gemini-flash-1.5', 'openai/gpt-4o-mini']
-    : [primaryModel, 'google/gemini-2.0-flash-001', 'openai/gpt-4o-mini'];
+  /**
+   * Unifica a lista de modelos: tenta o primário e depois a lista de fallbacks da configuração.
+   * Removida a priorização estática de modelos de imagem para respeitar a hierarquia definida pelo usuário.
+   */
+  const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
   
   let lastError = null;
   const jsonSchema = params.schema ? zodToJsonSchema(params.schema) : null;
@@ -49,6 +51,7 @@ export async function askAI<T>(params: {
         }
       ];
 
+      // Se houver imagem, ela é incluída no payload multimodal
       if (params.imageUri) {
         contentParts.push({
           type: 'image_url',
@@ -77,7 +80,7 @@ export async function askAI<T>(params: {
           const data = JSON.parse(jsonString);
           return params.schema.parse(data);
         } catch (parseError) {
-          console.error('OpenRouter: Falha ao parsear JSON:', content);
+          console.error(`OpenRouter [${modelId}]: Falha ao parsear JSON:`, content);
           throw new Error('Resposta da IA não é um JSON válido');
         }
       }
@@ -90,5 +93,5 @@ export async function askAI<T>(params: {
     }
   }
 
-  throw lastError || new Error('Todos os modelos de IA falharam.');
+  throw lastError || new Error('Todos os modelos de IA configurados falharam.');
 }
