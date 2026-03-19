@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Curion X — Portfólio Inteligente',
-    short_name: 'CurionX',
+    short_name: 'Curion X',
     description: 'Seu currículo interativo e temático com IA',
     start_url: '/',
     display: 'standalone',
