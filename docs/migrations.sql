@@ -1,50 +1,61 @@
 
--- 1. Habilitar a extensão de vetores
-create extension if not exists vector;
+-- ==============================================================================
+-- MIGRATIONS CUMULATIVAS CURION X (V5 - PROOF OF WORK & BLOCKCHAIN SIMULATION)
+-- ==============================================================================
 
--- 2. Adicionar coluna de embedding na tabela de usuários
--- O modelo text-embedding-004 da Google gera vetores de 768 dimensões
-alter table public.users add column if not exists embedding vector(768);
+-- 1. EXTENSÕES NECESSÁRIAS
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
--- 3. Criar índice HNSW para buscas ultra-rápidas
-create index on users using hnsw (embedding vector_cosine_ops);
+-- 2. ATUALIZAÇÃO DE USUÁRIOS (CACHE DE ÁUDIO E BUSCA SEMÂNTICA)
+ALTER TABLE public.users 
+ADD COLUMN IF NOT EXISTS audio_bio_path TEXT,
+ADD COLUMN IF NOT EXISTS audio_bio_hash TEXT,
+ADD COLUMN IF NOT EXISTS embedding vector(768),
+ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT 'open';
 
--- 4. Função RPC para busca por similaridade
--- Esta função será chamada pelo DatabaseService para encontrar candidatos
-create or replace function match_profiles (
+-- 3. SISTEMA DE PROOF OF WORK (IMUTABILIDADE DE PROJETOS)
+ALTER TABLE public.projects 
+ADD COLUMN IF NOT EXISTS verification_hash TEXT,
+ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+
+COMMENT ON COLUMN public.projects.verification_hash IS 'Hash SHA-256 dos dados do projeto, simulando integridade de blockchain';
+
+-- 4. FUNÇÃO DE BUSCA SEMÂNTICA (VETORES)
+CREATE OR REPLACE FUNCTION match_profiles (
   query_embedding vector(768),
-    match_threshold float,
-      match_count int
-      )
-      returns table (
-        id uuid,
-          name text,
-            username text,
-              headline text,
-                summary text,
-                  avatar_path text,
-                    location text,
-                      availability_status text,
-                        similarity float
-                        )
-                        language plpgsql
-                        as $$
-                        begin
-                          return query
-                            select
-                                users.id,
-                                    users.name,
-                                        users.username,
-                                            users.headline,
-                                                users.summary,
-                                                    users.avatar_path,
-                                                        users.location,
-                                                            users.availability_status,
-                                                                1 - (users.embedding <=> query_embedding) as similarity
-                                                                  from users
-                                                                    where 1 - (users.embedding <=> query_embedding) > match_threshold
-                                                                      order by users.embedding <=> query_embedding
-                                                                        limit match_count;
-                                                                        end;
-                                                                        $$;
-                                                                        
+  match_threshold float,
+  match_count int
+)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  username text,
+  headline text,
+  summary text,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    users.id,
+    users.name,
+    users.username,
+    users.headline,
+    users.summary,
+    1 - (users.embedding <=> query_embedding) AS similarity
+  FROM users
+  WHERE 1 - (users.embedding <=> query_embedding) > match_threshold
+  ORDER BY similarity DESC
+  LIMIT match_count;
+END;
+$$;
+
+-- 5. STORAGE CONFIG (POLÍTICAS PÚBLICAS PARA ÁUDIO E JOBS)
+-- Nota: Execute estes comandos se os buckets ainda não existirem ou se precisar resetar permissões
+INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'uploads');
+CREATE POLICY "Auth Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'uploads' AND auth.role() = 'authenticated');

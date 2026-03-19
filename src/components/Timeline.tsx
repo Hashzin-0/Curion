@@ -1,12 +1,13 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, GraduationCap, Folder, Plus, X, Calendar, Building, Pencil, Trash2 } from 'lucide-react';
-import { useStore } from '@/lib/store';
+import { Briefcase, GraduationCap, Folder, Plus, X, Calendar, Building, Pencil, Trash2, ShieldCheck, Sparkles, Loader2 } from 'lucide-react';
+import { useStore, Project } from '@/lib/store';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { parseSafeDate } from '@/lib/utils';
+import { parseSafeDate, cn } from '@/lib/utils';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { toast } from 'sonner';
 
@@ -57,10 +58,12 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
   const addProject = useStore(state => state.addProject);
   const updateProject = useStore(state => state.updateProject);
   const removeProject = useStore(state => state.removeProject);
+  const verifyProject = useStore(state => state.verifyProject);
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<TimelineItem | null>(null);
+  const [isVerifying, setIsVerifying] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<TimelineItem>>({ type: 'work' });
   const [parent] = useAutoAnimate();
 
@@ -121,6 +124,19 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
     return items.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
   }, [targetUserId, experiences, education, projects]);
 
+  const handleVerify = async (id: string) => {
+    setIsVerifying(id);
+    const tid = toast.loading('Calculando prova de integridade...');
+    try {
+      await verifyProject(id);
+      toast.success('Projeto verificado com sucesso!', { id: tid });
+    } catch (e) {
+      toast.error('Erro na verificação.', { id: tid });
+    } finally {
+      setIsVerifying(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !newItem.title || (newItem.type !== 'project' && !newItem.organization)) return;
@@ -136,7 +152,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         } else if (editingItem.type === 'project') {
           await updateProject({ ...editingItem.raw, name: newItem.title, description: newItem.description || '' });
         }
-        toast.success('Registro atualizado com sucesso!');
+        toast.success('Registro atualizado!');
       } else {
         if (newItem.type === 'work') {
           await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || null, company_name: newItem.organization!, role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
@@ -151,70 +167,51 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
       setEditingItem(null);
       setNewItem({ type: 'work' });
     } catch (err) {
-      toast.error('Erro ao salvar o registro.');
+      toast.error('Erro ao salvar.');
     }
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingItem) return;
-    try {
-      if (deletingItem.type === 'work') await removeExperience(deletingItem.id);
-      if (deletingItem.type === 'education') await removeEducation(deletingItem.id);
-      if (deletingItem.type === 'project') await removeProject(deletingItem.id);
-      toast.success('Registro removido.');
-    } catch (err) {
-      toast.error('Erro ao excluir.');
-    }
-    setDeletingItem(null);
-  };
-
-  const handleEdit = (item: TimelineItem) => {
-    setEditingItem(item);
-    setNewItem({ type: item.type, title: item.title, organization: item.organization, description: item.description, date: item.date });
-    setIsAdding(true);
   };
 
   return (
     <div className="w-full py-8">
       <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
         <div className="text-center md:text-left">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Histórico e Conquistas</h2>
-          <p className="text-slate-500 dark:text-slate-400">Sua trajetória profissional organizada cronologicamente.</p>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tighter">Trajetória Imutável</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Sua história profissional com selo de integridade Curion X.</p>
         </div>
         {!readOnly && currentUser?.id === targetUserId && (
-          <button onClick={() => { setEditingItem(null); setNewItem({ type: 'work' }); setIsAdding(true); }} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full font-bold hover:shadow-lg transition-all shadow-md">
-            <Plus className="w-5 h-5" /> Novo Registro
+          <button onClick={() => { setEditingItem(null); setNewItem({ type: 'work' }); setIsAdding(true); }} className="flex items-center gap-2 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase hover:shadow-2xl transition-all shadow-xl active:scale-95">
+            <Plus className="w-5 h-5" /> Adicionar Conquista
           </button>
         )}
       </div>
 
       <AnimatePresence>
         {isAdding && !readOnly && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <motion.form 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-xl bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800" 
+              className="w-full max-w-xl bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800" 
               onSubmit={handleSubmit}
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Editar Registro' : 'Novo Registro'}</h3>
-                <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{editingItem ? 'Refinar Registro' : 'Nova Conquista'}</h3>
+                <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
               </div>
               <div className="space-y-6">
                 {!editingItem && (
                   <div ref={parent}>
-                    <label className="block text-sm font-bold mb-2">Tipo de Registro</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Categoria</label>
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { id: 'work', label: 'Experiência', icon: Briefcase },
+                        { id: 'work', label: 'Carreira', icon: Briefcase },
                         { id: 'education', label: 'Formação', icon: GraduationCap },
                         { id: 'project', label: 'Projeto', icon: Folder },
                       ].map(type => (
-                        <button key={type.id} type="button" onClick={() => setNewItem({...newItem, type: type.id as any})} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${newItem.type === type.id ? 'bg-blue-50 border-blue-500 text-blue-600 dark:bg-blue-900/20' : 'bg-slate-50 border-transparent text-slate-500 dark:bg-slate-800'}`}>
-                          <type.icon className="w-5 h-5" />
-                          <span className="text-xs font-bold">{type.label}</span>
+                        <button key={type.id} type="button" onClick={() => setNewItem({...newItem, type: type.id as any})} className={cn("flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all", newItem.type === type.id ? 'bg-blue-50 border-blue-500 text-blue-600 dark:bg-blue-900/20' : 'bg-slate-50 border-transparent text-slate-400 dark:bg-slate-800')}>
+                          <type.icon size={20} />
+                          <span className="text-[10px] font-black uppercase tracking-tight">{type.label}</span>
                         </button>
                       ))}
                     </div>
@@ -222,41 +219,26 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold mb-2">Título / Nome</label>
-                    <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.title || ''} onChange={e => setNewItem({...newItem, title: e.target.value})} placeholder="Ex: App de Finanças" />
+                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Título</label>
+                    <input required className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold" value={newItem.title || ''} onChange={e => setNewItem({...newItem, title: e.target.value})} placeholder="Ex: Lead Designer" />
                   </div>
                   {newItem.type !== 'project' && (
                     <div>
-                      <label className="block text-sm font-bold mb-2">Instituição / Empresa</label>
-                      <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.organization || ''} onChange={e => setNewItem({...newItem, organization: e.target.value})} placeholder="Ex: Google Inc." />
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Local</label>
+                      <input required className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold" value={newItem.organization || ''} onChange={e => setNewItem({...newItem, organization: e.target.value})} placeholder="Ex: Google" />
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">Descrição</label>
-                  <textarea className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none" rows={4} value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} placeholder="Fale um pouco sobre..." />
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Contexto / Realizações</label>
+                  <textarea className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none font-medium text-sm" rows={4} value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} placeholder="Descreva seus resultados..." />
                 </div>
               </div>
               <div className="flex gap-4 mt-10">
-                <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Descartar</button>
-                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md">Salvar</button>
+                <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase hover:text-slate-900 transition-all">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase shadow-xl hover:scale-[1.02] transition-all">Salvar Registro</button>
               </div>
             </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {deletingItem && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800 text-center">
-              <h3 className="text-xl font-black mb-4">Confirmar Exclusão</h3>
-              <p className="text-slate-500 mb-8">Deseja remover <strong>{deletingItem.title}</strong> de sua trajetória?</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeletingItem(null)} className="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
-                <button onClick={confirmDelete} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold">Excluir</button>
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -266,36 +248,56 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
           <>
             <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 z-0 min-w-[1200px]"></div>
             <div ref={parent} className="flex flex-row items-center gap-12 min-w-[1200px] px-12 relative z-10">
-              {timelineData.map((item, index) => (
-                <motion.div 
-                  key={item.id} 
-                  layout
-                  initial={{ opacity: 0, y: index % 2 === 0 ? -20 : 20 }} 
-                  whileInView={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: index * 0.1 }} 
-                  className={`relative flex flex-col items-center w-80 shrink-0 ${index % 2 === 0 ? 'mb-64' : 'mt-64'}`}
-                >
-                  <div className={`absolute ${index % 2 === 0 ? 'bottom-[-3.5rem]' : 'top-[-3.5rem]'} left-1/2 -translate-x-1/2 w-12 h-12 rounded-2xl border-4 border-white dark:border-slate-950 flex items-center justify-center bg-white dark:bg-slate-900 ${getColorClass(item.type)} z-20 shadow-md`}>
-                    {getIcon(item.type)}
-                  </div>
-                  <div className={`absolute ${index % 2 === 0 ? 'bottom-[-2.5rem] h-10' : 'top-[-2.5rem] h-10'} left-1/2 w-0.5 bg-slate-200 dark:bg-slate-800 z-10`}></div>
-                  <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl transition-all w-full group relative overflow-hidden">
-                    <div className={`absolute top-0 left-0 w-1.5 h-full ${item.type === 'work' ? 'bg-blue-500' : item.type === 'education' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-                    {!readOnly && (
-                      <div className="absolute top-4 right-4 flex gap-2 transition-all md:opacity-0 md:group-hover:opacity-100">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500 shadow-sm"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => setDeletingItem(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500 shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    )}
-                    <div className="flex flex-col mb-4 gap-3">
-                      <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 w-fit uppercase">{item.date}</span>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{item.title}</h3>
+              {timelineData.map((item, index) => {
+                const isVerified = item.type === 'project' && !!item.raw.verification_hash;
+                return (
+                  <motion.div 
+                    key={item.id} 
+                    layout
+                    initial={{ opacity: 0, y: index % 2 === 0 ? -20 : 20 }} 
+                    whileInView={{ opacity: 1, y: 0 }} 
+                    transition={{ delay: index * 0.1 }} 
+                    className={cn("relative flex flex-col items-center w-80 shrink-0", index % 2 === 0 ? 'mb-64' : 'mt-64')}
+                  >
+                    <div className={cn("absolute left-1/2 -translate-x-1/2 w-12 h-12 rounded-2xl border-4 border-white dark:border-slate-950 flex items-center justify-center bg-white dark:bg-slate-900 z-20 shadow-md", index % 2 === 0 ? 'bottom-[-3.5rem]' : 'top-[-3.5rem]', getColorClass(item.type))}>
+                      {getIcon(item.type)}
                     </div>
-                    <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center gap-1.5"><Building className="w-3 h-3" />{item.organization}</h4>
-                    {item.description && <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3 italic">"{item.description}"</p>}
-                  </div>
-                </motion.div>
-              ))}
+                    
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-2xl transition-all w-full group relative overflow-hidden">
+                      {isVerified && (
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-400 animate-pulse" />
+                      )}
+                      
+                      <div className="flex flex-col gap-3 mb-4">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[9px] font-black px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-widest">{item.date}</span>
+                          {isVerified && (
+                            <div className="flex items-center gap-1 text-[8px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
+                              <ShieldCheck size={10} /> Verified Proof
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">{item.title}</h3>
+                      </div>
+                      
+                      <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 mb-4 uppercase tracking-widest flex items-center gap-1.5"><Building size={12} />{item.organization}</h4>
+                      
+                      {item.description && <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic line-clamp-3">"{item.description}"</p>}
+
+                      {item.type === 'project' && !isVerified && !readOnly && currentUser?.id === targetUserId && (
+                        <button 
+                          onClick={() => handleVerify(item.id)}
+                          disabled={!!isVerifying}
+                          className="mt-6 w-full py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all flex items-center justify-center gap-2"
+                        >
+                          {isVerifying === item.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                          Gerar Prova de Trabalho (PoW)
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -305,7 +307,6 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
           </div>
         )}
       </div>
-      <style dangerouslySetInnerHTML={{__html: `.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}} />
     </div>
   );
 }

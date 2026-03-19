@@ -1,7 +1,9 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { differenceInMonths, differenceInYears, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import crypto from 'crypto'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,6 +17,14 @@ export const slugify = (text: string) =>
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
     .slice(0, 40);
+
+/**
+ * Gera um hash determinístico para simular Proof of Work em blockchain.
+ */
+export function generateProjectHash(name: string, description: string, date: string): string {
+  const content = `${name}|${description}|${date}|CURION_X_IMMUTABLE_PROTOCOL`;
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
 
 export const parseSafeDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return new Date();

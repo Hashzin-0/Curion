@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
-import { detectAreaFromRole, getRelevantAreaSlugsForSkill, slugify } from './utils';
+import { detectAreaFromRole, getRelevantAreaSlugsForSkill, slugify, generateProjectHash } from './utils';
 
 export type User = { 
   id: string; 
@@ -69,6 +69,8 @@ export type Project = {
   start_date: string | null;
   end_date: string | null;
   external_url: string | null;
+  verification_hash?: string | null;
+  verified_at?: string | null;
 };
 
 export type Skill = { 
@@ -122,6 +124,7 @@ interface AppState {
   addProject: (proj: Omit<Project, 'id'>) => Promise<void>;
   updateProject: (proj: Project) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
+  verifyProject: (id: string) => Promise<void>;
 
   addAreaSkill: (as: AreaSkill) => Promise<void>;
   removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
@@ -295,6 +298,19 @@ export const useStore = create<AppState>()(
       removeProject: async (id) => {
         await DatabaseService.deleteProject(id);
         set(s => ({ projects: s.projects.filter(p => p.id !== id) }));
+      },
+      verifyProject: async (id) => {
+        const project = get().projects.find(p => p.id === id);
+        if (!project || project.verification_hash) return;
+
+        const hash = generateProjectHash(project.name, project.description || '', project.start_date || '');
+        const data = await DatabaseService.upsertProject({
+          ...project,
+          verification_hash: hash,
+          verified_at: new Date().toISOString()
+        });
+
+        set(s => ({ projects: s.projects.map(p => p.id === id ? data : p) }));
       },
 
       addAreaSkill: async (as) => {
