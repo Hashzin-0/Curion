@@ -2,7 +2,7 @@ export const LANDING_MESSAGES = {
   main: {
     title: "Seu currículo, agora é um portfólio.",
     subtitle:
-      "Organize suas experiências por área de atuação, gere currículos temáticos em PDF com QR Code e destaque-se no mercado com uma presença digital profissional.",
+      "Curion X organiza suas experiências por área de atuação, gera currículos temáticos em PDF com QR Code e destaca-se no mercado com uma presença digital profissional.",
     cta: {
       my_profile: "Meu Perfil",
       login_google: "Entrar com Google",
@@ -29,6 +29,6 @@ export const LANDING_MESSAGES = {
     ],
   },
   footer: {
-    copy: "© {year} CareerCanvas. Organize sua carreira com inteligência.",
+    copy: "© {year} Curion X. Organize sua carreira com inteligência.",
   },
 };

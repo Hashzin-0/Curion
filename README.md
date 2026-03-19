@@ -2,19 +2,29 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Curion X — AI Resume & Profile Generator
 
-This contains everything you need to run your app locally.
+A Next.js 15 app that generates themed resumes and animated profile pages using AI.
 
-View your app in AI Studio: https://ai.studio/apps/4ffea89e-5238-4aae-93a9-226c2c8ce493
+## Architecture
 
-## Run Locally
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS v4
+- **Auth**: Supabase Auth (Google OAuth)
+- **AI**: Google Genkit with OpenRouter via genkitx-openai plugin
+- **State**: Zustand
+- **Animations**: Framer Motion / Motion
+- **PDF Export**: html2pdf.js
 
-**Prerequisites:**  Node.js
+## Key Features
 
+- **Resume Builder** — AI picks colors, emojis and layout based on profession.
+- **Public Profile** — Poster-style themed page showing all experiences auto-grouped.
+- **AI Job Parsing** — Extract job data from images/PDFs using OpenRouter Vision.
+- **Live Interview** — Realtime audio simulation for career preparation.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Running
+
+```bash
+npm run dev   # http://localhost:5000 (bound to 0.0.0.0)
+```

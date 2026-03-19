@@ -1,16 +1,13 @@
 'use server';
 
 /**
- * @fileOverview Cliente utilitário para o OpenRouter.
- * Inclui tratamento robusto de erros para evitar Erro 500 no Next.js.
+ * @fileOverview Cliente utilitário para o OpenRouter configurado para Curion X.
  */
 
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { AI_CONFIG } from '@/config/ai';
 
-// Instância do cliente com verificação de chave
 const getClient = () => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -20,8 +17,8 @@ const getClient = () => {
     apiKey: apiKey || 'placeholder',
     baseURL: 'https://openrouter.ai/api/v1',
     defaultHeaders: {
-      'HTTP-Referer': 'https://career-canvas.studio',
-      'X-Title': 'CareerCanvas',
+      'HTTP-Referer': 'https://curionx.vercel.app',
+      'X-Title': 'Curion X',
     }
   });
 };

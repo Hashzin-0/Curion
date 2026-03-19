@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CareerCanvas — Portfólio Inteligente',
-    short_name: 'CareerCanvas',
+    name: 'Curion X — Portfólio Inteligente',
+    short_name: 'CurionX',
     description: 'Seu currículo interativo e temático com IA',
     start_url: '/',
     display: 'standalone',

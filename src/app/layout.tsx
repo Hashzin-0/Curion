@@ -15,6 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <title>Curion X — Portfólio Inteligente</title>
+        <meta name="description" content="Sua carreira organizada com inteligência artificial. Currículos temáticos, exportação PDF e Hub de vagas." />
+      </head>
       <body className="antialiased font-sans">
         <NuqsAdapter>
           <QueryClientProvider>
