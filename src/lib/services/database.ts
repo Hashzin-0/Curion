@@ -52,7 +52,7 @@ export const DatabaseService = {
     return data;
   },
 
-  // Contatos do Usuário
+  // Contatos do Usuário (Tabela user_contacts)
   async fetchUserContacts(userId: string) {
     const { data, error } = await supabase
       .from('user_contacts')
@@ -88,7 +88,7 @@ export const DatabaseService = {
     return data;
   },
 
-  // Vagas
+  // Vagas (Tabela jobs)
   async fetchJobs() {
     const { data, error } = await supabase
       .from('jobs')
@@ -129,7 +129,7 @@ export const DatabaseService = {
     return data.publicUrl;
   },
 
-  // Áreas Profissionais
+  // Áreas Profissionais (Tabela professional_areas)
   async upsertArea(area: Partial<ProfessionalArea>) {
     const { data, error } = await supabase.from('professional_areas').upsert(area).select().single();
     if (error) throw error;
@@ -141,7 +141,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Experiências
+  // Experiências (Tabela experiences)
   async upsertExperience(exp: Partial<Experience>) {
     const { data, error } = await supabase.from('experiences').upsert(exp).select().single();
     if (error) throw error;
@@ -153,7 +153,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Educação
+  // Educação (Tabela education)
   async upsertEducation(edu: Partial<Education>) {
     const { data, error } = await supabase.from('education').upsert(edu).select().single();
     if (error) throw error;
@@ -165,7 +165,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Portfólio
+  // Portfólio (Tabela portfolio_items)
   async upsertPortfolioItem(item: Partial<PortfolioItem>) {
     const { data, error } = await supabase.from('portfolio_items').upsert(item).select().single();
     if (error) throw error;
@@ -177,7 +177,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Habilidades
+  // Habilidades (Tabelas skills e area_skills)
   async addAreaSkill(as: AreaSkill) {
     const { error } = await supabase.from('area_skills').insert([as]);
     if (error) throw error;

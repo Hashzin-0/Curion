@@ -149,7 +149,7 @@ export const useStore = create<AppState>()(
         if (!currentUser) return;
         const data = await DatabaseService.updateUser(currentUser.id, userData);
         
-        if (userData.email || userData.phone) {
+        if (userData.email || userData.phone || userData.website) {
           await DatabaseService.upsertUserContacts({
             user_id: currentUser.id,
             email: userData.email,
@@ -270,18 +270,17 @@ export const useStore = create<AppState>()(
           return relevantSlugs.includes(areaSlug) && a.user_id === currentUser.id;
         });
 
-        // Se encontrou áreas específicas, linka nelas. Se não, linka na primeira.
         const targetAreas = userAreasToLink.length > 0 ? userAreasToLink : [areas[0]];
         
         for (const area of targetAreas) {
           try {
             await addAreaSkill({ area_id: area.id, skill_id: skillId });
           } catch (e) {
-            // Ignora se já existir a associação (PK conflict)
+            // Ignora duplicatas
           }
         }
       },
     }),
-    { name: 'curion-x-v3' }
+    { name: 'curion-x-v4' }
   )
 );

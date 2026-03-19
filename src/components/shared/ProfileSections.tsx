@@ -4,7 +4,6 @@ import { motion } from 'motion/react';
 import * as LucideIcons from 'lucide-react';
 import { Education, PortfolioItem, Experience } from '@/lib/store';
 import { formatDateRange, calcDuration } from '@/lib/utils';
-import { Button } from '@/components/ui/SharedUI';
 
 export function EducationCard({ edu, isOwner, onEdit, onDelete }: any) {
   return (
@@ -39,8 +38,8 @@ export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
         </div>
       )}
       <div className="h-48 bg-slate-100 dark:bg-slate-800 relative">
-        {item.file_url ? (
-          <img src={item.file_url} alt={item.title} className="w-full h-full object-cover" />
+        {item.file_path ? (
+          <img src={item.file_path} alt={item.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-300">
             <LucideIcons.Folder size={48} />
@@ -49,9 +48,9 @@ export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
       </div>
       <div className="p-8 flex-1 flex flex-col">
         <h4 className="text-xl font-black mb-3 text-slate-900 dark:text-white tracking-tighter uppercase">{item.title}</h4>
-        <p className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: item.description }} />
-        {item.link_url && (
-          <a href={item.link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-black text-purple-600 hover:underline uppercase tracking-widest">
+        <div className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: item.description || '' }} />
+        {item.external_url && (
+          <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-black text-purple-600 hover:underline uppercase tracking-widest">
             Ver Projeto <LucideIcons.ArrowRight size={14} />
           </a>
         )}
@@ -74,7 +73,7 @@ export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{formatDateRange(exp.start_date, exp.end_date)} • {calcDuration(exp.start_date, exp.end_date)}</span>
         <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{exp.role}</h4>
         <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3" style={{ color: themeColor }}>{exp.company_name}</p>
-        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm dark:prose-invert" dangerouslySetInnerHTML={{ __html: exp.description }} />
+        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm dark:prose-invert" dangerouslySetInnerHTML={{ __html: exp.description || '' }} />
       </div>
     </div>
   );

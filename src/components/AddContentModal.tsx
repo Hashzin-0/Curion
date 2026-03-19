@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import { SkillSearch } from './SkillSearch';
 
-type ContentType = 'experience' | 'education' | 'skill' | 'portfolio' | 'certificate';
+type ContentType = 'experience' | 'education' | 'skill' | 'portfolio';
 
 type Props = {
   isOpen: boolean;
@@ -29,8 +29,7 @@ const CONTENT_OPTIONS: {
   { type: 'experience', label: 'Experiência Profissional', description: 'Empregos anteriores e atuais', icon: LucideIcons.Briefcase, color: 'blue' },
   { type: 'education', label: 'Formação Acadêmica', description: 'Escolaridade e cursos superiores', icon: LucideIcons.GraduationCap, color: 'emerald' },
   { type: 'skill', label: 'Competências & Skills', description: 'Habilidades técnicas e interpessoais', icon: LucideIcons.Star, color: 'orange' },
-  { type: 'portfolio', label: 'Portfólio', description: 'Projetos e trabalhos realizados', icon: LucideIcons.Folder, color: 'purple' },
-  { type: 'certificate', label: 'Certificados', description: 'Cursos e diplomas extras', icon: LucideIcons.Award, color: 'rose' },
+  { type: 'portfolio', label: 'Portfólio & Projetos', description: 'Trabalhos realizados e destaques', icon: LucideIcons.Folder, color: 'purple' },
 ];
 
 const COLOR_CLASSES: Record<string, string> = {
@@ -38,7 +37,6 @@ const COLOR_CLASSES: Record<string, string> = {
   emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20',
   orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500/20',
   purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/20',
-  rose: 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20',
 };
 
 export function AddContentModal({ isOpen, onClose }: Props) {
@@ -49,15 +47,13 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [showCalendar, setShowCalendar] = useState<'start' | 'end' | null>(null);
   const [formParent] = useAutoAnimate();
 
-  // Estados dos formulários
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
-  const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
+  const [portForm, setPortForm] = useState({ title: '', description: '', file_path: '', external_url: '' });
   const [tempSkill, setTempSkill] = useState<Skill | null>(null);
 
   const handleConfirmSkill = async () => {
     if (!currentUser || !tempSkill || isSaving) return;
-
     setIsSaving(true);
     try {
       await addSkillToRelevantAreas(tempSkill.id, tempSkill.name);
@@ -66,7 +62,6 @@ export function AddContentModal({ isOpen, onClose }: Props) {
       setSelectedType(null);
       onClose();
     } catch (e) {
-      console.error(e);
       toast.error('Erro ao adicionar habilidade.');
     } finally {
       setIsSaving(false);
@@ -76,7 +71,6 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || isSaving) return;
-    if (selectedType === 'skill') return;
 
     setIsSaving(true);
     try {
@@ -105,8 +99,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           user_id: currentUser.id,
           title: portForm.title,
           description: portForm.description,
-          file_path: portForm.file_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-          external_url: portForm.link_url,
+          file_path: portForm.file_path || `https://picsum.photos/seed/${Math.random()}/600/400`,
+          external_url: portForm.external_url,
         });
       }
 
@@ -166,14 +160,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     <div className="w-16" />
                   </div>
 
-                  {selectedType === 'skill' && (
+                  {selectedType === 'skill' ? (
                     <div className="space-y-6">
-                      <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                        <p className="text-xs font-bold text-blue-600 dark:text-blue-400 text-center">
-                          Habilidades são distribuídas automaticamente entre seus currículos baseadas na sua área.
-                        </p>
-                      </div>
-                      
                       {tempSkill ? (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700">
                           <div className="flex items-center justify-between">
@@ -183,14 +171,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                             </div>
                             <button onClick={() => setTempSkill(null)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Trocar</button>
                           </div>
-
-                          <button 
-                            onClick={handleConfirmSkill}
-                            disabled={isSaving}
-                            className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-                          >
-                            {isSaving ? <LucideIcons.Loader2 className="animate-spin" /> : <LucideIcons.Check />}
-                            {isSaving ? 'Salvando...' : 'Confirmar e Salvar'}
+                          <button onClick={handleConfirmSkill} disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                            {isSaving ? <LucideIcons.Loader2 className="animate-spin" /> : <LucideIcons.Check />} Confirmar e Salvar
                           </button>
                         </motion.div>
                       ) : (
@@ -200,9 +182,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {(selectedType === 'experience' || selectedType === 'education' || selectedType === 'portfolio') && (
+                  ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">
                       {selectedType === 'experience' && (
                         <div className="space-y-4">
@@ -236,10 +216,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                               )}
                             </div>
                           </div>
-                          <div>
-                            <label className={labelCls}>Descrição</label>
-                            <textarea rows={6} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Descreva suas atividades..." />
-                          </div>
+                          <div><label className={labelCls}>Descrição</label><textarea rows={6} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Descreva suas atividades..." /></div>
                         </div>
                       )}
 
@@ -258,30 +235,17 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
                       {selectedType === 'portfolio' && (
                         <div className="space-y-4">
-                          <div>
-                            <label className={labelCls}>Título do Projeto *</label>
-                            <input required value={portForm.title} onChange={e => setPortForm(p => ({ ...p, title: e.target.value }))} className={inputCls} placeholder="Ex: App de Delivery" />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Descrição</label>
-                            <textarea rows={4} value={portForm.description} onChange={e => setPortForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Conte mais sobre o projeto..." />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Link do Projeto (opcional)</label>
-                            <input value={portForm.link_url} onChange={e => setPortForm(p => ({ ...p, link_url: e.target.value }))} className={inputCls} placeholder="https://github.com/..." />
-                          </div>
-                          <div>
-                            <label className={labelCls}>URL da Imagem de Capa (opcional)</label>
-                            <input value={portForm.file_url} onChange={e => setPortForm(p => ({ ...p, file_url: e.target.value }))} className={inputCls} placeholder="https://..." />
-                          </div>
+                          <div><label className={labelCls}>Título do Projeto *</label><input required value={portForm.title} onChange={e => setPortForm(p => ({ ...p, title: e.target.value }))} className={inputCls} /></div>
+                          <div><label className={labelCls}>Descrição</label><textarea rows={4} value={portForm.description} onChange={e => setPortForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} /></div>
+                          <div><label className={labelCls}>Link do Projeto (Opcional)</label><input value={portForm.external_url} onChange={e => setPortForm(p => ({ ...p, external_url: e.target.value }))} className={inputCls} placeholder="https://..." /></div>
+                          <div><label className={labelCls}>URL da Imagem (Opcional)</label><input value={portForm.file_path} onChange={e => setPortForm(p => ({ ...p, file_path: e.target.value }))} className={inputCls} placeholder="https://..." /></div>
                         </div>
                       )}
 
                       <div className="flex gap-4 pt-4">
-                        <button type="button" onClick={() => { setSelectedType(null); setTempSkill(null); }} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
-                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:scale-[1.02]">
-                          {isSaving && <LucideIcons.Loader2 className="animate-spin" />}
-                          {isSaving ? 'Salvando...' : 'Adicionar Registro'}
+                        <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
+                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                          {isSaving && <LucideIcons.Loader2 className="animate-spin" />} Salvar Registro
                         </button>
                       </div>
                     </form>

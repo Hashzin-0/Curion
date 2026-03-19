@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -65,14 +64,16 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
         throw new Error('Por favor, forneça uma descrição da vaga válida.');
       }
 
-      // Coleta dados completos para o match
       const profileContext = {
         experiences: experiences.filter(e => e.user_id === currentUser.id),
         education: education.filter(e => e.user_id === currentUser.id),
         portfolio: portfolio.filter(p => p.user_id === currentUser.id),
         skills: areaSkills
           .filter(as => areas.some(a => a.id === as.area_id && a.user_id === currentUser.id))
-          .map(as => ({ id: as.skill_id, name: skills.find(s => s.id === as.skill_id)?.name }))
+          .map(as => ({ 
+            id: as.skill_id, 
+            name: skills.find(s => s.id === as.skill_id)?.name 
+          }))
       };
 
       const res = await fetch('/api/resume/match', {
@@ -84,7 +85,6 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
       if (!res.ok) throw new Error('Falha na resposta da IA');
       const matchResult = await res.json();
 
-      // Salva no localStorage para o preview de currículo carregar
       localStorage.setItem('career_canvas_smart_match', JSON.stringify({
         ...matchResult,
         timestamp: Date.now()
