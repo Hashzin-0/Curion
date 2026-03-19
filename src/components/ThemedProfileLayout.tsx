@@ -178,6 +178,8 @@ export function ThemedProfileLayout(props: Props) {
                           <div className="space-y-3 mb-8 flex-1">
                             {areaExps.slice(0, 3).map((exp) => {
                               const isExpanded = expandedExpId === exp.id;
+                              const hasDescription = !!exp.description && exp.description.replace(/<[^>]*>/g, '').trim().length > 0;
+
                               return (
                                 <motion.div 
                                   key={exp.id} 
@@ -199,24 +201,29 @@ export function ThemedProfileLayout(props: Props) {
                                   )}
 
                                   <button 
-                                    onClick={() => toggleExpand(exp.id)}
-                                    className="w-full flex items-center justify-between p-4 text-left"
+                                    onClick={() => hasDescription && toggleExpand(exp.id)}
+                                    className={cn(
+                                      "w-full flex items-center justify-between p-4 text-left transition-all",
+                                      hasDescription ? "cursor-pointer" : "cursor-default"
+                                    )}
                                   >
                                     <div className="flex flex-col">
                                       <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{exp.role}</span>
                                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{exp.company_name}</span>
                                     </div>
-                                    <motion.div
-                                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                      className="text-slate-300 group-hover/item:text-blue-500"
-                                    >
-                                      <ChevronDown size={16} />
-                                    </motion.div>
+                                    {hasDescription && (
+                                      <motion.div
+                                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                        className="text-slate-300 group-hover/item:text-blue-500"
+                                      >
+                                        <ChevronDown size={16} />
+                                      </motion.div>
+                                    )}
                                   </button>
 
                                   <AnimatePresence initial={false}>
-                                    {isExpanded && (
+                                    {isExpanded && hasDescription && (
                                       <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
