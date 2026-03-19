@@ -1,8 +1,9 @@
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, Loader2 } from 'lucide-react';
+import { Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, Loader2, BrainCircuit, Target, CheckCircle2 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
 import Link from 'next/link';
@@ -10,16 +11,117 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { useStore } from '@/lib/store';
-import { slugify } from '@/lib/utils';
+import { slugify, calcDuration } from '@/lib/utils';
+import { toast } from 'sonner';
+
+/**
+ * @fileOverview Página de Exploração com Match IA V1.
+ */
+
+function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, currentUser: any, profileContext: any }) {
+  const [match, setMatch] = useState<{ score: number; reason: string } | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  const handleCalculateMatch = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser || !profileContext) {
+      toast.error('Complete seu perfil para calcular o match!');
+      return;
+    }
+
+    setIsCalculating(true);
+    try {
+      const res = await fetch('/api/jobs/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userProfile: profileContext,
+          jobData: {
+            title: job.title,
+            description: job.description || '',
+            requirements: job.requirements || []
+          }
+        })
+      });
+      
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setMatch(data);
+    } catch (err) {
+      toast.error('Erro ao calcular match IA.');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  if (match) {
+    const isHigh = match.score >= 80;
+    const isMid = match.score >= 50 && match.score < 80;
+
+    return (
+      <motion.div 
+        initial={{ scale: 0.8, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }}
+        className={`flex items-center gap-3 px-4 py-2 rounded-2xl border ${isHigh ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : isMid ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
+      >
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <Target size={14} className="animate-pulse" />
+            <span className="text-sm font-black uppercase tracking-tighter">{match.score}% Compatível</span>
+          </div>
+          <p className="text-[9px] font-bold uppercase leading-tight mt-0.5 opacity-80">{match.reason}</p>
+        </div>
+        {isHigh && <CheckCircle2 size={18} className="text-emerald-500" />}
+      </motion.div>
+    );
+  }
+
+  return (
+    <button 
+      onClick={handleCalculateMatch}
+      disabled={isCalculating}
+      className="group relative flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-all active:scale-95 disabled:opacity-50"
+    >
+      {isCalculating ? (
+        <>
+          <Loader2 size={14} className="animate-spin text-indigo-600" />
+          <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Analisando...</span>
+        </>
+      ) : (
+        <>
+          <BrainCircuit size={14} className="text-indigo-600 group-hover:rotate-12 transition-transform" />
+          <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Match IA</span>
+        </>
+      )}
+    </button>
+  );
+}
 
 export default function ExplorePage() {
-  const { currentUser } = useStore();
+  const { currentUser, experiences, skills, areaSkills, education, areas } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs'>('candidates');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
+
+  const profileContext = useMemo(() => {
+    if (!currentUser) return null;
+    return {
+      headline: currentUser.headline || '',
+      summary: currentUser.summary || '',
+      skills: areaSkills
+        .filter(as => areas.some(a => a.id === as.area_id && a.user_id === currentUser.id))
+        .map(as => skills.find(s => s.id === as.skill_id)?.name || '')
+        .filter(Boolean),
+      experiences: experiences
+        .filter(e => e.user_id === currentUser.id)
+        .map(e => `${e.role} na ${e.company_name} (${calcDuration(e.start_date, e.end_date)})`)
+    };
+  }, [currentUser, experiences, skills, areaSkills, areas]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -158,12 +260,15 @@ export default function ExplorePage() {
                   return (
                     <div key={job.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group">
                       <div className="flex items-center gap-6 flex-1">
-                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner" style={{ backgroundColor: theme.hex + '15' }}>
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner shrink-0" style={{ backgroundColor: theme.hex + '15' }}>
                           {theme.emoji}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-3 mb-1">
                             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{job.title}</h3>
+                            {currentUser && (
+                              <JobMatchBadge job={job} currentUser={currentUser} profileContext={profileContext} />
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
                             <span className="text-slate-600 dark:text-slate-300">{job.company}</span>
