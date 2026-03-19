@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Layout de perfil temático atualizado para o schema SQL oficial.
  */
@@ -17,7 +18,7 @@ import { getTheme } from '@/styles/themes';
 import { useStore } from '@/lib/store';
 import { useQueryState } from 'nuqs';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, slugify } from '@/lib/utils';
 import { CardActions } from '@/components/shared/CardActions';
 
 // Sub-componentes modularizados
@@ -44,9 +45,6 @@ type Props = {
   isLoadingTheme: boolean;
   username: string;
 };
-
-// Gera slug amigável em tempo de execução
-const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
 
 function Particle({ emoji, x, size, speed, delay }: any) {
   return (

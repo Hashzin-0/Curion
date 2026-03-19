@@ -8,6 +8,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const slugify = (text: string) => 
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .slice(0, 40);
+
 export const parseSafeDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return new Date();
   const parts = dateStr.split('T')[0].split('-');
@@ -17,7 +26,8 @@ export const parseSafeDate = (dateStr: string | null | undefined) => {
   return new Date(dateStr);
 };
 
-export function calcDuration(startDate: string, endDate: string | null): string {
+export function calcDuration(startDate: string | null, endDate: string | null): string {
+  if (!startDate) return '1 mês';
   const start = parseSafeDate(startDate);
   const end = endDate ? parseSafeDate(endDate) : new Date();
   const months = differenceInMonths(end, start);
@@ -29,7 +39,8 @@ export function calcDuration(startDate: string, endDate: string | null): string 
   return `${years}a ${rem}m`;
 }
 
-export function formatDateRange(start: string, end: string | null): string {
+export function formatDateRange(start: string | null, end: string | null): string {
+  if (!start) return 'Data não informada';
   const s = format(parseSafeDate(start), 'MMM yyyy', { locale: ptBR });
   const e = end ? format(parseSafeDate(end), 'MMM yyyy', { locale: ptBR }) : 'Atual';
   return `${s} - ${e}`;
@@ -73,7 +84,7 @@ export function detectAreaFromRole(role: string): DetectedArea {
     }
   }
   const name = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-  const slug = role.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
+  const slug = slugify(name);
   return { name, slug, icon: 'Briefcase', themeColor: '#64748b' };
 }
 

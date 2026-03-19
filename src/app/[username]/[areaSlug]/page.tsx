@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useStore, Experience, Education, ProfessionalArea } from '@/lib/store';
@@ -8,7 +9,7 @@ import { getTheme } from '@/styles/themes';
 import ResumeTemplate, { ResumeData } from '@/components/ResumeTemplate';
 import { generateSystemResumeTheme } from '@/lib/premium-themes';
 import { QRCodeSVG } from 'qrcode.react';
-import { calcDuration } from '@/lib/utils';
+import { calcDuration, slugify } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/feedback/Modal';
@@ -23,7 +24,10 @@ import { RichEditor } from '@/components/RichEditor';
  */
 
 export default function AreaResume() {
-  const { username, areaSlug } = useParams();
+  const params = useParams();
+  const username = params?.username as string;
+  const areaSlug = params?.areaSlug as string;
+  
   const { 
     users, areas, experiences, skills, areaSkills, education, 
     currentUser, isLoading, updateExperience, removeExperience,
@@ -56,7 +60,8 @@ export default function AreaResume() {
     else if (!isLoading && isMounted) router.push('/');
   }, [username, users, isMounted, isLoading, router]);
 
-  const area = areas.find(a => a.slug === areaSlug);
+  // Encontra a área comparando o slug gerado com o slug da URL
+  const area = useMemo(() => areas.find(a => slugify(a.name) === areaSlug), [areas, areaSlug]);
   const isOwner = currentUser?.id === user?.id;
 
   const areaExperiences = useMemo(() => experiences.filter(e => e.area_id === area?.id && e.user_id === user?.id), [experiences, area, user]);
@@ -75,7 +80,7 @@ export default function AreaResume() {
       firstName: user.name.split(' ')[0], 
       lastName: user.name.split(' ').slice(1).join(' '),
       profession: area.name, 
-      phone: user.phone || '', 
+      phone: '', 
       email: user.email || '', 
       availableSince: 'Hoje',
       summary: user.summary || '',
@@ -111,7 +116,7 @@ export default function AreaResume() {
 
   if (!isMounted || !user || !area) return <div className="min-h-screen flex items-center justify-center"><LucideIcons.Loader2 className="animate-spin" /></div>;
 
-  const theme = getTheme(area.slug);
+  const theme = getTheme(areaSlug);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
