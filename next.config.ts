@@ -29,7 +29,8 @@ const nextConfig: NextConfig = {
     '@genkit-ai/ai',
     '@genkit-ai/google-genai',
     'genkitx-openai',
-    'pdfjs-dist'
+    'pdfjs-dist',
+    '@cfworker/json-schema'
   ],
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
