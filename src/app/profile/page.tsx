@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useProfileState } from '@/modules/profile/hooks/useProfileState';
@@ -9,10 +10,15 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { EducationModal, ExperienceModal, PortfolioModal, AreaModal } from '@/components/profile/EditModals';
 import { AddContentModal } from '@/components/AddContentModal';
+import { useAnalytics } from '@/modules/profile/hooks/useAnalytics';
+import { useEffect } from 'react';
 
 export default function Dashboard() {
   const state = useProfileState();
   const data = useProfileData();
+  
+  // Prefetch das métricas assim que o componente monta
+  const { isLoading: isLoadingMetrics } = useAnalytics(state.currentUser?.id);
 
   if (!state.isAuthReady || (state.isLoading && !state.currentUser)) { 
     return <div className="min-h-screen flex items-center justify-center"><LucideIcons.Loader2 className="animate-spin" /></div>;
