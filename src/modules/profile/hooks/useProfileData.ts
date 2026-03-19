@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -45,9 +46,14 @@ export function useProfileData() {
   const handleUpdateProfile = async (editedProfile: any, onDone: () => void) => {
     setIsProcessing(true);
     try {
+      // 1. Atualiza o banco de dados
       await updateUser(editedProfile);
+      
+      // 2. Feedback imediato: Fecha o modal e avisa o usuário
       onDone();
       toast.success('Perfil atualizado com sucesso!');
+      
+      // 3. Atualiza o tema em background sem bloquear a UI
       fetchTheme();
     } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);

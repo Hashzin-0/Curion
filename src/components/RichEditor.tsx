@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, List, ListOrdered } from 'lucide-react';
+import { useEffect } from 'react';
 
 type Props = {
   content: string;
@@ -30,6 +31,13 @@ export function RichEditor({ content, onChange, placeholder }: Props) {
       },
     },
   });
+
+  // Efeito crucial: Atualiza o conteúdo do editor se a prop mudar externamente (ex: via IA)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 
