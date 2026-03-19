@@ -12,7 +12,7 @@ import { DatabaseService } from '@/lib/services/database';
 
 export default function PublicProfile() {
   const { username } = useParams();
-  const { users, areas, isLoading } = useStore();
+  const { users, areas, isLoading, currentUser } = useStore();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -47,8 +47,12 @@ export default function PublicProfile() {
     
     if (found) {
       setUser(found);
-      // Registra a visualização (Analytics)
-      DatabaseService.recordProfileView(found.id);
+      
+      // REGRA DE NEGÓCIO: Só grava a visualização se o visitante NÃO for o dono do perfil
+      // Isso evita inflar métricas com visitas do próprio usuário
+      if (currentUser?.id !== found.id) {
+        DatabaseService.recordProfileView(found.id);
+      }
     }
     
     setLoadingUser(false);
@@ -57,7 +61,7 @@ export default function PublicProfile() {
     if (!found && !isLoading && isMounted) {
       router.push('/');
     }
-  }, [username, users, isMounted, isLoading, router]);
+  }, [username, users, isMounted, isLoading, router, currentUser?.id]);
 
   useEffect(() => {
     fetchUser();
@@ -109,7 +113,7 @@ export default function PublicProfile() {
     <ThemedProfileLayout
       user={user}
       areas={userAreas}
-      isOwner={false}
+      isOwner={currentUser?.id === user.id}
       theme={profileTheme}
       isLoadingTheme={isLoadingTheme}
       username={user.username}
