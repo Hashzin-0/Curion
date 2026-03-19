@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -81,7 +80,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         title: exp.role,
         organization: exp.company_name,
         date: `${startDate} - ${endDate}`,
-        description: exp.description,
+        description: exp.description || '',
         sortDate: start,
         raw: exp
       });
@@ -112,7 +111,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         title: ach.title,
         organization: ach.organization,
         date: format(date, 'MMM yyyy', { locale: ptBR }),
-        description: ach.description,
+        description: ach.description || '',
         sortDate: date,
         raw: ach
       });
@@ -139,7 +138,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         toast.success('Registro atualizado com sucesso!');
       } else {
         if (newItem.type === 'work') {
-          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || '', company_name: newItem.organization, company_logo: 'https://picsum.photos/seed/company/100/100', role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
+          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || null, company_name: newItem.organization, role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
         } else if (newItem.type === 'education') {
           await addEducation({ user_id: currentUser.id, institution: newItem.organization, course: newItem.title, start_date: dateToStore, end_date: null });
         } else if (newItem.type === 'achievement') {

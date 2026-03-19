@@ -97,7 +97,6 @@ export default function ImportPage() {
             user_id: currentUser.id,
             company_name: exp.company,
             role: exp.role,
-            company_logo: `https://picsum.photos/seed/${exp.company}/100/100`,
             start_date: new Date().toISOString(),
             end_date: null,
             description: '',

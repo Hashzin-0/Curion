@@ -1,8 +1,6 @@
-
 'use client';
 
 import { Experience } from '@/lib/store';
-import Image from 'next/image';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getTheme } from '@/styles/themes';
@@ -11,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from 'next-themes';
+import { Briefcase } from 'lucide-react';
 
 export default function ExperienceCard({ experience, areaSlug }: { experience: Experience, areaSlug: string }) {
   const theme = getTheme(areaSlug);
@@ -27,7 +26,8 @@ export default function ExperienceCard({ experience, areaSlug }: { experience: E
   if (!isMounted) return null;
 
   // Função para renderizar conteúdo com suporte a blocos de código
-  const renderDescription = (text: string) => {
+  const renderDescription = (text: string | null) => {
+    if (!text) return null;
     const parts = text.split(/(```[\s\S]*?```)/g);
     return parts.map((part, i) => {
       if (part.startsWith('```') && part.endsWith('```')) {
@@ -53,14 +53,8 @@ export default function ExperienceCard({ experience, areaSlug }: { experience: E
       <div className={`absolute top-0 left-0 w-2 h-full ${theme.primary} transition-all group-hover:w-3`} />
       
       <div className="flex items-start gap-6">
-        <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <Image
-            src={experience.company_logo}
-            alt={experience.company_name}
-            fill
-            className="object-cover"
-            referrerPolicy="no-referrer"
-          />
+        <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm ${theme.bgLight} ${theme.text}`}>
+          <Briefcase size={32} />
         </div>
         
         <div className="flex-1">

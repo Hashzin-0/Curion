@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -51,7 +50,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [formParent] = useAutoAnimate();
 
   // Estados dos formulários
-  const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '', company_logo: '' });
+  const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
   const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
   const [skillForm, setSkillForm] = useState({ level: 80 });
@@ -87,7 +86,6 @@ export function AddContentModal({ isOpen, onClose }: Props) {
         await addExperienceWithAutoArea({
           user_id: currentUser.id,
           company_name: expForm.company_name,
-          company_logo: expForm.company_logo || `https://picsum.photos/seed/${Math.random()}/100/100`,
           role: expForm.role,
           start_date: expForm.start_date.toISOString(),
           end_date: expForm.end_date ? expForm.end_date.toISOString() : null,
