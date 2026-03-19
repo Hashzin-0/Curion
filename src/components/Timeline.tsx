@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, GraduationCap, Star, Plus, X, Calendar, Building, Pencil, Trash2 } from 'lucide-react';
+import { Briefcase, GraduationCap, Folder, Plus, X, Calendar, Building, Pencil, Trash2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 type TimelineItem = {
   id: string;
-  type: 'work' | 'education' | 'achievement';
+  type: 'work' | 'education' | 'project';
   title: string;
   organization: string;
   date: string;
@@ -25,7 +25,7 @@ const getIcon = (type: TimelineItem['type']) => {
   switch (type) {
     case 'work': return <Briefcase className="w-5 h-5" />;
     case 'education': return <GraduationCap className="w-5 h-5" />;
-    case 'achievement': return <Star className="w-5 h-5" />;
+    case 'project': return <Folder className="w-5 h-5" />;
   }
 };
 
@@ -33,7 +33,7 @@ const getColorClass = (type: TimelineItem['type']) => {
   switch (type) {
     case 'work': return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
     case 'education': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
-    case 'achievement': return 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800';
+    case 'project': return 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800';
   }
 };
 
@@ -43,7 +43,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
 
   const experiences = useStore(state => state.experiences);
   const education = useStore(state => state.education);
-  const achievements = useStore(state => state.achievements);
+  const projects = useStore(state => state.projects);
   const areas = useStore(state => state.areas);
   
   const addExperience = useStore(state => state.addExperience);
@@ -54,9 +54,9 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
   const updateEducation = useStore(state => state.updateEducation);
   const removeEducation = useStore(state => state.removeEducation);
   
-  const addAchievement = useStore(state => state.addAchievement);
-  const updateAchievement = useStore(state => state.updateAchievement);
-  const removeAchievement = useStore(state => state.removeAchievement);
+  const addProject = useStore(state => state.addProject);
+  const updateProject = useStore(state => state.updateProject);
+  const removeProject = useStore(state => state.removeProject);
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
@@ -103,46 +103,47 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
       });
     });
     
-    achievements.filter(a => a.user_id === targetUserId).forEach(ach => {
-      const date = parseSafeDate(ach.date);
+    projects.filter(p => p.user_id === targetUserId).forEach(proj => {
+      const start = parseSafeDate(proj.start_date);
+      const startDate = format(start, 'MMM yyyy', { locale: ptBR });
       items.push({
-        id: ach.id,
-        type: 'achievement',
-        title: ach.title,
-        organization: ach.organization,
-        date: format(date, 'MMM yyyy', { locale: ptBR }),
-        description: ach.description || '',
-        sortDate: date,
-        raw: ach
+        id: proj.id,
+        type: 'project',
+        title: proj.name,
+        organization: 'Projeto Pessoal',
+        date: startDate,
+        description: proj.description || '',
+        sortDate: start,
+        raw: proj
       });
     });
     
     return items.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
-  }, [targetUserId, experiences, education, achievements]);
+  }, [targetUserId, experiences, education, projects]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !newItem.title || !newItem.organization) return;
+    if (!currentUser || !newItem.title || (newItem.type !== 'project' && !newItem.organization)) return;
     
     const dateToStore = new Date().toISOString(); 
     
     try {
       if (editingItem) {
         if (editingItem.type === 'work') {
-          await updateExperience({ ...editingItem.raw, role: newItem.title, company_name: newItem.organization, description: newItem.description || '' });
+          await updateExperience({ ...editingItem.raw, role: newItem.title, company_name: newItem.organization!, description: newItem.description || '' });
         } else if (editingItem.type === 'education') {
-          await updateEducation({ ...editingItem.raw, course: newItem.title, institution: newItem.organization });
-        } else if (editingItem.type === 'achievement') {
-          await updateAchievement({ ...editingItem.raw, title: newItem.title, organization: newItem.organization, description: newItem.description || '' });
+          await updateEducation({ ...editingItem.raw, course: newItem.title, institution: newItem.organization! });
+        } else if (editingItem.type === 'project') {
+          await updateProject({ ...editingItem.raw, name: newItem.title, description: newItem.description || '' });
         }
         toast.success('Registro atualizado com sucesso!');
       } else {
         if (newItem.type === 'work') {
-          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || null, company_name: newItem.organization, role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
+          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || null, company_name: newItem.organization!, role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
         } else if (newItem.type === 'education') {
-          await addEducation({ user_id: currentUser.id, institution: newItem.organization, course: newItem.title, start_date: dateToStore, end_date: null });
-        } else if (newItem.type === 'achievement') {
-          await addAchievement({ user_id: currentUser.id, title: newItem.title, organization: newItem.organization, date: dateToStore, description: newItem.description || '' });
+          await addEducation({ user_id: currentUser.id, institution: newItem.organization!, course: newItem.title, start_date: dateToStore, end_date: null });
+        } else if (newItem.type === 'project') {
+          await addProject({ user_id: currentUser.id, name: newItem.title, description: newItem.description || '', start_date: dateToStore, end_date: null, external_url: null });
         }
         toast.success('Novo registro adicionado!');
       }
@@ -159,7 +160,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
     try {
       if (deletingItem.type === 'work') await removeExperience(deletingItem.id);
       if (deletingItem.type === 'education') await removeEducation(deletingItem.id);
-      if (deletingItem.type === 'achievement') await removeAchievement(deletingItem.id);
+      if (deletingItem.type === 'project') await removeProject(deletingItem.id);
       toast.success('Registro removido.');
     } catch (err) {
       toast.error('Erro ao excluir.');
@@ -209,7 +210,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
                       {[
                         { id: 'work', label: 'Experiência', icon: Briefcase },
                         { id: 'education', label: 'Formação', icon: GraduationCap },
-                        { id: 'achievement', label: 'Conquista', icon: Star },
+                        { id: 'project', label: 'Projeto', icon: Folder },
                       ].map(type => (
                         <button key={type.id} type="button" onClick={() => setNewItem({...newItem, type: type.id as any})} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${newItem.type === type.id ? 'bg-blue-50 border-blue-500 text-blue-600 dark:bg-blue-900/20' : 'bg-slate-50 border-transparent text-slate-500 dark:bg-slate-800'}`}>
                           <type.icon className="w-5 h-5" />
@@ -221,20 +222,20 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold mb-2">Título / Cargo</label>
-                    <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.title || ''} onChange={e => setNewItem({...newItem, title: e.target.value})} placeholder="Ex: Desenvolvedor Senior" />
+                    <label className="block text-sm font-bold mb-2">Título / Nome</label>
+                    <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.title || ''} onChange={e => setNewItem({...newItem, title: e.target.value})} placeholder="Ex: App de Finanças" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2">Instituição / Empresa</label>
-                    <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.organization || ''} onChange={e => setNewItem({...newItem, organization: e.target.value})} placeholder="Ex: Google Inc." />
-                  </div>
+                  {newItem.type !== 'project' && (
+                    <div>
+                      <label className="block text-sm font-bold mb-2">Instituição / Empresa</label>
+                      <input required type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" value={newItem.organization || ''} onChange={e => setNewItem({...newItem, organization: e.target.value})} placeholder="Ex: Google Inc." />
+                    </div>
+                  )}
                 </div>
-                {(newItem.type === 'work' || newItem.type === 'achievement') && (
-                  <div key="desc-field">
-                    <label className="block text-sm font-bold mb-2">Descrição</label>
-                    <textarea className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none" rows={4} value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} placeholder="Fale um pouco sobre..." />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-bold mb-2">Descrição</label>
+                  <textarea className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none" rows={4} value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} placeholder="Fale um pouco sobre..." />
+                </div>
               </div>
               <div className="flex gap-4 mt-10">
                 <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Descartar</button>

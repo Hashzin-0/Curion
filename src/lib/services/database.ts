@@ -2,7 +2,7 @@
  * @fileOverview Camada de serviço para interações com o Supabase seguindo o schema oficial.
  */
 import { supabase } from '../supabase';
-import { User, ProfessionalArea, Experience, Education, PortfolioItem, AreaSkill } from '../store';
+import { User, ProfessionalArea, Experience, Education, PortfolioItem, AreaSkill, Project } from '../store';
 
 export type JobVacancy = {
   id: string;
@@ -177,6 +177,18 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
+  // Projetos (Tabela projects)
+  async upsertProject(proj: Partial<Project>) {
+    const { data, error } = await supabase.from('projects').upsert(proj).select().single();
+    if (error) throw error;
+    return data as Project;
+  },
+
+  async deleteProject(id: string) {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   // Habilidades (Tabelas skills e area_skills)
   async addAreaSkill(as: AreaSkill) {
     const { error } = await supabase.from('area_skills').insert([as]);
@@ -198,6 +210,7 @@ export const DatabaseService = {
       supabase.from('area_skills').select('*'),
       supabase.from('education').select('*'),
       supabase.from('portfolio_items').select('*'),
+      supabase.from('projects').select('*'),
     ];
     return await Promise.all(queries);
   }

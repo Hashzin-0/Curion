@@ -32,22 +32,11 @@ export type Experience = {
   id: string; 
   user_id: string; 
   area_id: string | null; 
-  company_name: string; 
   role: string; 
+  company_name: string; 
   start_date: string | null; 
   end_date: string | null; 
   description: string | null; 
-};
-
-export type Skill = { 
-  id: string; 
-  name: string; 
-  icon: string; 
-};
-
-export type AreaSkill = { 
-  area_id: string; 
-  skill_id: string; 
 };
 
 export type Education = { 
@@ -68,6 +57,27 @@ export type PortfolioItem = {
   external_url: string | null; 
 };
 
+export type Project = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  external_url: string | null;
+};
+
+export type Skill = { 
+  id: string; 
+  name: string; 
+  icon: string; 
+};
+
+export type AreaSkill = { 
+  area_id: string; 
+  skill_id: string; 
+};
+
 interface AppState {
   currentUser: User | null;
   users: User[];
@@ -77,6 +87,7 @@ interface AppState {
   areaSkills: AreaSkill[];
   education: Education[];
   portfolio: PortfolioItem[];
+  projects: Project[];
   isLoading: boolean;
   isAuthReady: boolean;
   
@@ -102,6 +113,10 @@ interface AppState {
   updatePortfolioItem: (item: PortfolioItem) => Promise<void>;
   removePortfolioItem: (id: string) => Promise<void>;
 
+  addProject: (proj: Omit<Project, 'id'>) => Promise<void>;
+  updateProject: (proj: Project) => Promise<void>;
+  removeProject: (id: string) => Promise<void>;
+
   addAreaSkill: (as: AreaSkill) => Promise<void>;
   removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
   addSkillToRelevantAreas: (skillId: string, skillName: string) => Promise<void>;
@@ -120,6 +135,7 @@ export const useStore = create<AppState>()(
       areaSkills: [],
       education: [],
       portfolio: [],
+      projects: [],
       isLoading: true,
       isAuthReady: false,
       
@@ -173,6 +189,7 @@ export const useStore = create<AppState>()(
             areaSkills: results[4].data || [],
             education: results[5].data || [],
             portfolio: results[6].data || [],
+            projects: results[7].data || [],
             isLoading: false
           });
         } catch (error) {
@@ -248,6 +265,19 @@ export const useStore = create<AppState>()(
       removePortfolioItem: async (id) => {
         await DatabaseService.deletePortfolioItem(id);
         set(s => ({ portfolio: s.portfolio.filter(p => p.id !== id) }));
+      },
+
+      addProject: async (proj) => {
+        const data = await DatabaseService.upsertProject(proj);
+        set(s => ({ projects: [data, ...s.projects] }));
+      },
+      updateProject: async (proj) => {
+        const data = await DatabaseService.upsertProject(proj);
+        set(s => ({ projects: s.projects.map(p => p.id === proj.id ? data : p) }));
+      },
+      removeProject: async (id) => {
+        await DatabaseService.deleteProject(id);
+        set(s => ({ projects: s.projects.filter(p => p.id !== id) }));
       },
 
       addAreaSkill: async (as) => {
