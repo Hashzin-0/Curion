@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -16,6 +17,8 @@ const ParseJobOutputSchema = z.object({
   salary: z.string().optional().describe('Remuneração se mencionada.'),
   contactInfo: z.string().describe('E-mail, WhatsApp ou endereço para envio de currículo.'),
   areaSlug: z.string().describe('Slug da área (ex: gastronomia, tecnologia, saude, vendas, administrativo).'),
+  regime: z.enum(['clt', 'pj', 'freelance', 'estagio']).optional().describe('O tipo de contrato detectado.'),
+  workModel: z.enum(['remoto', 'hibrido', 'presencial']).optional().describe('O modelo de trabalho detectado.'),
 });
 
 export type ParsedJob = z.infer<typeof ParseJobOutputSchema>;
@@ -28,7 +31,9 @@ export async function parseJobFile(dataUri: string): Promise<ParsedJob> {
     1. Identifique o cargo principal.
     2. Identifique a empresa.
     3. Procure por números de WhatsApp ou e-mails para contato.
-    4. Mapeie a área para um dos slugs: gastronomia, tecnologia, saude, beleza, logistica, vendas, limpeza, seguranca, educacao, design, construcao, administrativo.`,
+    4. Mapeie a área para um dos slugs: gastronomia, tecnologia, saude, beleza, logistica, vendas, limpeza, seguranca, educacao, design, construcao, administrativo.
+    5. Tente identificar se é Remoto, Híbrido ou Presencial.
+    6. Tente identificar se é CLT, PJ ou Freelance.`,
     imageUri: dataUri,
     schema: ParseJobOutputSchema
   });

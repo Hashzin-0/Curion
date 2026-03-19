@@ -17,6 +17,9 @@ export type JobVacancy = {
   contact_info: string | null;
   area_slug: string | null;
   file_url: string | null;
+  regime: string | null; // clt, pj, freelance, estagio
+  work_model: string | null; // remoto, hibrido, presencial
+  company_type: string | null; // startup, corporativo, agencia, pequena
   created_at: string;
 };
 
