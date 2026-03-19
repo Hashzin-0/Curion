@@ -23,12 +23,7 @@ export function useProfileState() {
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
 
   useEffect(() => {
-    // Guarda de Rota Refinada:
-    // Só redirecionamos para a home se a autenticação foi resolvida (isAuthReady),
-    // o carregamento de dados terminou (isLoading === false) 
-    // e REALMENTE não temos um usuário logado.
     if (store.isAuthReady && !store.isLoading && !store.currentUser) {
-      console.log('useProfileState: Usuário não detectado, redirecionando...');
       router.push('/');
     }
   }, [store.currentUser, store.isAuthReady, store.isLoading, router]);
@@ -40,7 +35,10 @@ export function useProfileState() {
         headline: store.currentUser.headline, 
         summary: store.currentUser.summary, 
         location: store.currentUser.location, 
-        avatar_path: store.currentUser.avatar_path 
+        avatar_path: store.currentUser.avatar_path,
+        email: store.currentUser.email,
+        phone: store.currentUser.phone,
+        website: store.currentUser.website
       });
     }
   }, [store.currentUser]);

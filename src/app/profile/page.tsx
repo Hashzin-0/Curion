@@ -70,6 +70,7 @@ export default function Dashboard() {
         editedProfile={state.editedProfile} 
         setEditedProfile={state.setEditedProfile} 
         onSave={data.handleUpdateProfile}
+        isSaving={data.isProcessing}
       />
       <EducationModal editingEdu={state.editingEdu} setEditingEdu={state.setEditingEdu} onSave={data.handleSaveEdu} />
       <ExperienceModal editingExp={state.editingExp} setEditingExp={state.setEditingExp} onSave={data.handleSaveExp} />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useStore, ProfessionalArea } from '@/lib/store';
+import { useStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 
@@ -43,10 +43,18 @@ export function useProfileData() {
   }, [currentUser, fetchTheme]);
 
   const handleUpdateProfile = async (editedProfile: any, onDone: () => void) => {
-    await updateUser(editedProfile);
-    onDone();
-    toast.success('Perfil atualizado!');
-    fetchTheme();
+    setIsProcessing(true);
+    try {
+      await updateUser(editedProfile);
+      onDone();
+      toast.success('Perfil atualizado com sucesso!');
+      fetchTheme();
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error(error.message || 'Falha ao salvar alterações do perfil.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const copyProfileLink = () => {
@@ -60,10 +68,15 @@ export function useProfileData() {
   const createSaveHandler = (updateFn: (data: any) => Promise<void>, entityName: string) => async (data: any, onDone: () => void) => {
     if (!data) return;
     setIsProcessing(true);
-    await updateFn(data);
-    setIsProcessing(false);
-    onDone();
-    toast.success(`${entityName} atualizado(a) com sucesso!`);
+    try {
+      await updateFn(data);
+      onDone();
+      toast.success(`${entityName} atualizado(a) com sucesso!`);
+    } catch (error) {
+      toast.error(`Erro ao salvar ${entityName.toLowerCase()}.`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSaveEdu = createSaveHandler(updateEducation, 'Formação');
@@ -77,9 +90,9 @@ export function useProfileData() {
     }
   };
 
-  const handleDeleteArea = createDeleteHandler(removeArea, 'Área e todas as suas experiências');
+  const handleDeleteArea = createDeleteHandler(removeArea, 'Área');
   const handleDeleteEdu = createDeleteHandler(removeEducation, 'Formação');
-  const handleDeletePort = createDeleteHandler(removePortfolioItem, 'Item do portfólio');
+  const handleDeletePort = createDeleteHandler(removePortfolioItem, 'Portfólio');
   const handleDeleteExp = createDeleteHandler(removeExperience, 'Experiência');
 
   return {
