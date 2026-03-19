@@ -53,7 +53,6 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const [expForm, setExpForm] = useState({ company_name: '', role: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined, description: '' });
   const [eduForm, setEduForm] = useState({ institution: '', course: '', start_date: undefined as Date | undefined, end_date: undefined as Date | undefined });
   const [portForm, setPortForm] = useState({ title: '', description: '', file_url: '', link_url: '' });
-  const [skillForm, setSkillForm] = useState({ level: 80 });
   const [tempSkill, setTempSkill] = useState<Skill | null>(null);
 
   const handleConfirmSkill = async () => {
@@ -61,7 +60,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
 
     setIsSaving(true);
     try {
-      await addSkillToRelevantAreas(tempSkill.id, tempSkill.name, skillForm.level);
+      await addSkillToRelevantAreas(tempSkill.id, tempSkill.name);
       toast.success(`${tempSkill.name} adicionada com sucesso!`);
       setTempSkill(null);
       setSelectedType(null);
@@ -106,8 +105,8 @@ export function AddContentModal({ isOpen, onClose }: Props) {
           user_id: currentUser.id,
           title: portForm.title,
           description: portForm.description,
-          file_url: portForm.file_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
-          link_url: portForm.link_url,
+          file_path: portForm.file_url || `https://picsum.photos/seed/${Math.random()}/600/400`,
+          external_url: portForm.link_url,
         });
       }
 
@@ -171,7 +170,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                     <div className="space-y-6">
                       <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                         <p className="text-xs font-bold text-blue-600 dark:text-blue-400 text-center">
-                          Habilidades são distribuídas automaticamente entre seus currículos.
+                          Habilidades são distribuídas automaticamente entre seus currículos baseadas na sua área.
                         </p>
                       </div>
                       
@@ -183,16 +182,6 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                               <h4 className="text-xl font-black text-slate-900 dark:text-white">{tempSkill.name}</h4>
                             </div>
                             <button onClick={() => setTempSkill(null)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Trocar</button>
-                          </div>
-
-                          <div className="w-full">
-                            <label className={labelCls}>Domínio ({skillForm.level}%)</label>
-                            <input 
-                              type="range" min="10" max="100" step="5" 
-                              value={skillForm.level} 
-                              onChange={(e) => setSkillForm({ ...skillForm, level: Number(e.target.value) })} 
-                              className="w-full h-10 accent-blue-600 cursor-pointer"
-                            />
                           </div>
 
                           <button 

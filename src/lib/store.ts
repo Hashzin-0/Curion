@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
-import { detectAreaFromRole } from './utils';
+import { detectAreaFromRole, getRelevantAreaSlugsForSkill, slugify } from './utils';
 
 export type User = { 
   id: string; 
@@ -104,6 +104,7 @@ interface AppState {
 
   addAreaSkill: (as: AreaSkill) => Promise<void>;
   removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
+  addSkillToRelevantAreas: (skillId: string, skillName: string) => Promise<void>;
   
   fetchData: () => Promise<void>;
 }
@@ -128,7 +129,6 @@ export const useStore = create<AppState>()(
       syncUserWithDatabase: async (userData) => {
         try {
           const data = await DatabaseService.syncUser(userData);
-          // Busca contatos
           const contacts = await DatabaseService.fetchUserContacts(data.id);
           const mergedUser = { 
             ...data, 
@@ -149,7 +149,6 @@ export const useStore = create<AppState>()(
         if (!currentUser) return;
         const data = await DatabaseService.updateUser(currentUser.id, userData);
         
-        // Atualiza contatos se fornecido
         if (userData.email || userData.phone) {
           await DatabaseService.upsertUserContacts({
             user_id: currentUser.id,
@@ -260,7 +259,29 @@ export const useStore = create<AppState>()(
         await DatabaseService.deleteAreaSkill(areaId, skillId);
         set(s => ({ areaSkills: s.areaSkills.filter(as => !(as.area_id === areaId && as.skill_id === skillId)) }));
       },
+
+      addSkillToRelevantAreas: async (skillId, skillName) => {
+        const { currentUser, areas, addAreaSkill } = get();
+        if (!currentUser || areas.length === 0) return;
+        
+        const relevantSlugs = getRelevantAreaSlugsForSkill(skillName);
+        const userAreasToLink = areas.filter(a => {
+          const areaSlug = slugify(a.name);
+          return relevantSlugs.includes(areaSlug) && a.user_id === currentUser.id;
+        });
+
+        // Se encontrou áreas específicas, linka nelas. Se não, linka na primeira.
+        const targetAreas = userAreasToLink.length > 0 ? userAreasToLink : [areas[0]];
+        
+        for (const area of targetAreas) {
+          try {
+            await addAreaSkill({ area_id: area.id, skill_id: skillId });
+          } catch (e) {
+            // Ignora se já existir a associação (PK conflict)
+          }
+        }
+      },
     }),
-    { name: 'curion-x-v2' }
+    { name: 'curion-x-v3' }
   )
 );

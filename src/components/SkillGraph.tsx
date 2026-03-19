@@ -9,7 +9,7 @@ export default function SkillGraph({ areaSkills, allSkills, areaSlug }: { areaSk
   const theme = getTheme(areaSlug);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-wrap gap-3">
       {areaSkills.map((as) => {
         const skill = allSkills.find(s => s.id === as.skill_id);
         if (!skill) return null;
@@ -18,22 +18,9 @@ export default function SkillGraph({ areaSkills, allSkills, areaSlug }: { areaSk
         const Icon = LucideIcons[skill.icon] || LucideIcons.CheckCircle;
 
         return (
-          <div key={as.id} className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Icon className={`w-5 h-5 ${theme.text} dark:text-opacity-80`} />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{skill.name}</span>
-              </div>
-              <span className="text-sm font-bold text-slate-400 dark:text-slate-500">{as.level}%</span>
-            </div>
-            <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${as.level}%` }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-                className={`h-full ${theme.primary} rounded-full`}
-              />
-            </div>
+          <div key={as.skill_id} className="bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3 transition-all hover:scale-105">
+            <Icon className={`w-5 h-5 ${theme.text}`} />
+            <span className="text-xs font-black uppercase text-slate-600 dark:text-slate-300">{skill.name}</span>
           </div>
         );
       })}

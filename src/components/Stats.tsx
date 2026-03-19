@@ -38,24 +38,6 @@ export function Stats({ userId }: { userId?: string }) {
   const experiences = useStore((state) => state.experiences);
   const areas = useStore((state) => state.areas);
 
-  const skillData = useMemo(() => {
-    if (!targetUserId) return [];
-    
-    // Filter skills for the areas relevant to the user
-    // In this prototype, we show skills based on area associations
-    const userAreaSkills = areaSkills; // In a real DB, filter by user/area
-    
-    const mappedSkills = userAreaSkills.map(as => {
-      const skill = allSkills.find(s => s.id === as.skill_id);
-      return {
-        name: skill?.name || 'Unknown',
-        level: as.level
-      };
-    });
-    
-    return mappedSkills.sort((a, b) => b.level - a.level).slice(0, 5);
-  }, [targetUserId, areaSkills, allSkills]);
-
   const experienceData = useMemo(() => {
     if (!targetUserId) return [];
     
@@ -81,16 +63,37 @@ export function Stats({ userId }: { userId?: string }) {
     }));
   }, [targetUserId, experiences, areas]);
 
+  const skillCountData = useMemo(() => {
+    if (!targetUserId) return [];
+    
+    const relevantAreaIds = areas.filter(a => a.user_id === targetUserId).map(a => a.id);
+    const userAreaSkills = areaSkills.filter(as => relevantAreaIds.includes(as.area_id));
+    
+    const areaSkillCount: Record<string, number> = {};
+    
+    userAreaSkills.forEach(as => {
+      const area = areas.find(a => a.id === as.area_id);
+      if (area) {
+        areaSkillCount[area.name] = (areaSkillCount[area.name] || 0) + 1;
+      }
+    });
+
+    return Object.entries(areaSkillCount).map(([name, value]) => ({
+      name,
+      count: value
+    }));
+  }, [targetUserId, areaSkills, areas]);
+
   if (!isMounted || !targetUserId) return null;
 
   return (
     <div className="w-full py-8">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-          Habilidades e Experiência
+        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tighter">
+          Dashboard de Expertise
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
-          Uma visão analítica da trajetória profissional.
+        <p className="text-slate-500 dark:text-slate-400 font-medium">
+          Uma visão analítica da distribuição de suas competências e tempo de carreira.
         </p>
       </div>
 
@@ -99,22 +102,22 @@ export function Stats({ userId }: { userId?: string }) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800"
+          className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800"
         >
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-8">
-            Principais Competências
+          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-8 uppercase tracking-tight">
+            Volume de Skills por Área
           </h3>
           <div className="h-72 w-full">
-            {skillData.length > 0 ? (
+            {skillCountData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={skillData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                <BarChart data={skillCountData} layout="vertical" margin={{ left: 20, right: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} horizontal={true} vertical={false} />
                   <XAxis type="number" hide />
                   <YAxis 
                     dataKey="name" 
                     type="category" 
                     stroke={isDark ? '#94a3b8' : '#64748b'} 
-                    tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 12 }}
+                    tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 'bold' }}
                     axisLine={false}
                     tickLine={false}
                     width={100}
@@ -125,15 +128,17 @@ export function Stats({ userId }: { userId?: string }) {
                       backgroundColor: isDark ? '#0f172a' : '#ffffff',
                       borderColor: isDark ? '#334155' : '#e2e8f0',
                       borderRadius: '1rem',
-                      borderWidth: '1px'
+                      borderWidth: '1px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
                     }}
                   />
-                  <Bar dataKey="level" fill="#3b82f6" radius={[0, 10, 10, 0]} barSize={20} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[0, 10, 10, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800">
-                Aguardando dados...
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-black uppercase tracking-widest">Aguardando Habilidades...</span>
               </div>
             )}
           </div>
@@ -144,10 +149,10 @@ export function Stats({ userId }: { userId?: string }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800"
+          className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800"
         >
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-8">
-            Tempo por Área (Meses)
+          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-8 uppercase tracking-tight">
+            Distribuição de Tempo (Meses)
           </h3>
           <div className="h-72 w-full flex items-center justify-center">
             {experienceData.length > 0 ? (
@@ -171,14 +176,16 @@ export function Stats({ userId }: { userId?: string }) {
                     contentStyle={{ 
                       backgroundColor: isDark ? '#0f172a' : '#ffffff',
                       borderColor: isDark ? '#334155' : '#e2e8f0',
-                      borderRadius: '1rem'
+                      borderRadius: '1rem',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
                     }}
                   />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800">
-                Adicione experiências para ver o gráfico.
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-black uppercase tracking-widest">Adicione Experiências</span>
               </div>
             )}
           </div>
@@ -186,7 +193,7 @@ export function Stats({ userId }: { userId?: string }) {
             {experienceData.map((entry, index) => (
               <div key={entry.name} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{entry.name}</span>
+                <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">{entry.name}</span>
               </div>
             ))}
           </div>
