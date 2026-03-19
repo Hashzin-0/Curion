@@ -15,7 +15,8 @@ const AnalysisSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { answer } = await req.json();
+    const body = await req.json();
+    const { answer } = body;
 
     if (!answer) {
       return NextResponse.json({ error: 'Resposta não fornecida' }, { status: 400 });
@@ -29,9 +30,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('[API Analyze] Erro:', error);
+    console.error('[API Analyze] Erro:', error.message);
     return NextResponse.json(
-      { error: 'Erro interno na análise da IA via OpenRouter', details: error.message }, 
+      { error: 'Erro interno na análise da IA', details: error.message }, 
       { status: 500 }
     );
   }

@@ -1,9 +1,8 @@
 /**
- * @fileOverview Camada de serviço isolada para interações com o Supabase.
- * Centraliza toda a lógica de persistência de dados.
+ * @fileOverview Camada de serviço para interações com o Supabase.
  */
 import { supabase } from '../supabase';
-import { User, ProfessionalArea, Experience, Education, Achievement, Certificate, PortfolioItem, AreaSkill } from '../store';
+import { User, ProfessionalArea, Experience, Education, PortfolioItem, AreaSkill } from '../store';
 
 export type JobVacancy = {
   id: string;
@@ -51,12 +50,13 @@ export const DatabaseService = {
     return data;
   },
 
-  // Analytics de Visualizações
+  // Analytics
   async recordProfileView(userId: string) {
+    if (!userId) return;
     const { error } = await supabase
       .from('profile_views')
       .insert([{ user_id: userId, viewed_at: new Date().toISOString() }]);
-    if (error) console.warn('Falha ao registrar view:', error);
+    if (error) console.warn('DatabaseService: Erro ao gravar view:', error.message);
   },
 
   async fetchProfileStats(userId: string) {
@@ -68,14 +68,14 @@ export const DatabaseService = {
     return data;
   },
 
-  // Vagas (Jobs)
+  // Vagas
   async fetchJobs() {
     const { data, error } = await supabase
       .from('jobs')
       .select('*')
       .order('created_at', { ascending: false });
     if (error) {
-      console.warn('Erro ao buscar vagas:', error);
+      console.warn('DatabaseService: Erro ao buscar vagas:', error.message);
       return [];
     }
     return data as JobVacancy[];
@@ -178,8 +178,6 @@ export const DatabaseService = {
       supabase.from('skills').select('*'),
       supabase.from('area_skills').select('*'),
       supabase.from('education').select('*'),
-      supabase.from('achievements').select('*'),
-      supabase.from('certificates').select('*'),
       supabase.from('portfolio').select('*'),
     ];
     return await Promise.all(queries);

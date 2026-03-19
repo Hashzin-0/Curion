@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Gerenciamento de estado global com Zustand.
  * Centraliza a lógica de negócios e sincronização com o banco de dados.
@@ -85,9 +84,14 @@ export const useStore = create<AppState>()(
       setAuthReady: (ready) => set({ isAuthReady: ready }),
 
       syncUserWithDatabase: async (userData) => {
-        const data = await DatabaseService.syncUser(userData);
-        set({ currentUser: data });
-        return data;
+        try {
+          const data = await DatabaseService.syncUser(userData);
+          set({ currentUser: data });
+          return data;
+        } catch (error) {
+          console.error('Store: syncUserWithDatabase failed', error);
+          throw error;
+        }
       },
 
       updateUser: async (userData) => {
@@ -114,6 +118,7 @@ export const useStore = create<AppState>()(
             isLoading: false
           });
         } catch (error) {
+          console.error('Store: fetchData failed', error);
           set({ isLoading: false });
         }
       },

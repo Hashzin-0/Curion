@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { useStore, User, ProfessionalArea, Education, PortfolioItem, Experience } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 
+/**
+ * @fileOverview Hook de gerenciamento de estado da página de Dashboard.
+ * Controla modais e a guarda de rota de forma robusta.
+ */
+
 export function useProfileState() {
   const store = useStore();
   const router = useRouter();
@@ -18,7 +23,12 @@ export function useProfileState() {
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
 
   useEffect(() => {
-    if (store.isAuthReady && !store.currentUser && !store.isLoading) router.push('/');
+    // Guarda de Rota Refinada:
+    // Só redirecionamos se o sistema de auth estiver pronto,
+    // o carregamento inicial de dados terminou e EXPLICITAMENTE não temos um usuário.
+    if (store.isAuthReady && !store.isLoading && !store.currentUser) {
+      router.push('/');
+    }
   }, [store.currentUser, store.isAuthReady, store.isLoading, router]);
 
   useEffect(() => {

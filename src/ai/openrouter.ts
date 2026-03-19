@@ -1,9 +1,8 @@
-
 'use server';
 
 /**
- * @fileOverview Cliente utilitário usando a SDK oficial da OpenAI configurada para o OpenRouter.
- * Suporta fallback de modelos, validação estruturada e Visão Computacional.
+ * @fileOverview Cliente utilitário para o OpenRouter.
+ * Inclui tratamento robusto de erros para evitar Erro 500 no Next.js.
  */
 
 import OpenAI from 'openai';
@@ -20,18 +19,14 @@ const client = new OpenAI({
   }
 });
 
-/**
- * Realiza uma chamada ao OpenRouter com suporte a fallback de modelos e retorno estruturado.
- */
 export async function askAI<T>(params: {
   system?: string;
   prompt: string;
   schema?: z.ZodType<T>;
-  imageUri?: string; // Suporte para análise de imagem (Vision)
+  imageUri?: string;
 }): Promise<T> {
   const cleanModelName = (id: string) => id.replace(/^openai\//, '').replace(/^googleai\//, '');
   
-  // Se houver imagem, prioriza modelos com visão (Gemini Flash no OpenRouter é excelente)
   const models = params.imageUri 
     ? ['google/gemini-flash-1.5', 'openai/gpt-4o-mini']
     : [
@@ -45,7 +40,10 @@ export async function askAI<T>(params: {
   for (const modelId of models) {
     try {
       const contentParts: any[] = [
-        { type: 'text', text: params.prompt + (jsonSchema ? `\n\nResponda estritamente seguindo este esquema JSON:\n${JSON.stringify(jsonSchema)}` : '') }
+        { 
+          type: 'text', 
+          text: params.prompt + (jsonSchema ? `\n\nResponda estritamente seguindo este esquema JSON:\n${JSON.stringify(jsonSchema)}` : '') 
+        }
       ];
 
       if (params.imageUri) {
@@ -68,21 +66,26 @@ export async function askAI<T>(params: {
       });
 
       const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error('Resposta vazia da IA');
+      if (!content) throw new Error('IA retornou conteúdo vazio');
 
       if (params.schema) {
-        const jsonString = content.replace(/```json\n?|```/g, '').trim();
-        const data = JSON.parse(jsonString);
-        return params.schema.parse(data);
+        try {
+          const jsonString = content.replace(/```json\n?|```/g, '').trim();
+          const data = JSON.parse(jsonString);
+          return params.schema.parse(data);
+        } catch (parseError) {
+          console.error('OpenRouter: Falha ao parsear JSON:', content);
+          throw new Error('Resposta da IA não é um JSON válido');
+        }
       }
 
       return content as T;
-    } catch (e) {
-      console.warn(`[OpenRouter SDK] Falha no modelo ${modelId}:`, e);
+    } catch (e: any) {
+      console.warn(`OpenRouter: Erro no modelo ${modelId}:`, e.message);
       lastError = e;
       continue;
     }
   }
 
-  throw lastError || new Error('Todos os modelos do OpenRouter falharam.');
+  throw lastError || new Error('Todos os modelos falharam.');
 }
