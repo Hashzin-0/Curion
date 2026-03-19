@@ -34,10 +34,13 @@ export async function askAI<T>(params: {
   const client = getClient();
   
   /**
-   * Unifica a lista de modelos: tenta o primário e depois a lista de fallbacks da configuração.
-   * Removida a priorização estática de modelos de imagem para respeitar a hierarquia definida pelo usuário.
+   * Seleção inteligente de modelos:
+   * Se houver uma imagem (imageUri), prioriza a lista visionModels que possui suporte multimodal.
+   * Caso contrário, utiliza a hierarquia padrão de modelos de texto.
    */
-  const models = [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
+  const models = params.imageUri 
+    ? AI_CONFIG.visionModels 
+    : [AI_CONFIG.primaryModel, ...AI_CONFIG.fallbackModels];
   
   let lastError = null;
   const jsonSchema = params.schema ? zodToJsonSchema(params.schema) : null;
@@ -51,7 +54,7 @@ export async function askAI<T>(params: {
         }
       ];
 
-      // Se houver imagem, ela é incluída no payload multimodal
+      // Se houver imagem, ela é incluída no payload multimodal seguindo o padrão OpenRouter
       if (params.imageUri) {
         contentParts.push({
           type: 'image_url',
@@ -76,6 +79,7 @@ export async function askAI<T>(params: {
 
       if (params.schema) {
         try {
+          // Limpa markdown opcional inserido por alguns modelos
           const jsonString = content.replace(/```json\n?|```/g, '').trim();
           const data = JSON.parse(jsonString);
           return params.schema.parse(data);
@@ -89,6 +93,7 @@ export async function askAI<T>(params: {
     } catch (e: any) {
       console.warn(`OpenRouter: Erro no modelo ${modelId}:`, e.message);
       lastError = e;
+      // Continua para o próximo modelo da lista (Fallback)
       continue;
     }
   }
