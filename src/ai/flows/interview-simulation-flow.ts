@@ -16,7 +16,7 @@ const InterviewInputSchema = z.object({
   userAudio: z.string().optional().describe('Áudio do usuário em formato data URI (base64).'),
   history: z.array(z.object({
     role: z.enum(['user', 'model']),
-    content: z.string(),
+    content: string(),
   })).optional().describe('Histórico da conversa textual.'),
 });
 
@@ -63,23 +63,26 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
 
   const currentPromptParts: any[] = [];
 
-  // Se for o início, o sistema se apresenta
-  if (historyMessages.length === 0 && !input.userAudio) {
-    currentPromptParts.push({ text: `Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}. Seja profissional e direto. Inicie a entrevista se apresentando e fazendo a primeira pergunta.` });
-  } else if (input.userAudio) {
-    // Se o usuário enviou áudio, incluímos como parte do prompt multimodal
+  // Configuração multimodal: se houver áudio, ele entra como parte do conteúdo da última mensagem
+  if (input.userAudio) {
     currentPromptParts.push({
       media: {
         url: input.userAudio,
         contentType: 'audio/wav'
       }
     });
+  } else if (historyMessages.length === 0) {
+    // Início da conversa sem áudio
+    currentPromptParts.push({ text: "Inicie a entrevista se apresentando e fazendo a primeira pergunta relevante para a vaga." });
   } else {
-    currentPromptParts.push({ text: "Continue a entrevista com base no contexto anterior." });
+    currentPromptParts.push({ text: "Continue a entrevista respondendo ao candidato." });
   }
 
   const response = await ai.generate({
     model: googleAI.model('gemini-2.5-flash-preview'),
+    system: `Você é um recrutador sênior extremamente profissional na área de ${input.areaName}. 
+    Seu objetivo é entrevistar o candidato ${input.userName} de forma técnica e direta. 
+    Faça uma pergunta por vez. Analise as respostas com profundidade.`,
     config: {
       responseModalities: ['AUDIO', 'TEXT'],
       speechConfig: {
@@ -89,10 +92,6 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
       },
     },
     messages: [
-      {
-        role: 'user',
-        content: [{ text: `Sistema: Você é um recrutador sênior na área de ${input.areaName}. Entreviste o candidato ${input.userName}.` }]
-      },
       ...historyMessages,
       {
         role: 'user',

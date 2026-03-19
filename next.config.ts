@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
     '@cfworker/json-schema'
   ],
   transpilePackages: ['motion'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     if (dev && process.env.DISABLE_HMR === 'true') {

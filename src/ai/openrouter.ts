@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Cliente utilitário para o OpenRouter configurado para Curion X.
  * Executa exclusivamente no servidor para garantir segurança da API Key e compatibilidade com Server Actions.
@@ -15,6 +14,7 @@ const getClient = () => {
     console.warn('OpenRouter: OPENROUTER_API_KEY não configurada no ambiente.');
   }
   
+  // Utilizamos a API WHATWG URL implicitamente ao passar a string para o construtor do SDK moderno
   return new OpenAI({
     apiKey: apiKey || 'placeholder',
     baseURL: 'https://openrouter.ai/api/v1',
@@ -56,6 +56,11 @@ export async function askAI<T>(params: {
 
       // Se houver imagem, ela é incluída no payload multimodal seguindo o padrão OpenRouter
       if (params.imageUri) {
+        // Validação básica para evitar payloads corrompidos que disparam erros de parser
+        if (!params.imageUri.startsWith('data:')) {
+          console.warn('OpenRouter: imageUri inválido detectado.');
+        }
+        
         contentParts.push({
           type: 'image_url',
           image_url: { url: params.imageUri }
