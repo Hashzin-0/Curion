@@ -1,15 +1,16 @@
 
 'use client';
 
-import Link from 'next/link';
+import Link from 'next/navigation';
 import Image from 'next/image';
 import { ArrowRight, Star, ThumbsUp } from 'lucide-react';
 import { StatusIndicator } from './StatusIndicator';
 import { getTheme } from '@/styles/themes';
 import { slugify } from '@/lib/utils';
+import { AvatarGlow } from '@/components/shared/AvatarGlow';
 
 /**
- * @fileOverview Card de Candidato (UI Pura).
+ * @fileOverview Card de Candidato atualizado com AvatarGlow premium.
  */
 
 export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
@@ -21,18 +22,23 @@ export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
   ).filter((s: any) => s.name).sort((a: any, b: any) => b.endorsements - a.endorsements).slice(0, 3);
 
   return (
-    <Link 
-      href={`/${user.username}`} 
+    <div 
       onMouseEnter={() => onPreviewEnter('candidate', user)}
       onMouseLeave={onPreviewLeave}
       className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
     >
       <div className="p-8 flex-1">
         <div className="flex items-center gap-4 mb-6">
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800 shadow-sm">
-            <Image src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
-            <StatusIndicator status={user.availability_status} />
-          </div>
+          <AvatarGlow status={user.availability_status} className="rounded-2xl shrink-0">
+            <div className="relative w-16 h-16 rounded-2xl overflow-hidden">
+              <Image 
+                src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} 
+                alt={user.name} 
+                fill 
+                className="object-cover" 
+              />
+            </div>
+          </AvatarGlow>
           <div>
             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{user.name}</h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user.headline || 'Profissional'}</p>
@@ -71,11 +77,14 @@ export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
         </div>
         <p className="text-xs text-slate-500 line-clamp-2 italic">"{user.summary?.replace(/<[^>]*>/g, '').slice(0, 100)}..."</p>
       </div>
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+      <Link 
+        href={`/${user.username}`}
+        className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+      >
         <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-2 group-hover:gap-4 transition-all">
           Ver Perfil Completo <ArrowRight size={14} />
         </span>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

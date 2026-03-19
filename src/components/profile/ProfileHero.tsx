@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -14,6 +15,7 @@ import { CoverLetterModal } from '@/components/CoverLetterModal';
 import { InterviewSimulatorModal } from '@/components/InterviewSimulatorModal';
 import { AudioBioPlayer } from './AudioBioPlayer';
 import { cn } from '@/lib/utils';
+import { AvatarGlow } from '@/components/shared/AvatarGlow';
 
 type Props = {
   user: User;
@@ -64,22 +66,23 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
             animate={{ scale: 1, rotate: 0 }}
             className="shrink-0 relative"
           >
-            <div
-              className="w-40 h-40 md:w-48 md:h-48 rounded-[2rem] overflow-hidden relative"
-              style={{
-                border: `6px solid ${accentColor}`,
-                boxShadow: `0 25px 50px rgba(0,0,0,0.5)`,
-              }}
-            >
-              <Image
-                src={user.avatar_path || `https://picsum.photos/seed/${user.id}/200/200`}
-                alt={user.name || 'Profile'}
-                fill
-                className="object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div className="absolute -bottom-2 -right-2 text-4xl bg-white dark:bg-slate-900 rounded-2xl w-14 h-14 flex items-center justify-center shadow-2xl border-2 border-slate-100 dark:border-slate-800">
+            <AvatarGlow status={user.availability_status} size="lg" className="rounded-[2.5rem]">
+              <div
+                className="w-40 h-40 md:w-48 md:h-48 rounded-[2.2rem] overflow-hidden relative"
+                style={{
+                  boxShadow: `0 25px 50px rgba(0,0,0,0.5)`,
+                }}
+              >
+                <Image
+                  src={user.avatar_path || `https://picsum.photos/seed/${user.id}/200/200`}
+                  alt={user.name || 'Profile'}
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </AvatarGlow>
+            <div className="absolute -bottom-2 -right-2 text-4xl bg-white dark:bg-slate-900 rounded-2xl w-14 h-14 flex items-center justify-center shadow-2xl border-2 border-slate-100 dark:border-slate-800 z-20">
               {theme?.heroEmoji || '✨'}
             </div>
           </motion.div>
