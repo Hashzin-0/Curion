@@ -134,3 +134,11 @@
         *   **Padrões de Vanguarda (Nível Startup):** A IA deve emular o raciocínio de um arquiteto de software sênior de uma startup inovadora, propondo soluções que não apenas resolvem o problema, mas que também conferem uma vantagem competitiva, seja em performance, experiência do usuário (UX) ou escalabilidade.
         *   **Elevação Exponencial do Nível:** As sugestões devem ser formuladas para "elevar abusadamente" o nível do projeto. Para uma funcionalidade, isso significa propor uma implementação que seja drasticamente mais robusta, visualmente impressionante ou funcionalmente rica do que o padrão. A proposta deve detalhar *como* e *porquê* tal abordagem representa um salto quântico de qualidade.
         *   **Justificativa e Análise de Trade-offs:** Nenhuma sugestão de alto nível deve ser apresentada sem uma justificativa robusta que explique seus benefícios estratégicos e uma análise clara dos potenciais trade-offs (custo de implementação, curva de aprendizado, complexidade de manutenção, etc.).
+
+19. **SQL E ARQUIVOS DE DOCUMENTAÇÃO**
+    *   **SQL no Chat:** Ao enviar código SQL, cole-o diretamente na conversa para rápido acesso e visualização.
+    *   **Nomenclatura de Arquivos:** Ao criar arquivos na pasta `/docs`, utilize nomes descritivos e baseados em palavras-chave que representem o conteúdo do arquivo (ex: `user_authentication_schema.sql` ou `setup_database_triggers.sql`). Evite nomes genéricos como `migration.sql` ou nomes com IDs aleatórios.
+
+20. **PADRONIZAÇÃO DE MODELOS DE IA**
+    *   **Modelo de Texto Padrão:** Para todas as tarefas de geração de texto, como criação de conteúdo, resumos, e outras manipulações de linguagem, utilize exclusivamente o `openrouter` como provedor de IA.
+    *   **Exceção para Áudio:** A única exceção à regra acima é para funcionalidades de áudio. A simulação de entrevista e a geração da bio em áudio podem utilizar outros modelos específicos para essa finalidade, não sendo obrigatório o uso do `openrouter`.

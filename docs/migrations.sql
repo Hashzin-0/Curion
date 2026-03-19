@@ -24,38 +24,39 @@ COMMENT ON COLUMN public.projects.verification_hash IS 'Hash SHA-256 dos dados d
 -- 4. FUNÇÃO DE BUSCA SEMÂNTICA (VETORES)
 CREATE OR REPLACE FUNCTION match_profiles (
   query_embedding vector(768),
-  match_threshold float,
-  match_count int
-)
-RETURNS TABLE (
-  id uuid,
-  name text,
-  username text,
-  headline text,
-  summary text,
-  similarity float
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    users.id,
-    users.name,
-    users.username,
-    users.headline,
-    users.summary,
-    1 - (users.embedding <=> query_embedding) AS similarity
-  FROM users
-  WHERE 1 - (users.embedding <=> query_embedding) > match_threshold
-  ORDER BY similarity DESC
-  LIMIT match_count;
-END;
-$$;
+    match_threshold float,
+      match_count int
+      )
+      RETURNS TABLE (
+        id uuid,
+          name text,
+            username text,
+              headline text,
+                summary text,
+                  similarity float
+                  )
+                  LANGUAGE plpgsql
+                  AS $$
+                  BEGIN
+                    RETURN QUERY
+                      SELECT
+                          users.id,
+                              users.name,
+                                  users.username,
+                                      users.headline,
+                                          users.summary,
+                                              1 - (users.embedding <=> query_embedding) AS similarity
+                                                FROM users
+                                                  WHERE 1 - (users.embedding <=> query_embedding) > match_threshold
+                                                    ORDER BY similarity DESC
+                                                      LIMIT match_count;
+                                                      END;
+                                                      $$;
 
--- 5. STORAGE CONFIG (POLÍTICAS PÚBLICAS PARA ÁUDIO E JOBS)
--- Nota: Execute estes comandos se os buckets ainda não existirem ou se precisar resetar permissões
-INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
+                                                      -- 5. STORAGE CONFIG (POLÍTICAS PÚBLICAS PARA ÁUDIO E JOBS)
+                                                      -- Nota: Execute estes comandos se os buckets ainda não existirem ou se precisar resetar permissões
+                                                      INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'uploads');
-CREATE POLICY "Auth Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'uploads' AND auth.role() = 'authenticated');
+                                                      CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'uploads');
+                                                      CREATE POLICY "Auth Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'uploads' AND auth.role() = 'authenticated');
+                                                      
