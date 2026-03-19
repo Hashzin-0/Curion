@@ -1,16 +1,15 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import React from 'react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
+interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'accent';
 }
 
 export function Button({ children, variant = 'primary', className, ...props }: ButtonProps) {
-  const base = "px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+  const base = "px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer";
   
   const variants: Record<string, string> = {
     primary: "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl hover:shadow-2xl",
