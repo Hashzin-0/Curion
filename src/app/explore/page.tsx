@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
   Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText,
-  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, Flame, TrendingUp, Send
+  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, Flame, TrendingUp, Send,
+  Map as MapIcon, Grid, LayoutDashboard
 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
@@ -19,7 +20,7 @@ import { slugify, calcDuration, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA, Preview Rápido, Filtros Inteligentes, Trending Skills e Quick Apply.
+ * @fileOverview Página de Exploração com Match IA, Preview Rápido, Filtros Inteligentes, Trending Skills, Quick Apply e Mapa de Oportunidades.
  */
 
 function StatusIndicator({ status }: { status?: string }) {
@@ -126,7 +127,7 @@ function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, 
 
 export default function ExplorePage() {
   const { currentUser, experiences, skills, areaSkills, areas } = useStore();
-  const [view, setView] = useState<'candidates' | 'jobs'>('candidates');
+  const [view, setView] = useState<'candidates' | 'jobs' | 'map'>('candidates');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
@@ -193,14 +194,35 @@ export default function ExplorePage() {
       .map(([name]) => name);
   }, [realJobs]);
 
+  // Funcionalidade 8: Mapa de Oportunidades (Clusterização Geográfica)
+  const geoDistribution = useMemo(() => {
+    const clusters: Record<string, { jobs: number, candidates: number, display: string }> = {};
+    
+    realJobs.forEach(j => {
+      const loc = j.location || 'Remoto';
+      if (!clusters[loc]) clusters[loc] = { jobs: 0, candidates: 0, display: loc };
+      clusters[loc].jobs++;
+    });
+
+    publicUsers.forEach(u => {
+      const loc = u.location || 'Remoto';
+      if (!clusters[loc]) clusters[loc] = { jobs: 0, candidates: 0, display: loc };
+      clusters[loc].candidates++;
+    });
+
+    return Object.values(clusters).sort((a, b) => (b.jobs + b.candidates) - (a.jobs + a.candidates));
+  }, [realJobs, publicUsers]);
+
   const filteredCandidates = publicUsers.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.headline?.toLowerCase().includes(searchQuery.toLowerCase())
+    u.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredJobs = realJobs.filter(j => {
     const matchesSearch = j.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         j.company.toLowerCase().includes(searchQuery.toLowerCase());
+                         j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         j.location?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRegime = !activeRegime || j.regime === activeRegime;
     const matchesModel = !activeModel || j.work_model === activeModel;
     const matchesVibe = !activeVibe || j.company_type === activeVibe;
@@ -303,6 +325,12 @@ export default function ExplorePage() {
             >
               <Briefcase size={16} /> Vagas
             </button>
+            <button 
+              onClick={() => { setView('map'); setPreviewItem(null); }}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${view === 'map' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400'}`}
+            >
+              <MapIcon size={16} /> Mapa
+            </button>
           </div>
         </header>
 
@@ -312,7 +340,7 @@ export default function ExplorePage() {
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
               <input 
                 type="text" 
-                placeholder={view === 'candidates' ? "Buscar por nome, cargo ou habilidade..." : "Buscar vagas, empresas ou áreas..."}
+                placeholder={view === 'candidates' ? "Buscar por nome, cargo ou habilidade..." : "Buscar vagas, empresas ou locais..."}
                 className="w-full pl-14 pr-6 py-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm outline-none focus:ring-4 focus:ring-blue-500/10 font-bold transition-all text-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -364,7 +392,7 @@ export default function ExplorePage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {view === 'candidates' ? (
+          {view === 'candidates' && (
             <motion.div 
               key="candidates"
               initial={{ opacity: 0, y: 20 }}
@@ -439,7 +467,9 @@ export default function ExplorePage() {
                 );
               })}
             </motion.div>
-          ) : (
+          )}
+
+          {view === 'jobs' && (
             <motion.div 
               key="jobs"
               initial={{ opacity: 0, y: 20 }}
@@ -512,6 +542,88 @@ export default function ExplorePage() {
                   <button onClick={() => { setActiveRegime(null); setActiveModel(null); setActiveVibe(null); setSearchQuery(''); }} className="mt-4 text-blue-600 font-black text-xs uppercase hover:underline">Limpar Tudo</button>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {view === 'map' && (
+            <motion.div 
+              key="map"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 p-10 min-h-[500px]"
+            >
+              <div className="max-w-4xl mx-auto space-y-10">
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter flex items-center justify-center gap-3">
+                    <Globe className="text-blue-600 animate-spin-slow" /> Mapa de Oportunidades
+                  </h2>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Densidade de talentos e vagas por região do Brasil</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {geoDistribution.length > 0 ? geoDistribution.map((loc, idx) => {
+                    const total = loc.jobs + loc.candidates;
+                    const intensity = Math.min(total * 10, 100); // Para visual de calor
+                    
+                    return (
+                      <motion.button 
+                        key={idx}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        onClick={() => { setSearchQuery(loc.display); setView('jobs'); }}
+                        className="relative group bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50 transition-all text-left overflow-hidden"
+                      >
+                        <div 
+                          className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity" 
+                          style={{ backgroundColor: `hsl(${210 + intensity}, 70%, 50%)` }} 
+                        />
+                        
+                        <div className="relative z-10 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
+                              <MapPin size={20} className="text-blue-600" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{loc.display === 'Remoto' ? 'Global' : 'Regional'}</span>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{loc.display}</h4>
+                            <div className="flex gap-4 mt-2">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Vagas</span>
+                                <span className="text-xl font-black text-blue-600">{loc.jobs}</span>
+                              </div>
+                              <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 self-end" />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Talentos</span>
+                                <span className="text-xl font-black text-emerald-600">{loc.candidates}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  }) : (
+                    <div className="col-span-full py-20 text-center text-slate-400 uppercase font-black text-xs tracking-widest">
+                      Gerando inteligência geográfica...
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-10 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                      <span className="text-[10px] font-black uppercase text-slate-500">Hub de Vagas</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-emerald-600" />
+                      <span className="text-[10px] font-black uppercase text-slate-500">Base de Talentos</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 italic">Clique em uma região para ver os detalhes completos no feed.</p>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
