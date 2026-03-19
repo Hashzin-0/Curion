@@ -1,13 +1,13 @@
 'use server';
 
 /**
- * @fileOverview Fluxo de simulação de entrevista refatorado para usar TTS de Fallback.
- * Separa a geração de texto (IA) da geração de áudio (Motores Locais).
+ * @fileOverview Fluxo de simulação de entrevista utilizando o modelo Gemini 2.5 Flash Native Audio.
+ * Este fluxo é exclusivo e não utiliza os motores de fallback locais para garantir latência mínima e qualidade premium.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { generateAudioBio } from './generate-audio-bio-flow';
+import { googleAI } from '@genkit-ai/google-genai';
 import { AI_CONFIG } from '@/ai/config';
 
 const InterviewInputSchema = z.object({
@@ -22,7 +22,7 @@ const InterviewInputSchema = z.object({
 
 const InterviewOutputSchema = z.object({
   text: z.string().describe('O texto transcrito ou resposta do recrutador.'),
-  audio: z.string().describe('Áudio da resposta em formato data URI (MP3).'),
+  audio: z.string().describe('Áudio da resposta em formato data URI nativo do Gemini.'),
 });
 
 export type InterviewInput = z.infer<typeof InterviewInputSchema>;
@@ -36,6 +36,7 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
 
   const currentPromptParts: any[] = [];
 
+  // Se houver áudio do usuário, enviamos como parte multimodal
   if (input.userAudio) {
     currentPromptParts.push({
       media: {
@@ -46,15 +47,18 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
   } else if (historyMessages.length === 0) {
     currentPromptParts.push({ text: "Inicie a entrevista se apresentando e fazendo a primeira pergunta relevante para a vaga." });
   } else {
-    currentPromptParts.push({ text: "Continue a entrevista respondendo ao candidato." });
+    currentPromptParts.push({ text: "Continue a entrevista respondendo ao candidato de forma curta e direta." });
   }
 
-  // 1. Gerar resposta em TEXTO usando o modelo configurado no AI_CONFIG (ex: OpenRouter)
+  // 1. Gerar resposta usando o modelo Native Audio do Gemini
   const response = await ai.generate({
-    model: 'openai/' + process.env.NEXT_PUBLIC_AI_MODEL || 'google/gemini-2.0-flash-001',
+    model: googleAI.model('gemini-2.5-flash-native-audio'),
+    config: {
+      responseModalities: ['TEXT', 'AUDIO'],
+    },
     system: `Você é um recrutador sênior extremamente profissional na área de ${input.areaName}. 
     Seu objetivo é entrevistar o candidato ${input.userName} de forma técnica e direta. 
-    Faça uma pergunta por vez. Analise as respostas com profundidade.`,
+    Faça uma pergunta por vez. Use sua capacidade nativa de áudio para soar humano e profissional.`,
     messages: [
       ...historyMessages,
       {
@@ -65,21 +69,13 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
   });
 
   const responseText = response.text;
+  
+  // Extrai a parte de áudio da resposta nativa
+  const audioPart = response.message?.content.find(p => !!p.media);
+  const audioUri = audioPart?.media?.url || '';
 
-  // 2. Gerar áudio usando a nova arquitetura de fallbacks locais
-  try {
-    const { audio } = await generateAudioBio(responseText);
-    return {
-      text: responseText,
-      audio: audio,
-    };
-  } catch (err) {
-    // Se o TTS falhar, retornamos o texto e uma string vazia no áudio.
-    // O frontend detectará a falta de áudio e acionará o Web Speech API se necessário.
-    console.warn('Interview Simulation: Falha no áudio premium, sinalizando fallback.');
-    return {
-      text: responseText,
-      audio: '',
-    };
-  }
+  return {
+    text: responseText,
+    audio: audioUri,
+  };
 }
