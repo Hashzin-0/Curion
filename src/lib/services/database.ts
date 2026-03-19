@@ -95,20 +95,25 @@ export const DatabaseService = {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) {
-      console.warn('DatabaseService: Erro ao buscar vagas:', error.message);
+      console.error('DatabaseService: Erro ao buscar vagas:', error.message);
       return [];
     }
     return data as JobVacancy[];
   },
 
   async createJob(job: Omit<JobVacancy, 'id' | 'created_at'>) {
+    // Usamos insert sem single() inicialmente para evitar travamentos se o select falhar por RLS
     const { data, error } = await supabase
       .from('jobs')
       .insert([job])
-      .select()
-      .single();
-    if (error) throw error;
-    return data as JobVacancy;
+      .select();
+    
+    if (error) {
+      console.error('Erro detalhado no Supabase:', error);
+      throw error;
+    }
+    
+    return (data ? data[0] : null) as JobVacancy;
   },
 
   async uploadJobFile(file: File) {

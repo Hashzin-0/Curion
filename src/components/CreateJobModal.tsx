@@ -63,12 +63,13 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
           toast.success('IA extraiu os dados com sucesso!', { id: toastId });
         } catch (err: any) {
           toast.error('A IA não conseguiu ler o arquivo. Tente preencher manualmente.', { id: toastId });
+        } finally {
+          setIsProcessing(false);
         }
       };
       reader.readAsDataURL(selectedFile);
     } catch (error) {
       toast.error('Erro ao processar arquivo.', { id: toastId });
-    } finally {
       setIsProcessing(false);
     }
   }, []);
@@ -81,7 +82,10 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error('Você precisa estar logado para publicar uma vaga.');
+      return;
+    }
 
     setIsProcessing(true);
     const toastId = toast.loading('Salvando vaga no banco de dados...');
@@ -89,28 +93,44 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
     try {
       let fileUrl = '';
       if (file) {
-        fileUrl = await DatabaseService.uploadJobFile(file);
+        try {
+          fileUrl = await DatabaseService.uploadJobFile(file);
+        } catch (storageErr) {
+          console.warn('Erro no upload de arquivo, prosseguindo sem arquivo:', storageErr);
+        }
       }
+
+      const requirementsArray = formData.requirements
+        .split(',')
+        .map(r => r.trim())
+        .filter(Boolean);
 
       await DatabaseService.createJob({
         user_id: currentUser.id,
         title: formData.title,
         company: formData.company,
         description: formData.description,
-        requirements: formData.requirements.split(',').map(r => r.trim()).filter(Boolean),
+        requirements: requirementsArray,
         location: formData.location,
         salary: formData.salary,
         contact_info: formData.contact_info,
         area_slug: formData.area_slug,
-        file_url: fileUrl
+        file_url: fileUrl || null
       });
 
       toast.success('Vaga publicada e visível para todos!', { id: toastId });
       onRefresh();
       onClose();
+      // Limpa formulário
+      setFormData({
+        title: '', company: '', description: '', requirements: '', 
+        location: '', salary: '', contact_info: '', area_slug: 'vendas'
+      });
+      setFile(null);
+      setFilePreview(null);
     } catch (error: any) {
-      console.error(error);
-      toast.error('Erro ao salvar no Supabase. Verifique as regras de RLS.', { id: toastId });
+      console.error('Erro ao salvar vaga:', error);
+      toast.error(error.message || 'Erro ao salvar no Supabase. Verifique as regras de RLS.', { id: toastId });
     } finally {
       setIsProcessing(false);
     }

@@ -1,4 +1,5 @@
-'use server';
+
+'use client';
 
 /**
  * @fileOverview Cliente utilitário para o OpenRouter configurado para Curion X.
@@ -13,11 +14,14 @@ const getClient = () => {
   if (!apiKey) {
     console.warn('OpenRouter: OPENROUTER_API_KEY não configurada.');
   }
+  
+  // Usando a API moderna para evitar avisos DEP0169
   return new OpenAI({
     apiKey: apiKey || 'placeholder',
     baseURL: 'https://openrouter.ai/api/v1',
+    dangerouslyAllowBrowser: true, // Necessário para chamadas client-side
     defaultHeaders: {
-      'HTTP-Referer': 'https://curionx.vercel.app',
+      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://curionx.vercel.app',
       'X-Title': 'Curion X',
     }
   });
