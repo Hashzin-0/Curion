@@ -1,10 +1,24 @@
-
 /**
  * @fileOverview Camada de serviço isolada para interações com o Supabase.
  * Centraliza toda a lógica de persistência de dados.
  */
 import { supabase } from '../supabase';
 import { User, ProfessionalArea, Experience, Education, Achievement, Certificate, PortfolioItem, AreaSkill } from '../store';
+
+export type JobVacancy = {
+  id: string;
+  user_id: string;
+  title: string;
+  company: string;
+  description: string;
+  requirements: string[];
+  location: string;
+  salary?: string;
+  contact_info: string;
+  area_slug: string;
+  file_url?: string;
+  created_at: string;
+};
 
 export const DatabaseService = {
   // Usuário
@@ -39,11 +53,9 @@ export const DatabaseService = {
 
   // Analytics de Visualizações
   async recordProfileView(userId: string) {
-    // Registra uma visualização de perfil
     const { error } = await supabase
       .from('profile_views')
       .insert([{ user_id: userId, viewed_at: new Date().toISOString() }]);
-    // Não bloqueamos se falhar, apenas logamos
     if (error) console.warn('Falha ao registrar view:', error);
   },
 
@@ -54,6 +66,49 @@ export const DatabaseService = {
       .eq('user_id', userId);
     if (error) throw error;
     return data;
+  },
+
+  // Vagas (Jobs)
+  async fetchJobs() {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as JobVacancy[];
+    } catch (e) {
+      console.warn('Tabela jobs pode não estar criada ainda:', e);
+      return [];
+    }
+  },
+
+  async createJob(job: Omit<JobVacancy, 'id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .insert([job])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as JobVacancy;
+  },
+
+  async uploadJobFile(file: File) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `jobs/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('job-files')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('job-files')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   },
 
   // Áreas
@@ -89,18 +144,6 @@ export const DatabaseService = {
 
   async deleteEducation(id: string) {
     const { error } = await supabase.from('education').delete().eq('id', id);
-    if (error) throw error;
-  },
-
-  // Conquistas
-  async upsertAchievement(ach: Partial<Achievement>) {
-    const { data, error } = await supabase.from('achievements').upsert(ach).select().single();
-    if (error) throw error;
-    return data as Achievement;
-  },
-
-  async deleteAchievement(id: string) {
-    const { error } = await supabase.from('achievements').delete().eq('id', id);
     if (error) throw error;
   },
 

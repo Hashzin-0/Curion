@@ -1,56 +1,52 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, Briefcase, Filter, ArrowRight, Sparkles, MapPin, Star } from 'lucide-react';
-import { useStore } from '@/lib/store';
-import { DatabaseService } from '@/lib/services/database';
+import { Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, Loader2 } from 'lucide-react';
+import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-
-/**
- * @fileOverview Discovery Hub - Central de Exploração de Talentos e Vagas.
- */
+import { CreateJobModal } from '@/components/CreateJobModal';
+import { useStore } from '@/lib/store';
 
 export default function ExplorePage() {
+  const { currentUser } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs'>('candidates');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
+  const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
 
-  // Mock de Vagas para demonstração (Em um sistema real viria do DB)
-  const mockJobs = [
-    { id: '1', title: 'Desenvolvedor React Sênior', company: 'TechFlow', area: 'tecnologia', location: 'Remoto', salary: 'R$ 12k - 15k', match: 98 },
-    { id: '2', title: 'Chef de Cozinha', company: 'Gourmet Bistro', area: 'gastronomia', location: 'São Paulo, SP', salary: 'R$ 6k - 8k', match: 85 },
-    { id: '3', title: 'Analista Administrativo', company: 'Global Corp', area: 'administrativo', location: 'Curitiba, PR', salary: 'R$ 4k - 5k', match: 70 },
-    { id: '4', title: 'Gerente de Vendas', company: 'Retail Pro', area: 'vendas', location: 'Rio de Janeiro, RJ', salary: 'R$ 8k + Comissões', match: 92 },
-  ];
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [profiles, jobs] = await Promise.all([
+        DatabaseService.fetchPublicProfiles(),
+        DatabaseService.fetchJobs()
+      ]);
+      setPublicUsers(profiles || []);
+      setRealJobs(jobs || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadProfiles = async () => {
-      setIsLoading(true);
-      try {
-        const profiles = await DatabaseService.fetchPublicProfiles();
-        setPublicUsers(profiles || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadProfiles();
-  }, []);
+    loadData();
+  }, [loadData]);
 
   const filteredCandidates = publicUsers.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.headline?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredJobs = mockJobs.filter(j => 
+  const filteredJobs = realJobs.filter(j => 
     j.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     j.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -58,7 +54,6 @@ export default function ExplorePage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-12">
-        {/* Header */}
         <header className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
@@ -82,19 +77,24 @@ export default function ExplorePage() {
           </div>
         </header>
 
-        {/* Search Bar */}
-        <div className="relative group max-w-2xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
-          <input 
-            type="text" 
-            placeholder={view === 'candidates' ? "Buscar por nome, cargo ou habilidade..." : "Buscar vagas, empresas ou áreas..."}
-            className="w-full pl-14 pr-6 py-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm outline-none focus:ring-4 focus:ring-blue-500/10 font-bold transition-all text-lg"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="relative group flex-1">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+            <input 
+              type="text" 
+              placeholder={view === 'candidates' ? "Buscar por nome, cargo ou habilidade..." : "Buscar vagas, empresas ou áreas..."}
+              className="w-full pl-14 pr-6 py-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm outline-none focus:ring-4 focus:ring-blue-500/10 font-bold transition-all text-lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {view === 'jobs' && currentUser && (
+            <Button onClick={() => setIsCreateJobOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-16 rounded-3xl">
+              <Plus size={20} /> Publicar Vaga
+            </Button>
+          )}
         </div>
 
-        {/* Content */}
         <AnimatePresence mode="wait">
           {view === 'candidates' ? (
             <motion.div 
@@ -148,48 +148,53 @@ export default function ExplorePage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {filteredJobs.map((job) => {
-                const theme = getTheme(job.area);
-                return (
-                  <div key={job.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group">
-                    <div className="flex items-center gap-6 flex-1">
-                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner" style={{ backgroundColor: theme.hex + '15' }}>
-                        {theme.emoji}
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-3xl" />
+                ))
+              ) : filteredJobs.length > 0 ? (
+                filteredJobs.map((job) => {
+                  const theme = getTheme(job.area_slug);
+                  return (
+                    <div key={job.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group">
+                      <div className="flex items-center gap-6 flex-1">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner" style={{ backgroundColor: theme.hex + '15' }}>
+                          {theme.emoji}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{job.title}</h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            <span className="text-slate-600 dark:text-slate-300">{job.company}</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {job.location}</span>
+                            {job.salary && <span className="text-emerald-500">{job.salary}</span>}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{job.title}</h3>
-                          <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1">
-                            <Sparkles size={10} /> {job.match}% Match
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          <span className="text-slate-600 dark:text-slate-300">{job.company}</span>
-                          <span className="flex items-center gap-1"><MapPin size={12} /> {job.location}</span>
-                          <span className="text-emerald-500">{job.salary}</span>
-                        </div>
+                      <div className="flex items-center gap-4 w-full md:w-auto">
+                        <a href={`https://wa.me/${job.contact_info.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex-1 md:flex-none">
+                           <Button variant="primary" className="w-full px-10">Candidatar-se</Button>
+                        </a>
                       </div>
                     </div>
-                    <Button variant="primary" className="w-full md:w-auto px-10">
-                      Candidatar-se
-                    </Button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Nenhuma vaga encontrada.</p>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Footer info */}
-        <div className="pt-20 text-center">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-white dark:bg-slate-900 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-black uppercase tracking-widest text-slate-500">
-              {publicUsers.length} Talentos online • {mockJobs.length} Vagas disponíveis
-            </span>
-          </div>
-        </div>
       </div>
+
+      <CreateJobModal 
+        isOpen={isCreateJobOpen} 
+        onClose={() => setIsCreateJobOpen(false)} 
+        onRefresh={loadData}
+      />
     </div>
   );
 }
