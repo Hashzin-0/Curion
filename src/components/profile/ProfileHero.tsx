@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles, Mail, Headphones, Zap, MessageSquare, Moon } from 'lucide-react';
+import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles, Mail, Headphones, Zap, MessageSquare, Moon, CreditCard } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User, ProfessionalArea } from '@/lib/store';
@@ -13,6 +13,7 @@ import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
 import { CoverLetterModal } from '@/components/CoverLetterModal';
 import { InterviewSimulatorModal } from '@/components/InterviewSimulatorModal';
+import { DigitalWalletPass } from '@/components/profile/DigitalWalletPass';
 import { AudioBioPlayer } from './AudioBioPlayer';
 import { cn } from '@/lib/utils';
 import { AvatarGlow } from '@/components/shared/AvatarGlow';
@@ -54,6 +55,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
   const [isCoverLetterOpen, setIsCoverLetterOpen] = useState(false);
   const [isInterviewOpen, setIsInterviewOpen] = useState(false);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   const mainArea = areas[0]?.name || "Geral";
 
@@ -129,31 +131,37 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
             )}
           </div>
 
-          {isOwner && (
-            <div className="flex gap-3 mt-8 justify-center md:justify-start flex-wrap">
-              <button onClick={onEdit} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
-                <Pencil className="w-4 h-4" /> Editar Perfil
-              </button>
-              <button onClick={() => setIsInterviewOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-xl">
-                <Headphones className="w-4 h-4" /> Simular Entrevista
-              </button>
-              <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
-                <Sparkles className="w-4 h-4" /> Currículo IA
-              </button>
-              <button onClick={() => setIsCoverLetterOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl">
-                <Mail className="w-4 h-4" /> Carta de Apresentação
-              </button>
-              <Link href="/import" className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
-                <FileUp className="w-4 h-4" /> Importar
-              </Link>
-            </div>
-          )}
+          <div className="flex gap-3 mt-8 justify-center md:justify-start flex-wrap">
+            {isOwner && (
+              <>
+                <button onClick={onEdit} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
+                  <Pencil className="w-4 h-4" /> Editar Perfil
+                </button>
+                <button onClick={() => setIsInterviewOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-xl">
+                  <Headphones className="w-4 h-4" /> Simular Entrevista
+                </button>
+                <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
+                  <Sparkles className="w-4 h-4" /> Currículo IA
+                </button>
+                <button onClick={() => setIsCoverLetterOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl">
+                  <Mail className="w-4 h-4" /> Carta de Apresentação
+                </button>
+                <Link href="/import" className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-xl">
+                  <FileUp className="w-4 h-4" /> Importar
+                </Link>
+              </>
+            )}
+            <button onClick={() => setIsWalletOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all shadow-xl backdrop-blur-md">
+              <CreditCard className="w-4 h-4" /> Identidade Digital
+            </button>
+          </div>
         </div>
       </div>
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
       <CoverLetterModal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} />
       <InterviewSimulatorModal isOpen={isInterviewOpen} onClose={() => setIsInterviewOpen(false)} areaName={mainArea} />
+      <DigitalWalletPass user={user} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} />
     </>
   );
 }
