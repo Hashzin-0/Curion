@@ -20,6 +20,7 @@ import { useQueryState } from 'nuqs';
 import Link from 'next/link';
 import { cn, slugify } from '@/lib/utils';
 import { CardActions } from '@/components/shared/CardActions';
+import { DatabaseService } from '@/lib/services/database';
 
 // Sub-componentes modularizados
 import { ProfileHero } from './profile/ProfileHero';
@@ -102,6 +103,18 @@ export function ThemedProfileLayout(props: Props) {
 
   const toggleExpand = (id: string) => {
     setExpandedExpId(expandedExpId === id ? null : id);
+  };
+
+  const handleTrackArea = (areaName: string) => {
+    if (!props.isOwner) {
+      DatabaseService.recordProfileView(props.user.id, 'view_area', { areaName });
+    }
+  };
+
+  const handleTrackSkill = (skillName: string) => {
+    if (!props.isOwner) {
+      DatabaseService.recordProfileView(props.user.id, 'skill_hover', { skillName });
+    }
   };
 
   return (
@@ -248,7 +261,12 @@ export function ThemedProfileLayout(props: Props) {
                             })}
                           </div>
 
-                          <Link href={`/${props.username}/${areaSlug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: (area.theme_color || theme.hex) + '15', color: area.theme_color || theme.hex }}>
+                          <Link 
+                            href={`/${props.username}/${areaSlug}`} 
+                            onClick={() => handleTrackArea(area.name)}
+                            className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" 
+                            style={{ backgroundColor: (area.theme_color || theme.hex) + '15', color: area.theme_color || theme.hex }}
+                          >
                             Ver Portfólio da Área
                             <ArrowRight className="w-4 h-4" />
                           </Link>
@@ -277,7 +295,11 @@ export function ThemedProfileLayout(props: Props) {
                     const area = props.areas.find(a => a.id === as.area_id);
                     const theme = getTheme(slugify(area?.name || 'default'));
                     return (
-                      <div key={`${as.area_id}-${as.skill_id}`} className="bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3">
+                      <div 
+                        key={`${as.area_id}-${as.skill_id}`} 
+                        onMouseEnter={() => handleTrackSkill(skill?.name || '')}
+                        className="bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3 transition-all hover:scale-105"
+                      >
                         <span className="text-xl">{theme.emoji}</span>
                         <span className="text-xs font-black uppercase text-slate-600 dark:text-slate-300">{skill?.name}</span>
                       </div>

@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { ExperienceItem, EducationCard } from '@/components/shared/ProfileSections';
 import { RichEditor } from '@/components/RichEditor';
+import { DatabaseService } from '@/lib/services/database';
 
 /**
  * @fileOverview Página de currículo específica por área de atuação.
@@ -72,6 +73,11 @@ export default function AreaResume() {
     if (!area || !user) return;
     setExporting(true);
     
+    // Tracking do evento de conversão
+    if (!isOwner) {
+      DatabaseService.recordProfileView(user.id, 'download_pdf', { areaName: area.name });
+    }
+
     const theme = generateSystemResumeTheme(user.name, area.name);
     
     setExportTheme(theme);
@@ -102,7 +108,7 @@ export default function AreaResume() {
           margin: 0, 
           filename: `cv-${areaSlug}.pdf`, 
           jsPDF: { format: [794, 1123], unit: 'px' },
-          html2canvas: { scale: 2, useCORS: true }
+          html2canvas: { scale: 2, useCORS: true, allowTaint: true }
         }).from(element).save();
       } catch (err) {
         toast.error('Erro ao gerar PDF');

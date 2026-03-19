@@ -71,7 +71,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Analytics (Page Views e Eventos)
+  // Analytics (V2: Suporte a múltiplos eventos e metadados)
   async recordProfileView(userId: string, eventType: string = 'page_view', metadata: any = {}) {
     if (!userId) return;
     
@@ -80,8 +80,19 @@ export const DatabaseService = {
       ...metadata,
       userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
       referrer: typeof document !== 'undefined' ? document.referrer : 'direct',
-      screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown'
+      screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown',
+      language: typeof window !== 'undefined' ? window.navigator.language : 'unknown'
     };
+
+    // Gera ou recupera um ID de sessão temporário por visita
+    let sessionId = '';
+    if (typeof window !== 'undefined') {
+      sessionId = sessionStorage.getItem('curion_session_id') || '';
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem('curion_session_id', sessionId);
+      }
+    }
 
     const { error } = await supabase
       .from('page_views')
@@ -89,7 +100,8 @@ export const DatabaseService = {
         user_id: userId, 
         viewed_at: new Date().toISOString(),
         event_type: eventType,
-        metadata: enrichedMetadata
+        metadata: enrichedMetadata,
+        session_id: sessionId || null
       }]);
     if (error) console.warn('DatabaseService: Erro ao gravar evento:', error.message);
   },
@@ -98,7 +110,8 @@ export const DatabaseService = {
     const { data, error } = await supabase
       .from('page_views')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .order('viewed_at', { ascending: false });
     if (error) throw error;
     return data;
   },
