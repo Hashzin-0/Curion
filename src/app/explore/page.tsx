@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -5,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
   Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText,
-  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, MessageSquare
+  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, Flame, TrendingUp
 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
@@ -18,7 +19,7 @@ import { slugify, calcDuration, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA, Preview Rápido e Status de Disponibilidade.
+ * @fileOverview Página de Exploração com Match IA, Preview Rápido, Filtros Inteligentes e Trending Skills.
  */
 
 function StatusIndicator({ status }: { status?: string }) {
@@ -174,6 +175,24 @@ export default function ExplorePage() {
     loadData();
   }, [loadData]);
 
+  // Funcionalidade 6: Trending Skills Logic
+  const trendingSkills = useMemo(() => {
+    const counts: Record<string, number> = {};
+    realJobs.forEach(job => {
+      job.requirements?.forEach(req => {
+        // Limpeza básica e normalização
+        const normalized = req.trim().toLowerCase();
+        if (normalized.length > 2 && normalized.length < 25) {
+          counts[normalized] = (counts[normalized] || 0) + 1;
+        }
+      });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name]) => name);
+  }, [realJobs]);
+
   const filteredCandidates = publicUsers.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.headline?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -274,7 +293,7 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {view === 'jobs' && (
+          <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-3 items-center">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mr-2">Filtrar por:</span>
               <div className="flex flex-wrap gap-2">
@@ -288,14 +307,29 @@ export default function ExplorePage() {
                 <FilterPill label="PJ" active={activeRegime === 'pj'} onClick={() => setActiveRegime(activeRegime === 'pj' ? null : 'pj')} />
                 <FilterPill label="Estágio" active={activeRegime === 'estagio'} onClick={() => setActiveRegime(activeRegime === 'estagio' ? null : 'estagio')} />
               </div>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-2 hidden md:block" />
-              <div className="flex flex-wrap gap-2">
-                <FilterPill label="Startup" active={activeVibe === 'startup'} onClick={() => setActiveVibe(activeVibe === 'startup' ? null : 'startup')} icon={Zap} />
-                <FilterPill label="Corp" active={activeVibe === 'corporativo'} onClick={() => setActiveVibe(activeVibe === 'corporativo' ? null : 'corporativo')} icon={Building2} />
-                <FilterPill label="Agência" active={activeVibe === 'agencia'} onClick={() => setActiveVibe(activeVibe === 'agencia' ? null : 'agencia')} icon={Coffee} />
-              </div>
             </div>
-          )}
+
+            {/* Sugestão 6: Trending Skills Section */}
+            {trendingSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center animate-in fade-in slide-in-from-left-2 duration-500">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 rounded-xl border border-orange-100 dark:border-orange-900/50">
+                  <Flame size={12} className="text-orange-500 animate-pulse" />
+                  <span className="text-[9px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-widest">Em Alta:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {trendingSkills.map((skill, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setSearchQuery(skill)}
+                      className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all"
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
