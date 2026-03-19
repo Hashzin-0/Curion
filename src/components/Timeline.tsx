@@ -244,7 +244,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
             </motion.form>
           </motion.div>
         )}
-      </AnPresence>
+      </AnimatePresence>
 
       <AnimatePresence>
         {deletingItem && (
