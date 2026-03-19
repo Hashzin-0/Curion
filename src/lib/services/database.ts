@@ -49,9 +49,20 @@ export const DatabaseService = {
   },
 
   async fetchPublicProfiles() {
+    // Busca perfis incluindo áreas e habilidades (via area_skills)
+    // Usamos uma query mais profunda para pegar os nomes das skills e contagem de endossos
     const { data, error } = await supabase
       .from('users')
-      .select('*, professional_areas(*)');
+      .select(`
+        *,
+        professional_areas(
+          *,
+          area_skills(
+            endorsements_count,
+            skills(name)
+          )
+        )
+      `);
     if (error) throw error;
     return data;
   },
@@ -78,7 +89,6 @@ export const DatabaseService = {
   async recordProfileView(userId: string, eventType: string = 'page_view', metadata: any = {}) {
     if (!userId) return;
     
-    // Captura metadados básicos automaticamente se estiver no browser
     const enrichedMetadata = {
       ...metadata,
       userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
@@ -87,7 +97,6 @@ export const DatabaseService = {
       language: typeof window !== 'undefined' ? window.navigator.language : 'unknown'
     };
 
-    // Gera ou recupera um ID de sessão temporário por visita
     let sessionId = '';
     if (typeof window !== 'undefined') {
       sessionId = sessionStorage.getItem('curion_session_id') || '';

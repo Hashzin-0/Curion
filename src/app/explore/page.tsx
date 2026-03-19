@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
   Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText,
-  Globe, Laptop, Building2, Coffee, Zap
+  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp
 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
@@ -19,7 +19,7 @@ import { slugify, calcDuration } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA, Preview Rápido e Filtros Inteligentes.
+ * @fileOverview Página de Exploração com Match IA, Preview Rápido e Endossos Visíveis.
  */
 
 function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, currentUser: any, profileContext: any }) {
@@ -112,12 +112,10 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
   
-  // Filtros Inteligentes
   const [activeRegime, setActiveRegime] = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [activeVibe, setActiveVibe] = useState<string | null>(null);
 
-  // Estado para o Preview Rápido
   const [previewItem, setPreviewItem] = useState<{ type: 'candidate' | 'job', data: any } | null>(null);
   const previewTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -192,6 +190,25 @@ export default function ExplorePage() {
       {label}
     </button>
   );
+
+  // Extrai as Top 3 skills baseadas em endossos para exibir no card
+  const getTopSkills = (user: any) => {
+    const allUserSkills: any[] = [];
+    user.professional_areas?.forEach((area: any) => {
+      area.area_skills?.forEach((as: any) => {
+        if (as.skills?.name) {
+          allUserSkills.push({
+            name: as.skills.name,
+            endorsements: as.endorsements_count || 0
+          });
+        }
+      });
+    });
+    
+    return allUserSkills
+      .sort((a, b) => b.endorsements - a.endorsements)
+      .slice(0, 3);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 relative">
@@ -275,43 +292,68 @@ export default function ExplorePage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-64 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-[2.5rem]" />
                 ))
-              ) : filteredCandidates.map((user) => (
-                <Link 
-                  key={user.id} 
-                  href={`/${user.username}`} 
-                  onMouseEnter={() => handleMouseEnter('candidate', user)}
-                  onMouseLeave={handleMouseLeave}
-                  className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
-                >
-                  <div className="p-8 flex-1">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800">
-                        <Image src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
+              ) : filteredCandidates.map((user) => {
+                const topSkills = getTopSkills(user);
+                return (
+                  <Link 
+                    key={user.id} 
+                    href={`/${user.username}`} 
+                    onMouseEnter={() => handleMouseEnter('candidate', user)}
+                    onMouseLeave={handleMouseLeave}
+                    className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
+                  >
+                    <div className="p-8 flex-1">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800 shadow-sm">
+                          <Image src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{user.name}</h3>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user.headline || 'Profissional'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{user.name}</h3>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user.headline || 'Profissional'}</p>
+
+                      {/* Top Skills com Endossos */}
+                      {topSkills.length > 0 && (
+                        <div className="mb-6 space-y-2">
+                          <div className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest">
+                            <Star size={10} className="text-yellow-500" /> Competências em Destaque
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {topSkills.map((skill, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg">
+                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase">{skill.name}</span>
+                                {skill.endorsements > 0 && (
+                                  <span className="flex items-center gap-0.5 text-[9px] font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-1 rounded">
+                                    <ThumbsUp size={8} /> {skill.endorsements}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {user.professional_areas?.slice(0, 2).map((area: any) => {
+                          const theme = getTheme(slugify(area.name));
+                          return (
+                            <span key={area.id} className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
+                              {theme.emoji} {area.name}
+                            </span>
+                          );
+                        })}
                       </div>
+                      <p className="text-xs text-slate-500 line-clamp-2 italic">"{user.summary?.replace(/<[^>]*>/g, '').slice(0, 100)}..."</p>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {user.professional_areas?.slice(0, 2).map((area: any) => {
-                        const theme = getTheme(slugify(area.name));
-                        return (
-                          <span key={area.id} className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
-                            {theme.emoji} {area.name}
-                          </span>
-                        );
-                      })}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-2 group-hover:gap-4 transition-all">
+                        Ver Perfil Completo <ArrowRight size={14} />
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-2 italic">"{user.summary?.replace(/<[^>]*>/g, '').slice(0, 100)}..."</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-2 group-hover:gap-4 transition-all">
-                      Ver Perfil Completo <ArrowRight size={14} />
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </motion.div>
           ) : (
             <motion.div 
