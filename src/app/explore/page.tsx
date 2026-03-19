@@ -1,9 +1,12 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, Loader2, BrainCircuit, Target, CheckCircle2 } from 'lucide-react';
+import { 
+  Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
+  Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText 
+} from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
 import Link from 'next/link';
@@ -15,7 +18,7 @@ import { slugify, calcDuration } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA V1.
+ * @fileOverview Página de Exploração com Match IA e Preview Rápido (Hover Card).
  */
 
 function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, currentUser: any, profileContext: any }) {
@@ -100,13 +103,17 @@ function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, 
 }
 
 export default function ExplorePage() {
-  const { currentUser, experiences, skills, areaSkills, education, areas } = useStore();
+  const { currentUser, experiences, skills, areaSkills, areas } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs'>('candidates');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
+  
+  // Estado para o Preview Rápido
+  const [previewItem, setPreviewItem] = useState<{ type: 'candidate' | 'job', data: any } | null>(null);
+  const previewTimer = useRef<NodeJS.Timeout | null>(null);
 
   const profileContext = useMemo(() => {
     if (!currentUser) return null;
@@ -153,8 +160,20 @@ export default function ExplorePage() {
     j.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleMouseEnter = (type: 'candidate' | 'job', data: any) => {
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    previewTimer.current = setTimeout(() => {
+      setPreviewItem({ type, data });
+    }, 400); // 400ms delay para evitar popups indesejados ao apenas passar o mouse
+  };
+
+  const handleMouseLeave = () => {
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    setPreviewItem(null);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 relative">
       <div className="max-w-6xl mx-auto space-y-12">
         <header className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
@@ -165,13 +184,13 @@ export default function ExplorePage() {
           </div>
           <div className="flex bg-white dark:bg-slate-900 p-1 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
             <button 
-              onClick={() => setView('candidates')}
+              onClick={() => { setView('candidates'); setPreviewItem(null); }}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${view === 'candidates' ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg' : 'text-slate-400'}`}
             >
               <Users size={16} /> Candidatos
             </button>
             <button 
-              onClick={() => setView('jobs')}
+              onClick={() => { setView('jobs'); setPreviewItem(null); }}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${view === 'jobs' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}
             >
               <Briefcase size={16} /> Vagas
@@ -211,7 +230,13 @@ export default function ExplorePage() {
                   <div key={i} className="h-64 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-[2.5rem]" />
                 ))
               ) : filteredCandidates.map((user) => (
-                <Link key={user.id} href={`/${user.username}`} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col">
+                <Link 
+                  key={user.id} 
+                  href={`/${user.username}`} 
+                  onMouseEnter={() => handleMouseEnter('candidate', user)}
+                  onMouseLeave={handleMouseLeave}
+                  className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden flex flex-col"
+                >
                   <div className="p-8 flex-1">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800">
@@ -258,7 +283,12 @@ export default function ExplorePage() {
                 filteredJobs.map((job) => {
                   const theme = getTheme(job.area_slug || 'default');
                   return (
-                    <div key={job.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group">
+                    <div 
+                      key={job.id} 
+                      onMouseEnter={() => handleMouseEnter('job', job)}
+                      onMouseLeave={handleMouseLeave}
+                      className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group"
+                    >
                       <div className="flex items-center gap-6 flex-1">
                         <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner shrink-0" style={{ backgroundColor: theme.hex + '15' }}>
                           {theme.emoji}
@@ -294,6 +324,94 @@ export default function ExplorePage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Preview Rápido (Hover Card) */}
+      <AnimatePresence>
+        {previewItem && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, x: 20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.9, x: 20 }}
+            className="fixed bottom-10 right-10 z-[100] w-full max-w-sm hidden lg:block"
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="bg-slate-900 dark:bg-white p-6 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <Info className="text-blue-500" size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white dark:text-slate-900">Preview Rápido</span>
+                </div>
+                <button onClick={handleMouseLeave} className="text-white/50 dark:text-slate-400 hover:text-white dark:hover:text-slate-900 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                {previewItem.type === 'candidate' ? (
+                  <>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-14 h-14 rounded-2xl overflow-hidden shadow-md">
+                        <Image src={previewItem.data.avatar_path || `https://picsum.photos/seed/${previewItem.data.id}/100/100`} alt="" fill className="object-cover" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{previewItem.data.name}</h4>
+                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{previewItem.data.headline || 'Profissional'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400">
+                        <FileText size={12} /> Resumo
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-4 italic">
+                        "{previewItem.data.summary?.replace(/<[^>]*>/g, '') || 'Sem resumo disponível.'}"
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {previewItem.data.professional_areas?.map((a: any) => (
+                        <span key={a.id} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[9px] font-black uppercase text-slate-500">
+                          {a.name}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">{previewItem.data.title}</h4>
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{previewItem.data.company}</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400">
+                          <FileText size={12} /> Descrição da Vaga
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-5">
+                          {previewItem.data.description || 'Sem descrição detalhada.'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400">
+                          <Star size={12} /> Requisitos Chave
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {previewItem.data.requirements?.slice(0, 5).map((req: string, i: number) => (
+                            <span key={i} className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[9px] font-bold uppercase">
+                              {req}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-[9px] font-black text-slate-400 uppercase text-center tracking-[0.2em]">Pressione para ver detalhes completos</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <CreateJobModal 
         isOpen={isCreateJobOpen} 
