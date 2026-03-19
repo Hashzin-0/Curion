@@ -63,7 +63,7 @@ export function Hero() {
             <Users className="w-5 h-5" />
           </Button>
         </Link>
-        <Link href="/kardec">
+        <Link href="/ana_dev">
           <Button variant="outline" className="w-full sm:w-auto">
             {LANDING_MESSAGES.main.cta.example}
             <FileText className="w-5 h-5" />

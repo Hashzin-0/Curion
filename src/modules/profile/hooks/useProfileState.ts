@@ -24,9 +24,11 @@ export function useProfileState() {
 
   useEffect(() => {
     // Guarda de Rota Refinada:
-    // Só redirecionamos se o sistema de auth estiver pronto,
-    // o carregamento inicial de dados terminou e EXPLICITAMENTE não temos um usuário.
+    // Só redirecionamos para a home se a autenticação foi resolvida (isAuthReady),
+    // o carregamento de dados terminou (isLoading === false) 
+    // e REALMENTE não temos um usuário logado.
     if (store.isAuthReady && !store.isLoading && !store.currentUser) {
+      console.log('useProfileState: Usuário não detectado, redirecionando...');
       router.push('/');
     }
   }, [store.currentUser, store.isAuthReady, store.isLoading, router]);

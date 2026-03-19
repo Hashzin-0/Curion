@@ -8,16 +8,23 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { AI_CONFIG } from './config';
+import { AI_CONFIG } from '@/config/ai';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY || '',
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://career-canvas.vercel.app',
-    'X-Title': 'CareerCanvas',
+// Instância do cliente com verificação de chave
+const getClient = () => {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.warn('OpenRouter: OPENROUTER_API_KEY não configurada.');
   }
-});
+  return new OpenAI({
+    apiKey: apiKey || 'placeholder',
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://career-canvas.studio',
+      'X-Title': 'CareerCanvas',
+    }
+  });
+};
 
 export async function askAI<T>(params: {
   system?: string;
@@ -25,14 +32,12 @@ export async function askAI<T>(params: {
   schema?: z.ZodType<T>;
   imageUri?: string;
 }): Promise<T> {
-  const cleanModelName = (id: string) => id.replace(/^openai\//, '').replace(/^googleai\//, '');
+  const client = getClient();
+  const primaryModel = process.env.NEXT_PUBLIC_AI_MODEL || 'stepfun/step-3.5-flash:free';
   
   const models = params.imageUri 
     ? ['google/gemini-flash-1.5', 'openai/gpt-4o-mini']
-    : [
-        cleanModelName(AI_CONFIG.primaryModel),
-        ...AI_CONFIG.fallbackModels.map(cleanModelName)
-      ];
+    : [primaryModel, 'google/gemini-2.0-flash-001', 'openai/gpt-4o-mini'];
   
   let lastError = null;
   const jsonSchema = params.schema ? zodToJsonSchema(params.schema) : null;
@@ -87,5 +92,5 @@ export async function askAI<T>(params: {
     }
   }
 
-  throw lastError || new Error('Todos os modelos falharam.');
+  throw lastError || new Error('Todos os modelos de IA falharam.');
 }

@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
           await handleSync(session?.user);
           
-          if ((pathname === '/' || pathname === '/login')) {
+          if (pathname === '/' || pathname === '/login') {
             router.push('/profile');
           }
         } else if (event === 'SIGNED_OUT') {
