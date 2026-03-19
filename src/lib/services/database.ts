@@ -183,19 +183,7 @@ export const DatabaseService = {
       .from('uploads')
       .upload(filePath, file);
 
-    if (uploadError) {
-      // Se o bucket 'uploads' não existir, tenta o fallback 'job-files'
-      const { error: fallbackError } = await supabase.storage
-        .from('job-files')
-        .upload(filePath, file);
-      
-      if (fallbackError) throw fallbackError;
-      
-      const { data } = supabase.storage
-        .from('job-files')
-        .getPublicUrl(filePath);
-      return data.publicUrl;
-    }
+    if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
       .from('uploads')

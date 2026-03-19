@@ -1,9 +1,11 @@
+
 'use server';
 
 /**
  * @fileOverview Fluxo de IA para conversão de texto em áudio usando arquitetura de fallbacks locais.
  * Tenta sequencialmente: ESPnet -> Kokoro -> Piper.
  * Requer que os binários/scripts estejam disponíveis no ambiente do servidor.
+ * Realiza a conversão de WAV para MP3 para otimização de espaço.
  */
 
 import { exec } from 'child_process';
