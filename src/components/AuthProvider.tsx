@@ -25,11 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         syncInProgress.current = true;
         try {
+          // Mapeia avatar_url para avatar_path conforme schema public.users
           await syncUserWithDatabase({
             id: user.id,
             username: user.email?.split('@')[0] || 'user',
             name: user.user_metadata?.full_name || user.email || 'Usuário',
-            photo_url: user.user_metadata?.avatar_url || `https://picsum.photos/seed/${user.id}/200/200`,
+            avatar_path: user.user_metadata?.avatar_url || `https://picsum.photos/seed/${user.id}/200/200`,
             email: user.email,
           });
         } catch (e) {

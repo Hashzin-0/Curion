@@ -7,7 +7,18 @@ import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
 import { detectAreaFromRole, getRelevantAreaSlugsForSkill } from './utils';
 
-export type User = { id: string; username: string; name: string; photo_url: string; headline: string; summary: string; location: string; email?: string; phone?: string; };
+export type User = { 
+  id: string; 
+  username: string; 
+  name: string; 
+  avatar_path: string; 
+  headline: string; 
+  summary: string; 
+  location: string; 
+  email?: string; 
+  phone?: string; 
+};
+
 export type ProfessionalArea = { id: string; user_id: string; name: string; slug: string; icon: string; theme_color: string; };
 export type Experience = { id: string; user_id: string; area_id: string; company_name: string; company_logo: string; role: string; start_date: string; end_date: string | null; description: string; };
 export type Skill = { id: string; name: string; icon: string; };
@@ -86,7 +97,8 @@ export const useStore = create<AppState>()(
       syncUserWithDatabase: async (userData) => {
         try {
           const data = await DatabaseService.syncUser(userData);
-          set({ currentUser: data });
+          // O email e telefone vêm da sessão auth, não necessariamente do banco publico
+          set({ currentUser: { ...data, email: userData.email, phone: userData.phone } });
           return data;
         } catch (error) {
           console.error('Store: syncUserWithDatabase failed', error);
@@ -98,7 +110,7 @@ export const useStore = create<AppState>()(
         const { currentUser } = get();
         if (!currentUser) return;
         const data = await DatabaseService.updateUser(currentUser.id, userData);
-        set({ currentUser: data });
+        set({ currentUser: { ...currentUser, ...data } });
       },
 
       fetchData: async () => {

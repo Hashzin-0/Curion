@@ -48,7 +48,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               }}
             >
               <Image
-                src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
+                src={user.avatar_path || `https://picsum.photos/seed/${user.id}/200/200`}
                 alt={user.name || 'Profile'}
                 fill
                 className="object-cover"

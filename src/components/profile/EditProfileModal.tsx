@@ -38,8 +38,8 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
         <form onSubmit={(e) => {e.preventDefault(); onSave(editedProfile, onClose);}} className="space-y-6">
           <div {...getRootProps()} className={cn("w-full border-2 border-dashed rounded-[1.5rem] p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all", isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200')}>
             <input {...getInputProps()} />
-            {editedProfile.photo_url ? (
-              <img src={editedProfile.photo_url} alt="profile" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
+            {editedProfile.avatar_path ? (
+              <img src={editedProfile.avatar_path} alt="profile" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
             ) : (
               <LucideIcons.Camera size={40} className="text-slate-400" />
             )}
@@ -75,7 +75,7 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
           image={rawImage} 
           isOpen={isCropOpen} 
           onClose={() => { setIsCropOpen(false); setRawImage(null); }} 
-          onCropComplete={(cropped) => setEditedProfile({ ...editedProfile, photo_url: cropped })} 
+          onCropComplete={(cropped) => setEditedProfile({ ...editedProfile, avatar_path: cropped })} 
         />
       )}
     </>

@@ -20,11 +20,12 @@ export type JobVacancy = {
 };
 
 export const DatabaseService = {
-  // Usuário
+  // Usuário - Sincroniza com base no schema avatar_path
   async syncUser(userData: Partial<User>) {
+    const { id, username, name, headline, summary, avatar_path, location } = userData;
     const { data, error } = await supabase
       .from('users')
-      .upsert(userData)
+      .upsert({ id, username, name, headline, summary, avatar_path, location })
       .select()
       .single();
     if (error) throw error;
@@ -32,9 +33,10 @@ export const DatabaseService = {
   },
 
   async updateUser(userId: string, userData: Partial<User>) {
+    const { username, name, headline, summary, avatar_path, location } = userData;
     const { data, error } = await supabase
       .from('users')
-      .update(userData)
+      .update({ username, name, headline, summary, avatar_path, location })
       .eq('id', userId)
       .select()
       .single();
