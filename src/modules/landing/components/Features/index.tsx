@@ -1,10 +1,11 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, FileText, QrCode } from 'lucide-react';
 import { LANDING_MESSAGES } from '@/lib/constants/messages/landing';
 
-const ICONS: Record<string, JSX.Element> = {
+const ICONS: Record<string, React.ReactNode> = {
   "Múltiplas Áreas": <Briefcase className="w-8 h-8" />,
   "Exportação PDF": <FileText className="w-8 h-8" />,
   "QR Code Integrado": <QrCode className="w-8 h-8" />,
