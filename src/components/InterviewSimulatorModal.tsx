@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Mic, Send, Loader2, Volume2, VolumeX, User, Bot, PlayCircle, Square, Sparkles } from 'lucide-react';
 import { simulateInterview } from '@/ai/flows/interview-simulation-flow';
 import { useStore } from '@/lib/store';
+import { DatabaseService } from '@/lib/services/database';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -86,13 +88,17 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-          const base64Audio = reader.result as string;
-          await sendAudioMessage(base64Audio);
-        };
-        stream.getTracks().forEach(track => track.stop());
+        setIsLoading(true);
+        try {
+          // Upload direto para o Storage para evitar limite de payload via Base64
+          const publicUrl = await DatabaseService.uploadFile(audioBlob, 'interviews', 'wav');
+          await sendAudioMessage(publicUrl);
+        } catch (err) {
+          toast.error('Falha ao processar áudio.');
+          setIsLoading(false);
+        } finally {
+          stream.getTracks().forEach(track => track.stop());
+        }
       };
 
       mediaRecorder.start();
@@ -109,10 +115,9 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
     }
   };
 
-  const sendAudioMessage = async (base64Audio: string) => {
-    if (!currentUser || isLoading) return;
+  const sendAudioMessage = async (audioUrl: string) => {
+    if (!currentUser) return;
 
-    setIsLoading(true);
     const newMessages = [...messages, { role: 'user', content: '🎤 Resposta em áudio...', isAudioInput: true } as Message];
     setMessages(newMessages);
 
@@ -120,7 +125,7 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
       const result = await simulateInterview({
         areaName,
         userName: currentUser.name,
-        userAudio: base64Audio,
+        userAudio: audioUrl, // Agora enviamos a URL pública do Storage
         history: messages.map(m => ({ role: m.role, content: m.content })),
       });
 
@@ -167,7 +172,7 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
         <div className="bg-blue-600/10 p-3 flex items-center justify-between border-b dark:border-slate-800">
            <div className="flex items-center gap-2">
              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-             <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">IA Multimodal Ativa</span>
+             <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">IA Multimodal Ativa (Storage Mode)</span>
            </div>
            <button onClick={() => setIsMuted(!isMuted)} className="text-slate-500 hover:text-blue-600 transition-colors">
              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -188,7 +193,7 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
                     {msg.role === 'user' ? <User size={20} className="text-white" /> : <Bot size={20} className="text-white" />}
                   </div>
                   <div className={`p-5 rounded-3xl text-sm font-medium shadow-sm relative ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-700'}`}>
-                    {msg.isAudioInput && <div className="flex items-center gap-2 mb-2 text-[10px] font-black uppercase opacity-70"><Mic size={10} /> Áudio Enviado</div>}
+                    {msg.isAudioInput && <div className="flex items-center gap-2 mb-2 text-[10px] font-black uppercase opacity-70"><Mic size={10} /> Áudio Processado</div>}
                     <p className="leading-relaxed">{msg.content}</p>
                     {msg.audio && (
                       <button 
@@ -207,7 +212,7 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
             <div className="flex justify-start">
               <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-3xl rounded-tl-none flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest animate-pulse">IA Processando Áudio...</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest animate-pulse">Sincronizando áudio com IA...</span>
               </div>
             </div>
           )}
@@ -241,7 +246,7 @@ export function InterviewSimulatorModal({ isOpen, onClose, areaName }: Props) {
           <div className="flex justify-center mt-4">
              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                <Sparkles size={12} className="text-blue-500" />
-               Segure o microfone para responder por voz
+               O áudio é processado via Storage para maior estabilidade
              </p>
           </div>
         </div>

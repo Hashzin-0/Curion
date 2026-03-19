@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -11,6 +12,7 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { parseResumeText } from '@/ai/flows/parse-resume-text-flow';
 import { useStore } from '@/lib/store';
+import { DatabaseService } from '@/lib/services/database';
 import Link from 'next/link';
 import * as pdfjs from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
@@ -56,6 +58,7 @@ export default function ImportPage() {
     try {
       let textToParse = rawText;
       if (inputMode === 'file' && file) {
+        // Para arquivos muito grandes, podemos extrair texto localmente ou usar storage
         textToParse = await extractText(file);
       }
 

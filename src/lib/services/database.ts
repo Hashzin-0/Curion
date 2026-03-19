@@ -59,7 +59,6 @@ export const DatabaseService = {
   },
 
   async fetchPublicProfiles() {
-    // Busca perfis incluindo áreas e habilidades (via area_skills)
     const { data, error } = await supabase
       .from('users')
       .select(`
@@ -94,7 +93,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Analytics (V2: Suporte a múltiplos eventos e metadados)
+  // Analytics
   async recordProfileView(userId: string, eventType: string = 'page_view', metadata: any = {}) {
     if (!userId) return;
     
@@ -164,25 +163,45 @@ export const DatabaseService = {
     return (data ? data[0] : null) as JobVacancy;
   },
 
-  async uploadJobFile(file: File) {
-    const fileExt = file.name.split('.').pop();
+  /**
+   * Faz upload genérico de arquivos para o storage para evitar envio de base64 via server actions.
+   */
+  async uploadFile(file: File | Blob, folder: string = 'general', extension: string = 'bin') {
+    const name = file instanceof File ? file.name : `media-${Date.now()}.${extension}`;
+    const fileExt = name.split('.').pop() || extension;
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `jobs/${fileName}`;
+    const filePath = `${folder}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('job-files')
+      .from('uploads')
       .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      // Se o bucket 'uploads' não existir, tenta o fallback 'job-files'
+      const { error: fallbackError } = await supabase.storage
+        .from('job-files')
+        .upload(filePath, file);
+      
+      if (fallbackError) throw fallbackError;
+      
+      const { data } = supabase.storage
+        .from('job-files')
+        .getPublicUrl(filePath);
+      return data.publicUrl;
+    }
 
     const { data } = supabase.storage
-      .from('job-files')
+      .from('uploads')
       .getPublicUrl(filePath);
 
     return data.publicUrl;
   },
 
-  // Áreas Profissionais (Tabela professional_areas)
+  async uploadJobFile(file: File) {
+    return this.uploadFile(file, 'jobs');
+  },
+
+  // Áreas Profissionais
   async upsertArea(area: Partial<ProfessionalArea>) {
     const { data, error } = await supabase.from('professional_areas').upsert(area).select().single();
     if (error) throw error;
@@ -194,7 +213,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Experiências (Tabela experiences)
+  // Experiências
   async upsertExperience(exp: Partial<Experience>) {
     const { data, error } = await supabase.from('experiences').upsert(exp).select().single();
     if (error) throw error;
@@ -206,7 +225,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Educação (Tabela education)
+  // Educação
   async upsertEducation(edu: Partial<Education>) {
     const { data, error } = await supabase.from('education').upsert(edu).select().single();
     if (error) throw error;
@@ -218,7 +237,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Portfólio (Tabela portfolio_items)
+  // Portfólio
   async upsertPortfolioItem(item: Partial<PortfolioItem>) {
     const { data, error } = await supabase.from('portfolio_items').upsert(item).select().single();
     if (error) throw error;
@@ -230,7 +249,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Projetos (Tabela projects)
+  // Projetos
   async upsertProject(proj: Partial<Project>) {
     const { data, error } = await supabase.from('projects').upsert(proj).select().single();
     if (error) throw error;
@@ -242,7 +261,7 @@ export const DatabaseService = {
     if (error) throw error;
   },
 
-  // Habilidades (Tabelas skills e area_skills)
+  // Habilidades
   async addAreaSkill(as: AreaSkill) {
     const { error } = await supabase.from('area_skills').insert([as]);
     if (error) throw error;

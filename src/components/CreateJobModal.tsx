@@ -14,6 +14,7 @@ import { Button } from './ui/Button';
 
 /**
  * @fileOverview Modal de criação de vaga com suporte a extração automática via IA e Categorização Inteligente.
+ * Utiliza upload direto para o storage para evitar erros de Payload Large.
  */
 
 export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean; onClose: () => void; onRefresh: () => void }) {
@@ -45,35 +46,29 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
     setFilePreview(preview);
     
     setIsProcessing(true);
-    const toastId = toast.loading('IA analisando o anúncio...');
+    const toastId = toast.loading('IA analisando o anúncio via link seguro...');
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUri = reader.result as string;
-        try {
-          const result = await parseJobFile(dataUri);
-          setFormData(prev => ({
-            ...prev,
-            title: result.title || '',
-            company: result.company || '',
-            description: result.description || '',
-            requirements: result.requirements?.join(', ') || '',
-            location: result.location || '',
-            salary: result.salary || '',
-            contact_info: result.contactInfo || '',
-            area_slug: result.areaSlug || 'vendas'
-          }));
-          toast.success('IA extraiu os dados básicos!', { id: toastId });
-        } catch (err: any) {
-          toast.error('IA não leu o arquivo. Preencha manualmente.', { id: toastId });
-        } finally {
-          setIsProcessing(false);
-        }
-      };
-      reader.readAsDataURL(selectedFile);
-    } catch (error) {
-      toast.error('Erro ao processar arquivo.', { id: toastId });
+      // Estratégia de Upload Direto para evitar Base64 Large payloads
+      const publicUrl = await DatabaseService.uploadFile(selectedFile, 'temp-analysis');
+      
+      const result = await parseJobFile(publicUrl);
+      setFormData(prev => ({
+        ...prev,
+        title: result.title || '',
+        company: result.company || '',
+        description: result.description || '',
+        requirements: result.requirements?.join(', ') || '',
+        location: result.location || '',
+        salary: result.salary || '',
+        contact_info: result.contactInfo || '',
+        area_slug: result.areaSlug || 'vendas'
+      }));
+      toast.success('IA extraiu os dados básicos!', { id: toastId });
+    } catch (err: any) {
+      console.error('Falha na extração IA:', err);
+      toast.error('Não conseguimos ler os dados automaticamente. Por favor, preencha manualmente.', { id: toastId });
+    } finally {
       setIsProcessing(false);
     }
   }, []);
@@ -97,11 +92,7 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
     try {
       let fileUrl = '';
       if (file) {
-        try {
-          fileUrl = await DatabaseService.uploadJobFile(file);
-        } catch (storageErr) {
-          console.warn('Erro no upload, prosseguindo sem arquivo:', storageErr);
-        }
+        fileUrl = await DatabaseService.uploadJobFile(file);
       }
 
       const requirementsArray = formData.requirements
