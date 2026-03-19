@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
   Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText,
-  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, Flame, TrendingUp
+  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, Flame, TrendingUp, Send
 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
@@ -19,7 +19,7 @@ import { slugify, calcDuration, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA, Preview Rápido, Filtros Inteligentes e Trending Skills.
+ * @fileOverview Página de Exploração com Match IA, Preview Rápido, Filtros Inteligentes, Trending Skills e Quick Apply.
  */
 
 function StatusIndicator({ status }: { status?: string }) {
@@ -131,6 +131,7 @@ export default function ExplorePage() {
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isApplying, setIsApplying] = useState<string | null>(null);
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
   
   const [activeRegime, setActiveRegime] = useState<string | null>(null);
@@ -180,7 +181,6 @@ export default function ExplorePage() {
     const counts: Record<string, number> = {};
     realJobs.forEach(job => {
       job.requirements?.forEach(req => {
-        // Limpeza básica e normalização
         const normalized = req.trim().toLowerCase();
         if (normalized.length > 2 && normalized.length < 25) {
           counts[normalized] = (counts[normalized] || 0) + 1;
@@ -218,6 +218,38 @@ export default function ExplorePage() {
   const handleMouseLeave = () => {
     if (previewTimer.current) clearTimeout(previewTimer.current);
     setPreviewItem(null);
+  };
+
+  // Funcionalidade 7: Quick Apply Logic
+  const handleQuickApply = async (job: JobVacancy) => {
+    if (!currentUser) {
+      toast.error('Faça login para se candidatar com um clique!');
+      return;
+    }
+
+    setIsApplying(job.id);
+    
+    // Grava conversão
+    await DatabaseService.recordProfileView(currentUser.id, 'click_apply', { jobId: job.id, jobTitle: job.title });
+
+    const profileUrl = `${window.location.origin}/${currentUser.username}`;
+    const message = encodeURIComponent(
+      `Olá! Vi sua vaga de "${job.title}" no Curion X e gostaria de me candidatar. ` +
+      `Aqui está meu portfólio interativo e currículo atualizado: ${profileUrl}`
+    );
+
+    const contact = job.contact_info?.replace(/\D/g, '') || '';
+    const isEmail = job.contact_info?.includes('@');
+
+    setTimeout(() => {
+      if (isEmail) {
+        window.location.href = `mailto:${job.contact_info}?subject=Candidatura: ${job.title}&body=${message}`;
+      } else {
+        window.open(`https://wa.me/${contact}?text=${message}`, '_blank');
+      }
+      setIsApplying(null);
+      toast.success('Candidatura iniciada!');
+    }, 800);
   };
 
   const FilterPill = ({ label, active, onClick, icon: Icon }: any) => (
@@ -309,7 +341,6 @@ export default function ExplorePage() {
               </div>
             </div>
 
-            {/* Sugestão 6: Trending Skills Section */}
             {trendingSkills.length > 0 && (
               <div className="flex flex-wrap gap-2 items-center animate-in fade-in slide-in-from-left-2 duration-500">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 rounded-xl border border-orange-100 dark:border-orange-900/50">
@@ -423,6 +454,8 @@ export default function ExplorePage() {
               ) : filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => {
                   const theme = getTheme(job.area_slug || 'default');
+                  const isCurrentApplying = isApplying === job.id;
+
                   return (
                     <div 
                       key={job.id} 
@@ -451,9 +484,24 @@ export default function ExplorePage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 w-full md:w-auto">
-                        <a href={`https://wa.me/${job.contact_info?.replace(/\D/g, '') || ''}`} target="_blank" rel="noopener" className="flex-1 md:flex-none">
-                           <Button variant="primary" className="w-full px-10">Candidatar-se</Button>
-                        </a>
+                        <Button 
+                          variant="primary" 
+                          className="w-full md:w-auto px-10 relative overflow-hidden"
+                          onClick={() => handleQuickApply(job)}
+                          disabled={isCurrentApplying}
+                        >
+                          {isCurrentApplying ? (
+                            <>
+                              <Loader2 size={18} className="animate-spin mr-2" />
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              <Send size={18} className="mr-2" />
+                              Quick Apply
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   );
