@@ -94,9 +94,11 @@ interface AppState {
   projects: Project[];
   isLoading: boolean;
   isAuthReady: boolean;
+  isAudioPlaying: boolean;
   
   setUser: (user: User | null) => void;
   setAuthReady: (ready: boolean) => void;
+  setIsAudioPlaying: (playing: boolean) => void;
   syncUserWithDatabase: (userData: Partial<User>) => Promise<User | null>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   
@@ -142,9 +144,11 @@ export const useStore = create<AppState>()(
       projects: [],
       isLoading: true,
       isAuthReady: false,
+      isAudioPlaying: false,
       
       setUser: (user) => set({ currentUser: user }),
       setAuthReady: (ready) => set({ isAuthReady: ready }),
+      setIsAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
 
       syncUserWithDatabase: async (userData) => {
         try {
@@ -324,6 +328,9 @@ export const useStore = create<AppState>()(
         }
       },
     }),
-    { name: 'curion-x-v4' }
+    { 
+      name: 'curion-x-v4',
+      partialize: (state) => ({ currentUser: state.currentUser }) // Apenas currentUser persiste
+    }
   )
 );

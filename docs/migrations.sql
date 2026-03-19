@@ -13,37 +13,38 @@ create index on users using hnsw (embedding vector_cosine_ops);
 -- Esta função será chamada pelo DatabaseService para encontrar candidatos
 create or replace function match_profiles (
   query_embedding vector(768),
-  match_threshold float,
-  match_count int
-)
-returns table (
-  id uuid,
-  name text,
-  username text,
-  headline text,
-  summary text,
-  avatar_path text,
-  location text,
-  availability_status text,
-  similarity float
-)
-language plpgsql
-as $$
-begin
-  return query
-  select
-    users.id,
-    users.name,
-    users.username,
-    users.headline,
-    users.summary,
-    users.avatar_path,
-    users.location,
-    users.availability_status,
-    1 - (users.embedding <=> query_embedding) as similarity
-  from users
-  where 1 - (users.embedding <=> query_embedding) > match_threshold
-  order by users.embedding <=> query_embedding
-  limit match_count;
-end;
-$$;
+    match_threshold float,
+      match_count int
+      )
+      returns table (
+        id uuid,
+          name text,
+            username text,
+              headline text,
+                summary text,
+                  avatar_path text,
+                    location text,
+                      availability_status text,
+                        similarity float
+                        )
+                        language plpgsql
+                        as $$
+                        begin
+                          return query
+                            select
+                                users.id,
+                                    users.name,
+                                        users.username,
+                                            users.headline,
+                                                users.summary,
+                                                    users.avatar_path,
+                                                        users.location,
+                                                            users.availability_status,
+                                                                1 - (users.embedding <=> query_embedding) as similarity
+                                                                  from users
+                                                                    where 1 - (users.embedding <=> query_embedding) > match_threshold
+                                                                      order by users.embedding <=> query_embedding
+                                                                        limit match_count;
+                                                                        end;
+                                                                        $$;
+                                                                        

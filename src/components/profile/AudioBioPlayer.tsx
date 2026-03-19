@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Loader2, Volume2, Globe } from 'lucide-react';
+import { Play, Pause, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
@@ -20,8 +20,13 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6', userId }: Props)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isTransitioning = useRef(false);
   
-  const { currentUser } = useStore();
+  const { currentUser, setIsAudioPlaying } = useStore();
   const cleanText = text.replace(/<[^>]*>/g, '').trim();
+
+  // Sincroniza estado global de reprodução
+  useEffect(() => {
+    setIsAudioPlaying(status === 'playing');
+  }, [status, setIsAudioPlaying]);
 
   // Reset player when text changes
   useEffect(() => {
@@ -162,8 +167,9 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6', userId }: Props)
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      setIsAudioPlaying(false);
     };
-  }, []);
+  }, [setIsAudioPlaying]);
 
   if (!cleanText) return null;
 
