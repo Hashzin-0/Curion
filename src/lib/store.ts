@@ -15,6 +15,7 @@ export type User = {
   headline: string | null; 
   summary: string | null; 
   location: string | null; 
+  availability_status?: 'searching' | 'open' | 'busy';
   email?: string; 
   phone?: string; 
   website?: string;
@@ -251,7 +252,7 @@ export const useStore = create<AppState>()(
       },
       removeEducation: async (id) => {
         await DatabaseService.deleteEducation(id);
-        set(s => ({ education: s.education.filter(e => e.id !== id) }));
+        set({ education: get().education.filter(e => e.id !== id) });
       },
 
       addPortfolioItem: async (item) => {

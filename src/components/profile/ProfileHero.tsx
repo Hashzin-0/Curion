@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles, Mail, Headphones } from 'lucide-react';
+import { MapPin, Wand as Wand2, Pencil, FileUp, Sparkles, Mail, Headphones, Zap, MessageSquare, Moon } from 'lucide-react';
 import { RoughNotation, RoughNotationGroup } from 'react-rough-notation';
 import { PremiumCard3D } from '@/components/PremiumCard3D';
 import { User, ProfessionalArea } from '@/lib/store';
@@ -13,6 +13,7 @@ import { SmartExportModal } from '@/components/SmartExportModal';
 import { CoverLetterModal } from '@/components/CoverLetterModal';
 import { InterviewSimulatorModal } from '@/components/InterviewSimulatorModal';
 import { AudioBioPlayer } from './AudioBioPlayer';
+import { cn } from '@/lib/utils';
 
 type Props = {
   user: User;
@@ -23,6 +24,29 @@ type Props = {
   darkColor: string;
   areas?: ProfessionalArea[];
 };
+
+function AvailabilityBadge({ status }: { status?: string }) {
+  if (!status) return null;
+
+  const configs = {
+    searching: { icon: Zap, label: 'Buscando Oportunidades', color: 'emerald' },
+    open: { icon: MessageSquare, label: 'Aberto a Propostas', color: 'blue' },
+    busy: { icon: Moon, label: 'Não estou buscando', color: 'slate' },
+  };
+
+  const config = configs[status as keyof typeof configs] || configs.open;
+  const Icon = config.icon;
+
+  return (
+    <div className={cn(
+      "inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border backdrop-blur-md",
+      `bg-${config.color}-500/10 text-${config.color}-400 border-${config.color}-500/20`
+    )}>
+      <Icon size={10} className="animate-pulse" />
+      {config.label}
+    </div>
+  );
+}
 
 export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor, areas = [] }: Props) {
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
@@ -67,6 +91,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               <Wand2 className="w-3 h-3 text-yellow-400" />
               {theme?.themeName || 'Premium Portfolio'}
             </div>
+            <AvailabilityBadge status={user.availability_status} />
             {user.summary && (
               <AudioBioPlayer text={user.summary} accentColor={accentColor} />
             )}

@@ -41,6 +41,27 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
     multiple: false 
   });
 
+  const StatusOption = ({ id, label, icon: Icon, color }: any) => (
+    <button
+      type="button"
+      onClick={() => setEditedProfile({ ...editedProfile, availability_status: id })}
+      className={cn(
+        "flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left",
+        editedProfile.availability_status === id 
+          ? `bg-${color}-50 border-${color}-500 text-${color}-700 dark:bg-${color}-900/20` 
+          : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400 hover:border-slate-200"
+      )}
+    >
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", editedProfile.availability_status === id ? `bg-${color}-500 text-white` : "bg-slate-100 dark:bg-slate-700")}>
+        <Icon size={20} />
+      </div>
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Status</div>
+        <div className="font-bold text-sm">{label}</div>
+      </div>
+    </button>
+  );
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Editar Perfil">
@@ -53,6 +74,15 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
               <LucideIcons.Camera size={40} className="text-slate-400" />
             )}
             <p className="text-sm font-bold text-slate-500">Alterar Foto de Perfil</p>
+          </div>
+
+          <div className="space-y-3">
+            <label className={labelCls}>Sinalização de Disponibilidade</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <StatusOption id="searching" label="Buscando" icon={LucideIcons.Zap} color="emerald" />
+              <StatusOption id="open" label="Aberto" icon={LucideIcons.MessageSquare} color="blue" />
+              <StatusOption id="busy" label="Ocupado" icon={LucideIcons.Moon} color="slate" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

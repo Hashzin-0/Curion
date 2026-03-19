@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -6,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Users, Briefcase, Plus, ArrowRight, Sparkles, MapPin, 
   Loader2, BrainCircuit, Target, CheckCircle2, Info, X, Star, FileText,
-  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp
+  Globe, Laptop, Building2, Coffee, Zap, ThumbsUp, MessageSquare
 } from 'lucide-react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { getTheme } from '@/styles/themes';
@@ -15,12 +14,33 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { useStore } from '@/lib/store';
-import { slugify, calcDuration } from '@/lib/utils';
+import { slugify, calcDuration, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Página de Exploração com Match IA, Preview Rápido e Endossos Visíveis.
+ * @fileOverview Página de Exploração com Match IA, Preview Rápido e Status de Disponibilidade.
  */
+
+function StatusIndicator({ status }: { status?: string }) {
+  if (!status || status === 'busy') return null;
+  
+  const colors = {
+    searching: 'bg-emerald-500',
+    open: 'bg-blue-500',
+  };
+
+  const labels = {
+    searching: 'Buscando Oportunidades',
+    open: 'Aberto a Propostas',
+  };
+
+  return (
+    <div className="absolute -bottom-1 -right-1 z-10 flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-slate-900 rounded-full shadow-lg border border-slate-100 dark:border-slate-800">
+      <div className={cn("w-2 h-2 rounded-full animate-pulse", colors[status as keyof typeof colors])} />
+      <span className="text-[7px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{labels[status as keyof typeof labels]}</span>
+    </div>
+  );
+}
 
 function JobMatchBadge({ job, currentUser, profileContext }: { job: JobVacancy, currentUser: any, profileContext: any }) {
   const [match, setMatch] = useState<{ score: number; reason: string } | null>(null);
@@ -191,7 +211,6 @@ export default function ExplorePage() {
     </button>
   );
 
-  // Extrai as Top 3 skills baseadas em endossos para exibir no card
   const getTopSkills = (user: any) => {
     const allUserSkills: any[] = [];
     user.professional_areas?.forEach((area: any) => {
@@ -306,6 +325,7 @@ export default function ExplorePage() {
                       <div className="flex items-center gap-4 mb-6">
                         <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800 shadow-sm">
                           <Image src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
+                          <StatusIndicator status={user.availability_status} />
                         </div>
                         <div>
                           <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{user.name}</h3>
@@ -313,7 +333,6 @@ export default function ExplorePage() {
                         </div>
                       </div>
 
-                      {/* Top Skills com Endossos */}
                       {topSkills.length > 0 && (
                         <div className="mb-6 space-y-2">
                           <div className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest">
@@ -416,7 +435,6 @@ export default function ExplorePage() {
         </AnimatePresence>
       </div>
 
-      {/* Preview Rápido (Hover Card) */}
       <AnimatePresence>
         {previewItem && (
           <motion.div
@@ -442,6 +460,7 @@ export default function ExplorePage() {
                     <div className="flex items-center gap-4">
                       <div className="relative w-14 h-14 rounded-2xl overflow-hidden shadow-md">
                         <Image src={previewItem.data.avatar_path || `https://picsum.photos/seed/${previewItem.data.id}/100/100`} alt="" fill className="object-cover" />
+                        <StatusIndicator status={previewItem.data.availability_status} />
                       </div>
                       <div>
                         <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{previewItem.data.name}</h4>
