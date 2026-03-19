@@ -70,17 +70,15 @@ export const DatabaseService = {
 
   // Vagas (Jobs)
   async fetchJobs() {
-    try {
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as JobVacancy[];
-    } catch (e) {
-      console.warn('Tabela jobs pode não estar criada ainda:', e);
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Erro ao buscar vagas:', error);
       return [];
     }
+    return data as JobVacancy[];
   },
 
   async createJob(job: Omit<JobVacancy, 'id' | 'created_at'>) {
