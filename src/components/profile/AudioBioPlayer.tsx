@@ -1,7 +1,8 @@
+
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Pause, Loader2, Headphones } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -14,54 +15,112 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isTransitioning = useRef(false);
 
   const cleanText = text.replace(/<[^>]*>/g, '').trim();
 
+  // Reset player when text changes (e.g. user updated their summary)
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    setAudioUrl(null);
+    setStatus('idle');
+  }, [text]);
+
+  const cleanupAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onplay = null;
+      audioRef.current.onpause = null;
+      audioRef.current.onerror = null;
+    }
+  }, []);
+
+  const setupAudio = useCallback((url: string) => {
+    cleanupAudio();
+    const audio = new Audio(url);
+    
+    audio.onplay = () => setStatus('playing');
+    audio.onpause = () => setStatus('paused');
+    audio.onended = () => setStatus('idle');
+    audio.onerror = () => {
+      toast.error('Erro ao reproduzir áudio.');
+      setStatus('idle');
+    };
+
+    audioRef.current = audio;
+    return audio;
+  }, [cleanupAudio]);
+
   const handlePlay = async () => {
-    if (status === 'playing') {
-      audioRef.current?.pause();
-      setStatus('paused');
-      return;
-    }
+    if (isTransitioning.current || status === 'loading') return;
+    isTransitioning.current = true;
 
-    if (status === 'paused' && audioRef.current) {
-      audioRef.current.play();
-      setStatus('playing');
-      return;
-    }
-
-    if (!audioUrl) {
-      setStatus('loading');
-      try {
-        const res = await fetch('/api/profile/audio-bio', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: cleanText }),
-        });
-        const data = await res.json();
-        if (data.audio) {
-          setAudioUrl(data.audio);
-          const audio = new Audio(data.audio);
-          audioRef.current = audio;
-          audio.onended = () => setStatus('idle');
-          audio.play();
-          setStatus('playing');
-        } else {
-          throw new Error('Falha ao obter áudio');
-        }
-      } catch (err) {
-        toast.error('Não foi possível gerar a narração agora.');
-        setStatus('idle');
+    try {
+      // Toggle logic for existing audio
+      if (status === 'playing') {
+        audioRef.current?.pause();
+        isTransitioning.current = false;
+        return;
       }
-    } else if (audioRef.current) {
-      audioRef.current.play();
-      setStatus('playing');
+
+      if (status === 'paused' && audioRef.current) {
+        await audioRef.current.play();
+        isTransitioning.current = false;
+        return;
+      }
+
+      // If no audio generated yet, fetch from AI
+      if (!audioUrl) {
+        setStatus('loading');
+        try {
+          const res = await fetch('/api/profile/audio-bio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: cleanText }),
+          });
+          
+          if (!res.ok) throw new Error('API Error');
+          
+          const data = await res.json();
+          if (data.audio) {
+            setAudioUrl(data.audio);
+            const audio = setupAudio(data.audio);
+            await audio.play();
+          } else {
+            throw new Error('No audio data');
+          }
+        } catch (err) {
+          toast.error('Não foi possível gerar a narração agora.');
+          setStatus('idle');
+        }
+      } else if (audioRef.current) {
+        // Use existing instance
+        await audioRef.current.play();
+      } else {
+        // Fallback: re-setup audio if ref was lost but URL exists
+        const audio = setupAudio(audioUrl);
+        await audio.play();
+      }
+    } catch (err) {
+      console.error('Audio playback failed:', err);
+    } finally {
+      isTransitioning.current = false;
     }
   };
 
+  // Global cleanup on unmount
   useEffect(() => {
     return () => {
-      audioRef.current?.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
     };
   }, []);
 
@@ -88,7 +147,9 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
         </div>
         
         <div className="flex flex-col items-start pr-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/70">Ouvir Resumo</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
+            {status === 'loading' ? 'Gerando Voz...' : 'Ouvir Resumo'}
+          </span>
           <span className="text-[9px] font-bold text-white/40 uppercase">AI Narrator</span>
         </div>
 
