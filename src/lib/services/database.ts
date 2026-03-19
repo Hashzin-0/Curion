@@ -47,10 +47,17 @@ export const DatabaseService = {
   },
 
   async updateUser(userId: string, userData: Partial<User>) {
-    const { username, name, headline, summary, avatar_path, location, availability_status } = userData;
+    const { 
+      username, name, headline, summary, avatar_path, 
+      location, availability_status, audio_bio_path, audio_bio_hash 
+    } = userData;
+    
     const { data, error } = await supabase
       .from('users')
-      .update({ username, name, headline, summary, avatar_path, location, availability_status })
+      .update({ 
+        username, name, headline, summary, avatar_path, 
+        location, availability_status, audio_bio_path, audio_bio_hash 
+      })
       .eq('id', userId)
       .select()
       .single();

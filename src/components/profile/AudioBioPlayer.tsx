@@ -2,24 +2,28 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Loader2 } from 'lucide-react';
+import { Play, Pause, Loader2, Volume2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { useStore } from '@/lib/store';
 
 type Props = {
   text: string;
   accentColor?: string;
+  userId?: string;
 };
 
-export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
+export function AudioBioPlayer({ text, accentColor = '#3b82f6', userId }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isNativeFallback, setIsNativeFallback] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isTransitioning = useRef(false);
-
+  
+  const { currentUser } = useStore();
   const cleanText = text.replace(/<[^>]*>/g, '').trim();
 
-  // Reset player when text changes (e.g. user updated their summary)
+  // Reset player when text changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -28,6 +32,7 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
     }
     setAudioUrl(null);
     setStatus('idle');
+    setIsNativeFallback(false);
   }, [text]);
 
   const cleanupAudio = useCallback(() => {
@@ -48,40 +53,78 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
     audio.onpause = () => setStatus('paused');
     audio.onended = () => setStatus('idle');
     audio.onerror = () => {
-      toast.error('Erro ao reproduzir áudio.');
-      setStatus('idle');
+      console.warn('AudioBioPlayer: Erro no arquivo remoto, tentando fallback nativo...');
+      handleNativeSpeak();
     };
 
     audioRef.current = audio;
     return audio;
   }, [cleanupAudio]);
 
+  const handleNativeSpeak = () => {
+    if (!('speechSynthesis' in window)) {
+      toast.error('Navegador não suporta voz nativa.');
+      return;
+    }
+
+    if (status === 'playing' && isNativeFallback) {
+      window.speechSynthesis.cancel();
+      setStatus('idle');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.1;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => {
+      setStatus('playing');
+      setIsNativeFallback(true);
+    };
+    utterance.onend = () => {
+      setStatus('idle');
+      setIsNativeFallback(false);
+    };
+    utterance.onerror = () => setStatus('idle');
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handlePlay = async () => {
     if (isTransitioning.current || status === 'loading') return;
     isTransitioning.current = true;
 
     try {
-      // Toggle logic for existing audio
       if (status === 'playing') {
-        audioRef.current?.pause();
+        if (isNativeFallback) {
+          window.speechSynthesis.cancel();
+          setStatus('idle');
+        } else {
+          audioRef.current?.pause();
+        }
         isTransitioning.current = false;
         return;
       }
 
-      if (status === 'paused' && audioRef.current) {
+      if (status === 'paused' && audioRef.current && !isNativeFallback) {
         await audioRef.current.play();
         isTransitioning.current = false;
         return;
       }
 
-      // If no audio generated yet, fetch from AI
+      // Tenta carregar do Cache/Servidor
       if (!audioUrl) {
         setStatus('loading');
         try {
           const res = await fetch('/api/profile/audio-bio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: cleanText }),
+            body: JSON.stringify({ 
+              text: cleanText,
+              userId: userId || currentUser?.id
+            }),
           });
           
           if (!res.ok) throw new Error('API Error');
@@ -92,22 +135,18 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
             const audio = setupAudio(data.audio);
             await audio.play();
           } else {
-            throw new Error('No audio data');
+            throw new Error('No audio returned');
           }
         } catch (err) {
-          toast.error('Não foi possível gerar a narração agora.');
-          setStatus('idle');
+          console.warn('AudioBioPlayer: Falha na IA Premium, usando Web Speech API.');
+          handleNativeSpeak();
         }
       } else if (audioRef.current) {
-        // Use existing instance
         await audioRef.current.play();
-      } else {
-        // Fallback: re-setup audio if ref was lost but URL exists
-        const audio = setupAudio(audioUrl);
-        await audio.play();
       }
     } catch (err) {
       console.error('Audio playback failed:', err);
+      handleNativeSpeak();
     } finally {
       isTransitioning.current = false;
     }
@@ -119,7 +158,9 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
-        audioRef.current = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -148,9 +189,11 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6' }: Props) {
         
         <div className="flex flex-col items-start pr-2">
           <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
-            {status === 'loading' ? 'Gerando Voz...' : 'Ouvir Resumo'}
+            {status === 'loading' ? 'Carregando Cache...' : isNativeFallback ? 'Voz Nativa' : 'Ouvir Resumo'}
           </span>
-          <span className="text-[9px] font-bold text-white/40 uppercase">AI Narrator</span>
+          <span className="text-[9px] font-bold text-white/40 uppercase">
+            {status === 'loading' ? 'Analisando texto' : isNativeFallback ? 'Browser API' : 'AI Premium'}
+          </span>
         </div>
 
         <AnimatePresence>

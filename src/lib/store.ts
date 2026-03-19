@@ -20,6 +20,8 @@ export type User = {
   email?: string; 
   phone?: string; 
   website?: string;
+  audio_bio_path?: string | null;
+  audio_bio_hash?: string | null;
 };
 
 export type ProfessionalArea = { 
@@ -146,15 +148,12 @@ export const useStore = create<AppState>()(
 
       syncUserWithDatabase: async (userData) => {
         try {
-          // Busca o usuário existente no banco para não sobrescrever dados customizados
           const existingUser = await DatabaseService.getUserById(userData.id!);
           
           let userRecord;
           if (existingUser) {
-            // Se já existe, usamos os dados do banco (mantém foto, headline, etc customizados)
             userRecord = existingUser;
           } else {
-            // Se for novo usuário, cria com os dados do OAuth (Google)
             userRecord = await DatabaseService.syncUser(userData);
           }
 
