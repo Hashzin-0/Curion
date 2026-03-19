@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -55,14 +56,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
   const handleConfirmSkill = async () => {
     if (!currentUser || !tempSkill || isSaving) return;
     setIsSaving(true);
+    const toastId = toast.loading('Adicionando habilidade ao seu perfil...');
     try {
       await addSkillToRelevantAreas(tempSkill.id, tempSkill.name);
-      toast.success(`${tempSkill.name} adicionada com sucesso!`);
+      toast.success(`${tempSkill.name} vinculada com sucesso!`, { id: toastId });
       setTempSkill(null);
       setSelectedType(null);
       onClose();
     } catch (e) {
-      toast.error('Erro ao adicionar habilidade.');
+      toast.error('Erro ao adicionar habilidade. Verifique sua conexão.', { id: toastId });
     } finally {
       setIsSaving(false);
     }
@@ -73,6 +75,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
     if (!currentUser || isSaving) return;
 
     setIsSaving(true);
+    const toastId = toast.loading('Salvando registro...');
     try {
       if (selectedType === 'experience') {
         if (!expForm.start_date) throw new Error('Data de início é obrigatória');
@@ -104,11 +107,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
         });
       }
 
-      toast.success('Conteúdo adicionado com sucesso!');
+      toast.success('Conteúdo adicionado com sucesso!', { id: toastId });
+      // Resetar formulários
+      setExpForm({ company_name: '', role: '', start_date: undefined, end_date: undefined, description: '' });
+      setEduForm({ institution: '', course: '', start_date: undefined, end_date: undefined });
+      setPortForm({ title: '', description: '', file_path: '', external_url: '' });
       setSelectedType(null);
       onClose();
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao salvar os dados.');
+      toast.error(err.message || 'Erro ao salvar os dados.', { id: toastId });
     } finally {
       setIsSaving(false);
     }
@@ -122,20 +129,20 @@ export function AddContentModal({ isOpen, onClose }: Props) {
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => { setSelectedType(null); setTempSkill(null); onClose(); }}
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 overflow-y-auto max-h-[90vh]"
+            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 overflow-visible max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div ref={formParent}>
+            <div ref={formParent} className="overflow-y-auto custom-scrollbar flex-1 px-2">
               {!selectedType ? (
-                <>
+                <div className="pb-4">
                   <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Adicionar Conteúdo</h3>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><LucideIcons.X /></button>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Adicionar Conteúdo</h3>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><LucideIcons.X /></button>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     {CONTENT_OPTIONS.map((option) => {
@@ -144,40 +151,40 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                         <button key={option.type} onClick={() => setSelectedType(option.type)} className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${COLOR_CLASSES[option.color]}`}>
                           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/50 dark:bg-slate-800/50"><Icon /></div>
                           <div className="flex-1">
-                            <div className="font-black text-slate-900 dark:text-white">{option.label}</div>
-                            <div className="text-xs opacity-70">{option.description}</div>
+                            <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{option.label}</div>
+                            <div className="text-xs opacity-70 font-bold uppercase tracking-widest">{option.description}</div>
                           </div>
                         </button>
                       );
                     })}
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-6 pb-4">
                   <div className="flex justify-between items-center mb-6">
-                    <button type="button" onClick={() => { setSelectedType(null); setTempSkill(null); }} className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-700 transition-colors"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
-                    <h3 className="text-xl font-black uppercase tracking-tight">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
+                    <button type="button" onClick={() => { setSelectedType(null); setTempSkill(null); }} className="flex items-center gap-2 text-slate-500 font-black text-xs uppercase hover:text-slate-700 transition-colors"><LucideIcons.ArrowLeft size={18} /> Voltar</button>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">{CONTENT_OPTIONS.find(o => o.type === selectedType)?.label}</h3>
                     <div className="w-16" />
                   </div>
 
                   {selectedType === 'skill' ? (
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-h-[400px]">
                       {tempSkill ? (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Habilidade Selecionada</p>
-                              <h4 className="text-xl font-black text-slate-900 dark:text-white">{tempSkill.name}</h4>
+                              <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{tempSkill.name}</h4>
                             </div>
                             <button onClick={() => setTempSkill(null)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Trocar</button>
                           </div>
-                          <button onClick={handleConfirmSkill} disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                          <button onClick={handleConfirmSkill} disabled={isSaving} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
                             {isSaving ? <LucideIcons.Loader2 className="animate-spin" /> : <LucideIcons.Check />} Confirmar e Salvar
                           </button>
                         </motion.div>
                       ) : (
                         <div className="pt-4">
-                          <label className={labelCls}>Procurar Habilidade</label>
+                          <label className={labelCls}>Procurar na Biblioteca</label>
                           <SkillSearch onAdd={(s) => setTempSkill(s)} />
                         </div>
                       )}
@@ -193,30 +200,30 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="relative">
                               <label className={labelCls}>Início *</label>
-                              <button type="button" onClick={() => setShowCalendar(showCalendar === 'start' ? null : 'start')} className={inputCls + ' text-left flex items-center justify-between'}>
+                              <button type="button" onClick={() => setShowCalendar(showCalendar === 'start' ? null : 'start')} className={inputCls + ' text-left flex items-center justify-between text-xs font-bold'}>
                                 {expForm.start_date ? format(expForm.start_date, 'PPP', { locale: ptBR }) : 'Selecionar data'}
                                 <LucideIcons.Calendar size={18} />
                               </button>
                               {showCalendar === 'start' && (
-                                <div className="absolute top-full left-0 z-50 mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
+                                <div className="absolute top-full left-0 z-[110] mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
                                   <DayPicker mode="single" selected={expForm.start_date} onSelect={(d) => { setExpForm(p => ({ ...p, start_date: d || undefined })); setShowCalendar(null); }} locale={ptBR} />
                                 </div>
                               )}
                             </div>
                             <div className="relative">
                               <label className={labelCls}>Término</label>
-                              <button type="button" onClick={() => setShowCalendar(showCalendar === 'end' ? null : 'end')} className={inputCls + ' text-left flex items-center justify-between'}>
+                              <button type="button" onClick={() => setShowCalendar(showCalendar === 'end' ? null : 'end')} className={inputCls + ' text-left flex items-center justify-between text-xs font-bold'}>
                                 {expForm.end_date ? format(expForm.end_date, 'PPP', { locale: ptBR }) : 'Atualmente'}
                                 <LucideIcons.Calendar size={18} />
                               </button>
                               {showCalendar === 'end' && (
-                                <div className="absolute top-full left-0 z-50 mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
+                                <div className="absolute top-full left-0 z-[110] mt-2 bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800">
                                   <DayPicker mode="single" selected={expForm.end_date} onSelect={(d) => { setExpForm(p => ({ ...p, end_date: d || undefined })); setShowCalendar(null); }} locale={ptBR} />
                                 </div>
                               )}
                             </div>
                           </div>
-                          <div><label className={labelCls}>Descrição</label><textarea rows={6} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} placeholder="Descreva suas atividades..." /></div>
+                          <div><label className={labelCls}>Descrição das Atividades</label><textarea rows={6} value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none text-xs'} placeholder="Descreva suas principais responsabilidades e conquistas..." /></div>
                         </div>
                       )}
 
@@ -236,15 +243,15 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                       {selectedType === 'portfolio' && (
                         <div className="space-y-4">
                           <div><label className={labelCls}>Título do Projeto *</label><input required value={portForm.title} onChange={e => setPortForm(p => ({ ...p, title: e.target.value }))} className={inputCls} /></div>
-                          <div><label className={labelCls}>Descrição</label><textarea rows={4} value={portForm.description} onChange={e => setPortForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none'} /></div>
+                          <div><label className={labelCls}>Descrição</label><textarea rows={4} value={portForm.description} onChange={e => setPortForm(p => ({ ...p, description: e.target.value }))} className={inputCls + ' resize-none text-xs'} /></div>
                           <div><label className={labelCls}>Link do Projeto (Opcional)</label><input value={portForm.external_url} onChange={e => setPortForm(p => ({ ...p, external_url: e.target.value }))} className={inputCls} placeholder="https://..." /></div>
                           <div><label className={labelCls}>URL da Imagem (Opcional)</label><input value={portForm.file_path} onChange={e => setPortForm(p => ({ ...p, file_path: e.target.value }))} className={inputCls} placeholder="https://..." /></div>
                         </div>
                       )}
 
                       <div className="flex gap-4 pt-4">
-                        <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-slate-500">Cancelar</button>
-                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2">
+                        <button type="button" onClick={() => setSelectedType(null)} className="flex-1 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-xs uppercase text-slate-500 hover:bg-slate-50 transition-all">Cancelar</button>
+                        <button type="submit" disabled={isSaving} className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
                           {isSaving && <LucideIcons.Loader2 className="animate-spin" />} Salvar Registro
                         </button>
                       </div>
