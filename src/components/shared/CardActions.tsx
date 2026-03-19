@@ -16,9 +16,12 @@ type Props = {
 
 export function CardActions({ onEdit, onDelete, className, variant = 'floating' }: Props) {
   // Define o estilo baseado na variante escolhida
+  // Ajustado para ser visível por padrão em dispositivos móveis (sem hover) e flutuante apenas em desktop
   const containerCls = variant === 'floating' 
-    ? "absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0"
-    : "flex gap-2";
+    ? "absolute top-4 right-4 z-20 flex gap-2 transition-all duration-300 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0"
+    : variant === 'small'
+      ? "absolute z-20 flex gap-2 transition-all duration-300 md:opacity-0 md:group-hover:opacity-100"
+      : "flex gap-2";
 
   const iconSize = variant === 'small' ? 12 : 14;
   const paddingCls = variant === 'small' ? "p-1.5" : "p-2";

@@ -244,7 +244,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
             </motion.form>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnPresence>
 
       <AnimatePresence>
         {deletingItem && (
@@ -282,9 +282,9 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
                   <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl transition-all w-full group relative overflow-hidden">
                     <div className={`absolute top-0 left-0 w-1.5 h-full ${item.type === 'work' ? 'bg-blue-500' : item.type === 'education' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                     {!readOnly && (
-                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => setDeletingItem(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <div className="absolute top-4 right-4 flex gap-2 transition-all md:opacity-0 md:group-hover:opacity-100">
+                        <button onClick={() => handleEdit(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500 shadow-sm"><Pencil className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setDeletingItem(item)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500 shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     )}
                     <div className="flex flex-col mb-4 gap-3">

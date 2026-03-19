@@ -9,9 +9,9 @@ export function EducationCard({ edu, isOwner, onEdit, onDelete }: any) {
   return (
     <div className="relative group bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all">
       {isOwner && (
-        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEdit(edu)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500"><LucideIcons.Pencil size={14} /></button>
-          <button onClick={() => onDelete(edu.id)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500"><LucideIcons.Trash2 size={14} /></button>
+        <div className="absolute top-4 right-4 flex gap-2 transition-all md:opacity-0 md:group-hover:opacity-100">
+          <button onClick={() => onEdit(edu)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-blue-500 shadow-sm"><LucideIcons.Pencil size={14} /></button>
+          <button onClick={() => onDelete(edu.id)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg hover:text-red-500 shadow-sm"><LucideIcons.Trash2 size={14} /></button>
         </div>
       )}
       <div className="flex items-center gap-4">
@@ -32,7 +32,7 @@ export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
   return (
     <div className="relative group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all h-full flex flex-col">
       {isOwner && (
-        <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-4 right-4 z-20 flex gap-2 transition-all md:opacity-0 md:group-hover:opacity-100">
           <button onClick={() => onEdit(item)} className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-lg hover:text-blue-500 shadow-lg"><LucideIcons.Pencil size={14} /></button>
           <button onClick={() => onDelete(item.id)} className="p-2 bg-white/90 dark:bg-slate-800/90 rounded-lg hover:text-red-500 shadow-lg"><LucideIcons.Trash2 size={14} /></button>
         </div>
@@ -64,7 +64,7 @@ export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#
     <div className="relative group pl-8 border-l-2 border-slate-100 dark:border-slate-800 pb-10 last:pb-0">
       <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900" style={{ backgroundColor: themeColor }} />
       {isOwner && (
-        <div className="absolute -right-4 top-0 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute -right-4 top-0 z-20 flex flex-col gap-1 transition-all md:opacity-0 md:group-hover:opacity-100">
           <button onClick={() => onEdit(exp)} className="p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:scale-110 transition-all"><LucideIcons.Pencil size={12} /></button>
           <button onClick={() => onDelete(exp.id)} className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:scale-110 transition-all"><LucideIcons.Trash2 size={12} /></button>
         </div>
