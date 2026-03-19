@@ -189,10 +189,10 @@ export function AudioBioPlayer({ text, accentColor = '#3b82f6', userId }: Props)
         
         <div className="flex flex-col items-start pr-2">
           <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
-            {status === 'loading' ? 'Carregando Cache...' : isNativeFallback ? 'Voz Nativa' : 'Ouvir Resumo'}
+            {status === 'loading' ? 'Sincronizando IA...' : isNativeFallback ? 'Voz Local' : 'Ouvir Perfil'}
           </span>
           <span className="text-[9px] font-bold text-white/40 uppercase">
-            {status === 'loading' ? 'Analisando texto' : isNativeFallback ? 'Browser API' : 'AI Premium'}
+            {status === 'loading' ? 'Gerando Áudio' : isNativeFallback ? 'Web Speech API' : 'Gemini Premium'}
           </span>
         </div>
 
