@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { CreateJobModal } from '@/components/CreateJobModal';
 import { useStore } from '@/lib/store';
+import { slugify } from '@/lib/utils';
 
 export default function ExplorePage() {
   const { currentUser } = useStore();
@@ -120,8 +121,8 @@ export default function ExplorePage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mb-6">
-                      {user.areas?.slice(0, 2).map((area: any) => {
-                        const theme = getTheme(area.slug);
+                      {user.professional_areas?.slice(0, 2).map((area: any) => {
+                        const theme = getTheme(slugify(area.name));
                         return (
                           <span key={area.id} className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>
                             {theme.emoji} {area.name}
@@ -153,7 +154,7 @@ export default function ExplorePage() {
                 ))
               ) : filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => {
-                  const theme = getTheme(job.area_slug);
+                  const theme = getTheme(job.area_slug || 'default');
                   return (
                     <div key={job.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl transition-all group">
                       <div className="flex items-center gap-6 flex-1">
@@ -172,7 +173,7 @@ export default function ExplorePage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 w-full md:w-auto">
-                        <a href={`https://wa.me/${job.contact_info.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex-1 md:flex-none">
+                        <a href={`https://wa.me/${job.contact_info?.replace(/\D/g, '') || ''}`} target="_blank" rel="noopener" className="flex-1 md:flex-none">
                            <Button variant="primary" className="w-full px-10">Candidatar-se</Button>
                         </a>
                       </div>
