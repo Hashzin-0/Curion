@@ -1,75 +1,100 @@
 'use server';
 
 /**
- * @fileOverview Fluxo de IA para converter texto de resumo profissional em áudio MP3 otimizado.
+ * @fileOverview Fluxo de IA para conversão de texto em áudio usando arquitetura de fallbacks locais.
+ * Tenta sequencialmente: ESPnet -> Kokoro -> Piper.
+ * Requer que os binários/scripts estejam disponíveis no ambiente do servidor.
  */
 
-import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import { PassThrough } from 'stream';
 
-// Configurar o caminho do binário FFmpeg
+const execAsync = promisify(exec);
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 /**
- * Converte dados PCM brutos (retornados pelo Gemini) para MP3 usando FFmpeg.
+ * Converte dados de um arquivo WAV para MP3 usando FFmpeg para otimização de espaço.
  */
-async function pcmToMp3(pcmBuffer: Buffer): Promise<string> {
+async function wavToMp3(wavPath: string): Promise<string> {
+  const mp3Path = wavPath.replace('.wav', '.mp3');
+  
   return new Promise((resolve, reject) => {
-    const outputStream = new PassThrough();
-    const chunks: Buffer[] = [];
-
-    outputStream.on('data', (chunk) => chunks.push(chunk));
-    outputStream.on('end', () => {
-      const mp3Buffer = Buffer.concat(chunks);
-      resolve(mp3Buffer.toString('base64'));
-    });
-    outputStream.on('error', reject);
-
-    const inputStream = new PassThrough();
-    inputStream.end(pcmBuffer);
-
-    // O Gemini Native Audio retorna áudio em 24kHz, 16-bit Mono (s16le)
-    ffmpeg(inputStream)
-      .inputFormat('s16le')
-      .inputOptions(['-ar 24000', '-ac 1'])
+    ffmpeg(wavPath)
       .toFormat('mp3')
       .audioBitrate('128k')
       .on('error', (err) => {
         console.error('FFmpeg Conversion Error:', err);
         reject(err);
       })
-      .pipe(outputStream);
+      .on('end', () => {
+        const buffer = fs.readFileSync(mp3Path);
+        const base64 = buffer.toString('base64');
+        // Limpeza do MP3 temporário
+        if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
+        resolve(base64);
+      })
+      .save(mp3Path);
   });
 }
 
-export async function generateAudioBio(text: string): Promise<{ audio: string }> {
-  // Utilizamos o modelo gemini-2.5-flash-preview-tts para gerar áudio de alta qualidade
-  const { media } = await ai.generate({
-    model: googleAI.model('gemini-2.5-flash-preview-tts'),
-    config: {
-      responseModalities: ['AUDIO'],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Algenib' },
-        },
-      },
-    },
-    prompt: `Narrate este resumo profissional com um tom calmo, profissional e inspirador em Português do Brasil: ${text}`,
-  });
+/**
+ * Tenta executar um comando de TTS e verifica se o arquivo foi gerado.
+ */
+async function tryRunTTS(command: string, outputPath: string): Promise<boolean> {
+  try {
+    await execAsync(command);
+    return fs.existsSync(outputPath);
+  } catch (err) {
+    return false;
+  }
+}
 
-  if (!media || !media.url) {
-    throw new Error('Falha ao gerar áudio da bio');
+export async function generateAudioBio(text: string): Promise<{ audio: string }> {
+  const id = crypto.randomUUID();
+  const wavPath = path.join(os.tmpdir(), `${id}.wav`);
+  const escapedText = text.replace(/"/g, '\\"');
+  
+  let generated = false;
+
+  // 1. 🧠 ESPnet (Qualidade Máxima)
+  console.log('TTS: Tentando ESPnet...');
+  generated = await tryRunTTS(`python3 espnet_tts.py "${escapedText}" ${wavPath}`, wavPath);
+
+  // 2. 🔥 Kokoro (Fallback 1)
+  if (!generated) {
+    console.warn('TTS: ESPnet falhou, tentando Kokoro...');
+    generated = await tryRunTTS(`python3 kokoro_tts.py "${escapedText}" ${wavPath}`, wavPath);
   }
 
-  // O Gemini retorna PCM. Convertemos para MP3 para economizar banda e armazenamento.
-  const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
-  const pcmBuffer = Buffer.from(pcmBase64, 'base64');
-  const mp3Base64 = await pcmToMp3(pcmBuffer);
+  // 3. 🚀 Piper (Fallback 2)
+  if (!generated) {
+    console.warn('TTS: Kokoro falhou, tentando Piper...');
+    generated = await tryRunTTS(`piper --text "${escapedText}" --output_file ${wavPath}`, wavPath);
+  }
 
-  return {
-    audio: `data:audio/mpeg;base64,${mp3Base64}`,
-  };
+  // Se nenhum motor de servidor funcionou, sinalizamos para o frontend usar Web Speech API
+  if (!generated) {
+    console.error('TTS: Todos os motores locais falharam.');
+    throw new Error('USE_BROWSER_TTS');
+  }
+
+  try {
+    // Converte o resultado para MP3 para economizar banda
+    const mp3Base64 = await wavToMp3(wavPath);
+    
+    // Limpeza do arquivo WAV temporário
+    if (fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+
+    return {
+      audio: `data:audio/mpeg;base64,${mp3Base64}`,
+    };
+  } catch (err) {
+    throw new Error('Erro na conversão de áudio para MP3');
+  }
 }

@@ -1,18 +1,14 @@
 'use server';
 
 /**
- * @fileOverview Fluxo de simulação de entrevista com Áudio Nativo Multimodal.
- * Utiliza Gemini 2.5 Flash para processar áudio de entrada e gerar áudio de saída em MP3.
+ * @fileOverview Fluxo de simulação de entrevista refatorado para usar TTS de Fallback.
+ * Separa a geração de texto (IA) da geração de áudio (Motores Locais).
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import { PassThrough } from 'stream';
-
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+import { generateAudioBio } from './generate-audio-bio-flow';
+import { AI_CONFIG } from '@/ai/config';
 
 const InterviewInputSchema = z.object({
   areaName: z.string().describe('A área profissional da entrevista.'),
@@ -31,27 +27,6 @@ const InterviewOutputSchema = z.object({
 
 export type InterviewInput = z.infer<typeof InterviewInputSchema>;
 export type InterviewOutput = z.infer<typeof InterviewOutputSchema>;
-
-async function pcmToMp3(pcmBuffer: Buffer): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const outputStream = new PassThrough();
-    const chunks: Buffer[] = [];
-    outputStream.on('data', (chunk) => chunks.push(chunk));
-    outputStream.on('end', () => resolve(Buffer.concat(chunks).toString('base64')));
-    outputStream.on('error', reject);
-
-    const inputStream = new PassThrough();
-    inputStream.end(pcmBuffer);
-
-    ffmpeg(inputStream)
-      .inputFormat('s16le')
-      .inputOptions(['-ar 24000', '-ac 1'])
-      .toFormat('mp3')
-      .audioBitrate('128k')
-      .on('error', reject)
-      .pipe(outputStream);
-  });
-}
 
 export async function simulateInterview(input: InterviewInput): Promise<InterviewOutput> {
   const historyMessages = input.history?.map(h => ({
@@ -74,19 +49,12 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
     currentPromptParts.push({ text: "Continue a entrevista respondendo ao candidato." });
   }
 
+  // 1. Gerar resposta em TEXTO usando o modelo configurado no AI_CONFIG (ex: OpenRouter)
   const response = await ai.generate({
-    model: googleAI.model('gemini-2.5-flash-preview'),
+    model: 'openai/' + process.env.NEXT_PUBLIC_AI_MODEL || 'google/gemini-2.0-flash-001',
     system: `Você é um recrutador sênior extremamente profissional na área de ${input.areaName}. 
     Seu objetivo é entrevistar o candidato ${input.userName} de forma técnica e direta. 
     Faça uma pergunta por vez. Analise as respostas com profundidade.`,
-    config: {
-      responseModalities: ['AUDIO', 'TEXT'],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Algenib' },
-        },
-      },
-    },
     messages: [
       ...historyMessages,
       {
@@ -97,18 +65,21 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
   });
 
   const responseText = response.text;
-  const media = response.media;
 
-  if (!media || !media.url) {
-    throw new Error('Falha ao gerar áudio nativo na resposta multimodal');
+  // 2. Gerar áudio usando a nova arquitetura de fallbacks locais
+  try {
+    const { audio } = await generateAudioBio(responseText);
+    return {
+      text: responseText,
+      audio: audio,
+    };
+  } catch (err) {
+    // Se o TTS falhar, retornamos o texto e uma string vazia no áudio.
+    // O frontend detectará a falta de áudio e acionará o Web Speech API se necessário.
+    console.warn('Interview Simulation: Falha no áudio premium, sinalizando fallback.');
+    return {
+      text: responseText,
+      audio: '',
+    };
   }
-
-  const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
-  const pcmBuffer = Buffer.from(pcmBase64, 'base64');
-  const mp3Base64 = await pcmToMp3(pcmBuffer);
-
-  return {
-    text: responseText,
-    audio: `data:audio/mpeg;base64,${mp3Base64}`,
-  };
 }
