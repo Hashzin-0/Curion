@@ -1,11 +1,10 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAudioBio } from '@/ai/flows/generate-audio-bio-flow';
 import { DatabaseService } from '@/lib/services/database';
 import crypto from 'crypto';
 
 /**
- * @fileOverview API de Bio em Áudio com Cache Inteligente e Upload para Storage.
+ * @fileOverview API de Bio em Áudio com Cache Inteligente e Upload para Storage em formato MP3.
  */
 
 export async function POST(req: NextRequest) {
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Gerar novo áudio via IA (Gemini 2.5 Flash Native Audio)
+    // 3. Gerar novo áudio via IA (Convertido para MP3 no Flow)
     const result = await generateAudioBio(text);
     
     // 4. Se tivermos um userId, vamos persistir no Supabase Storage e DB
@@ -33,11 +32,11 @@ export async function POST(req: NextRequest) {
       const base64Data = result.audio.split(',')[1];
       const audioBuffer = Buffer.from(base64Data, 'base64');
       
-      // Upload para pasta dedicada 'audio-bios'
+      // Upload para pasta dedicada 'audio-bios' em formato MP3
       const publicUrl = await DatabaseService.uploadFile(
-        new Blob([audioBuffer], { type: 'audio/wav' }),
+        new Blob([audioBuffer], { type: 'audio/mpeg' }),
         'audio-bios',
-        'wav'
+        'mp3'
       );
 
       // Atualizar registro do usuário com a nova URL e o novo Hash

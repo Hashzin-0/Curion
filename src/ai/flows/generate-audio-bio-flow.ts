@@ -1,37 +1,47 @@
 'use server';
 
 /**
- * @fileOverview Fluxo de IA para converter texto de resumo profissional em áudio narrado.
+ * @fileOverview Fluxo de IA para converter texto de resumo profissional em áudio MP3 otimizado.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import wav from 'wav';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import { PassThrough } from 'stream';
+
+// Configurar o caminho do binário FFmpeg
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 /**
- * Converte dados PCM brutos para o formato WAV.
+ * Converte dados PCM brutos (retornados pelo Gemini) para MP3 usando FFmpeg.
  */
-async function pcmToWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
+async function pcmToMp3(pcmBuffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
+    const outputStream = new PassThrough();
+    const chunks: Buffer[] = [];
+
+    outputStream.on('data', (chunk) => chunks.push(chunk));
+    outputStream.on('end', () => {
+      const mp3Buffer = Buffer.concat(chunks);
+      resolve(mp3Buffer.toString('base64'));
     });
+    outputStream.on('error', reject);
 
-    let bufs: Buffer[] = [];
-    writer.on('error', reject);
-    writer.on('data', (d) => bufs.push(d));
-    writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
+    const inputStream = new PassThrough();
+    inputStream.end(pcmBuffer);
 
-    writer.write(pcmData);
-    writer.end();
+    // O Gemini Native Audio retorna áudio em 24kHz, 16-bit Mono (s16le)
+    ffmpeg(inputStream)
+      .inputFormat('s16le')
+      .inputOptions(['-ar 24000', '-ac 1'])
+      .toFormat('mp3')
+      .audioBitrate('128k')
+      .on('error', (err) => {
+        console.error('FFmpeg Conversion Error:', err);
+        reject(err);
+      })
+      .pipe(outputStream);
   });
 }
 
@@ -54,12 +64,12 @@ export async function generateAudioBio(text: string): Promise<{ audio: string }>
     throw new Error('Falha ao gerar áudio da bio');
   }
 
-  // O Gemini retorna PCM. Convertemos para WAV para compatibilidade com navegadores.
+  // O Gemini retorna PCM. Convertemos para MP3 para economizar banda e armazenamento.
   const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
   const pcmBuffer = Buffer.from(pcmBase64, 'base64');
-  const wavBase64 = await pcmToWav(pcmBuffer);
+  const mp3Base64 = await pcmToMp3(pcmBuffer);
 
   return {
-    audio: `data:audio/wav;base64,${wavBase64}`,
+    audio: `data:audio/mpeg;base64,${mp3Base64}`,
   };
 }
