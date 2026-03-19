@@ -1,7 +1,7 @@
 
 'use client';
 
-import Link from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Star, ThumbsUp } from 'lucide-react';
 import { StatusIndicator } from './StatusIndicator';
