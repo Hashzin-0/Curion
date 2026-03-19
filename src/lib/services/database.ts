@@ -82,6 +82,20 @@ export const DatabaseService = {
     return data;
   },
 
+  /**
+   * Realiza busca semântica por similaridade de vetores.
+   */
+  async searchSemanticProfiles(queryVector: number[]) {
+    const { data, error } = await supabase.rpc('match_profiles', {
+      query_embedding: queryVector,
+      match_threshold: 0.5, // Similaridade mínima de 50%
+      match_count: 12,
+    });
+
+    if (error) throw error;
+    return data;
+  },
+
   // Contatos do Usuário (Tabela user_contacts)
   async fetchUserContacts(userId: string) {
     const { data, error } = await supabase

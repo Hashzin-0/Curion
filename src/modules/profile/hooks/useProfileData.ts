@@ -49,15 +49,23 @@ export function useProfileData() {
       // 1. Atualiza o banco de dados
       await updateUser(editedProfile);
       
-      // 2. Feedback imediato: Fecha o modal e avisa o usuário
+      // 2. Sincroniza o vetor de busca (Busca Semântica)
+      const profileText = `${editedProfile.name} | ${editedProfile.headline} | ${editedProfile.summary}`;
+      fetch('/api/profile/sync-embedding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: editedProfile.id || currentUser?.id, text: profileText })
+      }).catch(e => console.error('Erro ao sincronizar busca semântica:', e));
+
+      // 3. Feedback imediato
       onDone();
-      toast.success('Perfil atualizado com sucesso!');
+      toast.success('Perfil atualizado!');
       
-      // 3. Atualiza o tema em background sem bloquear a UI
+      // 4. Atualiza o tema
       fetchTheme();
     } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);
-      toast.error(error.message || 'Falha ao salvar alterações do perfil.');
+      toast.error(error.message || 'Falha ao salvar alterações.');
     } finally {
       setIsProcessing(false);
     }
@@ -77,7 +85,7 @@ export function useProfileData() {
     try {
       await updateFn(data);
       onDone();
-      toast.success(`${entityName} atualizado(a) com sucesso!`);
+      toast.success(`${entityName} atualizado(a)!`);
     } catch (error) {
       toast.error(`Erro ao salvar ${entityName.toLowerCase()}.`);
     } finally {

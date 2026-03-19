@@ -18,12 +18,13 @@ import { QuickPreview } from '@/modules/explore/components/QuickPreview';
 
 /**
  * @fileOverview Página Explorer orquestrada seguindo ai_rules.md.
- * Isola lógica em hooks e compõe via componentes puros.
+ * Integrado suporte ao Motor de Busca Semântica (IA).
  */
 
 export default function ExplorePage() {
   const {
     view, setView,
+    searchMode, setSearchMode,
     searchQuery, setSearchQuery,
     isLoading,
     filteredCandidates,
@@ -88,6 +89,7 @@ export default function ExplorePage() {
 
         <ExploreFilters 
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+          searchMode={searchMode} setSearchMode={setSearchMode}
           activeModel={activeModel} setActiveModel={setActiveModel}
           activeRegime={activeRegime} setActiveRegime={setActiveRegime}
           trendingSkills={trendingSkills}
@@ -101,13 +103,19 @@ export default function ExplorePage() {
             <motion.div key="candidates" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-64 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-[2.5rem]" />)
-              ) : filteredCandidates.map(user => (
-                <CandidateCard 
-                  key={user.id} user={user} 
-                  onPreviewEnter={handlePreviewEnter} 
-                  onPreviewLeave={handlePreviewLeave} 
-                />
-              ))}
+              ) : filteredCandidates.length > 0 ? (
+                filteredCandidates.map(user => (
+                  <CandidateCard 
+                    key={user.id} user={user} 
+                    onPreviewEnter={handlePreviewEnter} 
+                    onPreviewLeave={handlePreviewLeave} 
+                  />
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum talento encontrado com este critério.</p>
+                </div>
+              )}
             </motion.div>
           )}
 

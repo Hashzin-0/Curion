@@ -5,15 +5,18 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { useStore } from '@/lib/store';
 import { slugify, calcDuration } from '@/lib/utils';
+import { generateTextEmbedding } from '@/ai/flows/generate-embedding-flow';
+import { toast } from 'sonner';
 
 /**
  * @fileOverview Hook principal do domínio Explore.
- * Isola toda a lógica de busca, filtragem e processamento de dados.
+ * Implementa Busca Híbrida (Keywords + Semântica).
  */
 
 export function useExplore() {
   const { currentUser, experiences, skills, areaSkills, areas } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs' | 'map'>('candidates');
+  const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>('keyword');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
@@ -43,6 +46,46 @@ export function useExplore() {
     loadData();
   }, [loadData]);
 
+  // Lógica de Busca Semântica
+  const handleSemanticSearch = useCallback(async () => {
+    if (!searchQuery.trim()) {
+      loadData();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 1. Transformar a pergunta do usuário em um vetor
+      const queryVector = await generateTextEmbedding(searchQuery);
+      
+      // 2. Buscar no Supabase via RPC (Similaridade de Vetores)
+      const results = await DatabaseService.searchSemanticProfiles(queryVector);
+      
+      // 3. Mapear resultados (o RPC retorna dados básicos, mas precisamos das áreas para o card)
+      // Em um app real, faríamos um JOIN no RPC, aqui vamos filtrar os perfis já carregados
+      const matchedIds = results.map((r: any) => r.id);
+      const filtered = publicUsers.filter(u => matchedIds.includes(u.id));
+      
+      setPublicUsers(filtered);
+      toast.success(`IA encontrou ${results.length} talentos relacionados.`);
+    } catch (err) {
+      toast.error('Erro na busca inteligente. Tente por palavra-chave.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, publicUsers, loadData]);
+
+  // Disparar busca ao mudar modo ou query
+  useEffect(() => {
+    if (searchMode === 'semantic') {
+      const delay = setTimeout(handleSemanticSearch, 1000);
+      return () => clearTimeout(delay);
+    } else {
+      loadData();
+    }
+  }, [searchMode, searchQuery, handleSemanticSearch, loadData]);
+
   // Contexto do perfil para o Match IA
   const profileContext = useMemo(() => {
     if (!currentUser) return null;
@@ -59,7 +102,6 @@ export function useExplore() {
     };
   }, [currentUser, experiences, skills, areaSkills, areas]);
 
-  // Lógica de Trending Skills
   const trendingSkills = useMemo(() => {
     const counts: Record<string, number> = {};
     realJobs.forEach(job => {
@@ -76,7 +118,6 @@ export function useExplore() {
       .map(([name]) => name);
   }, [realJobs]);
 
-  // Lógica de Distribuição Geográfica
   const geoDistribution = useMemo(() => {
     const clusters: Record<string, { jobs: number, candidates: number, display: string }> = {};
     realJobs.forEach(j => {
@@ -93,12 +134,13 @@ export function useExplore() {
   }, [realJobs, publicUsers]);
 
   const filteredCandidates = useMemo(() => {
+    if (searchMode === 'semantic') return publicUsers;
     return publicUsers.filter(u => 
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       u.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.location?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [publicUsers, searchQuery]);
+  }, [publicUsers, searchQuery, searchMode]);
 
   const filteredJobs = useMemo(() => {
     return realJobs.filter(j => {
@@ -114,6 +156,7 @@ export function useExplore() {
 
   return {
     view, setView,
+    searchMode, setSearchMode,
     searchQuery, setSearchQuery,
     isLoading,
     filteredCandidates,
