@@ -1,32 +1,72 @@
 /**
  * @fileOverview Gerenciamento de estado global com Zustand.
- * Centraliza a lógica de negócios e sincronização com o banco de dados.
+ * Centraliza a lógica de negócios e sincronização com o banco de dados seguindo o schema oficial.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
-import { detectAreaFromRole, getRelevantAreaSlugsForSkill } from './utils';
+import { detectAreaFromRole } from './utils';
 
 export type User = { 
   id: string; 
   username: string; 
   name: string; 
-  avatar_path: string; 
-  headline: string; 
-  summary: string; 
-  location: string; 
+  avatar_path: string | null; 
+  headline: string | null; 
+  summary: string | null; 
+  location: string | null; 
   email?: string; 
   phone?: string; 
+  website?: string;
 };
 
-export type ProfessionalArea = { id: string; user_id: string; name: string; slug: string; icon: string; theme_color: string; };
-export type Experience = { id: string; user_id: string; area_id: string; company_name: string; company_logo: string; role: string; start_date: string; end_date: string | null; description: string; };
-export type Skill = { id: string; name: string; icon: string; };
-export type AreaSkill = { id: string; area_id: string; skill_id: string; level: number; };
-export type Education = { id: string; user_id: string; institution: string; course: string; start_date: string; end_date: string | null; };
-export type Achievement = { id: string; user_id: string; title: string; organization: string; date: string; description: string; };
-export type PortfolioItem = { id: string; user_id: string; title: string; description: string; file_url?: string; link_url?: string; };
-export type Certificate = { id: string; user_id: string; name: string; issuer: string; date: string; url?: string; };
+export type ProfessionalArea = { 
+  id: string; 
+  user_id: string; 
+  name: string; 
+  theme_color: string; 
+  order: number; 
+};
+
+export type Experience = { 
+  id: string; 
+  user_id: string; 
+  area_id: string | null; 
+  company_name: string; 
+  role: string; 
+  start_date: string | null; 
+  end_date: string | null; 
+  description: string | null; 
+};
+
+export type Skill = { 
+  id: string; 
+  name: string; 
+  icon: string; 
+};
+
+export type AreaSkill = { 
+  area_id: string; 
+  skill_id: string; 
+};
+
+export type Education = { 
+  id: string; 
+  user_id: string; 
+  institution: string; 
+  course: string; 
+  start_date: string | null; 
+  end_date: string | null; 
+};
+
+export type PortfolioItem = { 
+  id: string; 
+  user_id: string; 
+  title: string; 
+  description: string | null; 
+  file_path: string | null; 
+  external_url: string | null; 
+};
 
 interface AppState {
   currentUser: User | null;
@@ -36,8 +76,6 @@ interface AppState {
   skills: Skill[];
   areaSkills: AreaSkill[];
   education: Education[];
-  achievements: Achievement[];
-  certificates: Certificate[];
   portfolio: PortfolioItem[];
   isLoading: boolean;
   isAuthReady: boolean;
@@ -60,17 +98,12 @@ interface AppState {
   updateEducation: (edu: Education) => Promise<void>;
   removeEducation: (id: string) => Promise<void>;
 
-  addAchievement: (ach: Omit<Achievement, 'id'>) => Promise<void>;
-  updateAchievement: (ach: Achievement) => Promise<void>;
-  removeAchievement: (id: string) => Promise<void>;
-
   addPortfolioItem: (item: Omit<PortfolioItem, 'id'>) => Promise<void>;
   updatePortfolioItem: (item: PortfolioItem) => Promise<void>;
   removePortfolioItem: (id: string) => Promise<void>;
 
-  addAreaSkill: (as: Omit<AreaSkill, 'id'>) => Promise<void>;
-  addSkillToRelevantAreas: (skillId: string, skillName: string, level: number) => Promise<void>;
-  removeAreaSkill: (id: string) => Promise<void>;
+  addAreaSkill: (as: AreaSkill) => Promise<void>;
+  removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
   
   fetchData: () => Promise<void>;
 }
@@ -85,8 +118,6 @@ export const useStore = create<AppState>()(
       skills: [],
       areaSkills: [],
       education: [],
-      achievements: [],
-      certificates: [],
       portfolio: [],
       isLoading: true,
       isAuthReady: false,
@@ -97,9 +128,16 @@ export const useStore = create<AppState>()(
       syncUserWithDatabase: async (userData) => {
         try {
           const data = await DatabaseService.syncUser(userData);
-          // O email e telefone vêm da sessão auth, não necessariamente do banco publico
-          set({ currentUser: { ...data, email: userData.email, phone: userData.phone } });
-          return data;
+          // Busca contatos
+          const contacts = await DatabaseService.fetchUserContacts(data.id);
+          const mergedUser = { 
+            ...data, 
+            email: contacts?.email || userData.email, 
+            phone: contacts?.phone || userData.phone,
+            website: contacts?.website
+          };
+          set({ currentUser: mergedUser });
+          return mergedUser;
         } catch (error) {
           console.error('Store: syncUserWithDatabase failed', error);
           throw error;
@@ -110,7 +148,18 @@ export const useStore = create<AppState>()(
         const { currentUser } = get();
         if (!currentUser) return;
         const data = await DatabaseService.updateUser(currentUser.id, userData);
-        set({ currentUser: { ...currentUser, ...data } });
+        
+        // Atualiza contatos se fornecido
+        if (userData.email || userData.phone) {
+          await DatabaseService.upsertUserContacts({
+            user_id: currentUser.id,
+            email: userData.email,
+            phone: userData.phone,
+            website: userData.website
+          });
+        }
+
+        set({ currentUser: { ...currentUser, ...data, ...userData } });
       },
 
       fetchData: async () => {
@@ -124,9 +173,7 @@ export const useStore = create<AppState>()(
             skills: results[3].data || [],
             areaSkills: results[4].data || [],
             education: results[5].data || [],
-            achievements: results[6].data || [],
-            certificates: results[7].data || [],
-            portfolio: results[8].data || [],
+            portfolio: results[6].data || [],
             isLoading: false
           });
         } catch (error) {
@@ -149,9 +196,14 @@ export const useStore = create<AppState>()(
       },
       addExperienceWithAutoArea: async (exp) => {
         const detected = detectAreaFromRole(exp.role);
-        let area = get().areas.find(a => a.slug === detected.slug && a.user_id === exp.user_id);
+        let area = get().areas.find(a => a.name.toLowerCase() === detected.name.toLowerCase() && a.user_id === exp.user_id);
         if (!area) {
-          area = await DatabaseService.upsertArea({ ...detected, user_id: exp.user_id });
+          area = await DatabaseService.upsertArea({ 
+            name: detected.name, 
+            theme_color: detected.themeColor,
+            user_id: exp.user_id,
+            order: get().areas.length
+          });
           set(s => ({ areas: [...s.areas, area!] }));
         }
         await get().addExperience({ ...exp, area_id: area!.id });
@@ -186,19 +238,6 @@ export const useStore = create<AppState>()(
         set(s => ({ education: s.education.filter(e => e.id !== id) }));
       },
 
-      addAchievement: async (ach) => {
-        const data = await DatabaseService.upsertAchievement(ach);
-        set(s => ({ achievements: [data, ...s.achievements] }));
-      },
-      updateAchievement: async (ach) => {
-        const data = await DatabaseService.upsertAchievement(ach);
-        set(s => ({ achievements: s.achievements.map(a => a.id === ach.id ? data : a) }));
-      },
-      removeAchievement: async (id) => {
-        await DatabaseService.deleteAchievement(id);
-        set(s => ({ achievements: s.achievements.filter(a => a.id !== id) }));
-      },
-
       addPortfolioItem: async (item) => {
         const data = await DatabaseService.upsertPortfolioItem(item);
         set(s => ({ portfolio: [data, ...s.portfolio] }));
@@ -213,47 +252,15 @@ export const useStore = create<AppState>()(
       },
 
       addAreaSkill: async (as) => {
-        const data = await DatabaseService.addAreaSkill(as);
-        set(s => ({ areaSkills: [...s.areaSkills, data] }));
+        await DatabaseService.addAreaSkill(as);
+        set(s => ({ areaSkills: [...s.areaSkills, as] }));
       },
 
-      addSkillToRelevantAreas: async (skillId, skillName, level) => {
-        const { areas, addArea, addAreaSkill, areaSkills } = get();
-        let targetAreas = [...areas];
-        if (targetAreas.length === 0) {
-          const newArea = await addArea({
-            name: 'Geral',
-            slug: 'geral',
-            icon: 'Briefcase',
-            theme_color: '#334155'
-          });
-          if (newArea) targetAreas = [newArea];
-        }
-
-        const matchedSlugs = getRelevantAreaSlugsForSkill(skillName);
-        let areasToLink = targetAreas.filter(a => matchedSlugs.includes(a.slug));
-
-        if (areasToLink.length === 0) {
-          areasToLink = targetAreas;
-        }
-
-        for (const area of areasToLink) {
-          const alreadyHas = areaSkills.find(as => as.area_id === area.id && as.skill_id === skillId);
-          if (!alreadyHas) {
-            await addAreaSkill({
-              area_id: area.id,
-              skill_id: skillId,
-              level: level
-            });
-          }
-        }
-      },
-
-      removeAreaSkill: async (id) => {
-        await DatabaseService.deleteAreaSkill(id);
-        set(s => ({ areaSkills: s.areaSkills.filter(as => as.id !== id) }));
+      removeAreaSkill: async (areaId, skillId) => {
+        await DatabaseService.deleteAreaSkill(areaId, skillId);
+        set(s => ({ areaSkills: s.areaSkills.filter(as => !(as.area_id === areaId && as.skill_id === skillId)) }));
       },
     }),
-    { name: 'career-canvas-src-v1' }
+    { name: 'curion-x-v2' }
   )
 );

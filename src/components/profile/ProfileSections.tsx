@@ -1,8 +1,10 @@
-
+/**
+ * @fileOverview Seções de Educação e Portfólio atualizadas para o schema oficial.
+ */
 'use client';
 
-import { Education, PortfolioItem, Certificate } from '@/lib/store';
-import { GraduationCap, Folder, ArrowRight } from 'lucide-react';
+import { Education, PortfolioItem } from '@/lib/store';
+import { GraduationCap, Folder, ArrowRight, ExternalLink } from 'lucide-react';
 import { CardActions } from '@/components/shared/CardActions';
 
 type EducationSectionProps = {
@@ -74,8 +76,8 @@ export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort 
               />
             )}
             <div className="h-48 bg-slate-100 dark:bg-slate-800 relative">
-              {item.file_url ? (
-                <img src={item.file_url} alt={item.title} className="w-full h-full object-cover" />
+              {item.file_path ? (
+                <img src={item.file_path} alt={item.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-300">
                   <Folder size={48} />
@@ -85,9 +87,9 @@ export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort 
             <div className="p-8 flex-1 flex flex-col">
               <h4 className="text-xl font-black mb-3 text-slate-900 dark:text-white uppercase tracking-tighter">{item.title}</h4>
               <p className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1">{item.description}</p>
-              {item.link_url && (
-                <a href={item.link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-purple-600 hover:underline">
-                  Ver Projeto <ArrowRight size={14} />
+              {item.external_url && (
+                <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-purple-600 hover:underline">
+                  Ver Projeto Externo <ExternalLink size={14} />
                 </a>
               )}
             </div>

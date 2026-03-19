@@ -1,11 +1,13 @@
-
+/**
+ * @fileOverview Layout de perfil temático atualizado para o schema SQL oficial.
+ */
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import { Plus, ArrowRight, Briefcase, ChevronDown } from 'lucide-react';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
-import { User, ProfessionalArea, Education, PortfolioItem, Certificate, Experience } from '@/lib/store';
+import { User, ProfessionalArea, Education, PortfolioItem, Experience } from '@/lib/store';
 import { Stats } from '@/components/Stats';
 import { Timeline } from '@/components/Timeline';
 import { generatePremiumTheme } from '@/lib/premium-themes';
@@ -27,7 +29,6 @@ type Props = {
   areas: ProfessionalArea[];
   education?: Education[];
   portfolio?: PortfolioItem[];
-  certificates?: Certificate[];
   isOwner?: boolean;
   onEditProfile?: () => void;
   onAddContent?: () => void;
@@ -39,11 +40,13 @@ type Props = {
   onDeletePortfolio?: (id: string) => void;
   onEditExperience?: (exp: Experience) => void;
   onDeleteExperience?: (id: string) => void;
-  onManageSkills?: () => void;
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
 };
+
+// Gera slug amigável em tempo de execução
+const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
 
 function Particle({ emoji, x, size, speed, delay }: any) {
   return (
@@ -71,18 +74,18 @@ export function ThemedProfileLayout(props: Props) {
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  const mainArea = props.areas[0]?.name || "tecnologia";
-  const premium = useMemo(() => generatePremiumTheme(props.user.name || '', mainArea), [props.user.name, mainArea]);
+  const mainAreaName = props.areas[0]?.name || "Tecnologia";
+  const premium = useMemo(() => generatePremiumTheme(props.user.name || '', mainAreaName), [props.user.name, mainAreaName]);
   const accentColor = props.theme?.primaryHex || premium.palette.primary;
   
   const filteredAreas = useMemo(() => {
     if (!areaFilter) return props.areas;
-    return props.areas.filter(a => a.slug === areaFilter);
+    return props.areas.filter(a => slugify(a.name) === areaFilter);
   }, [props.areas, areaFilter]);
 
   const waterfallEmojis = useMemo(() => {
     if (props.areas.length === 0) return premium.particles.map(p => p.emoji);
-    return props.areas.map(a => getTheme(a.slug).emoji);
+    return props.areas.map(a => getTheme(slugify(a.name)).emoji);
   }, [props.areas, premium.particles]);
 
   const userAreaSkills = useMemo(() => {
@@ -119,6 +122,7 @@ export function ThemedProfileLayout(props: Props) {
               onEdit={props.onEditProfile} 
               accentColor={accentColor} 
               darkColor={premium.palette.dark} 
+              areas={props.areas}
             />
           </div>
 
@@ -140,7 +144,8 @@ export function ThemedProfileLayout(props: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {filteredAreas.map((area) => {
                     const areaExps = userExperiences.filter(e => e.area_id === area.id);
-                    const theme = getTheme(area.slug);
+                    const areaSlug = slugify(area.name);
+                    const theme = getTheme(areaSlug);
                     
                     return (
                       <motion.div 
@@ -166,7 +171,7 @@ export function ThemedProfileLayout(props: Props) {
                               </div>
                               <div>
                                 <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{area.name}</h3>
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{areaExps.length} Experiência{areaExps.length !== 1 ? 's' : ''}</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{areaExps.length} Registro{areaExps.length !== 1 ? 's' : ''}</span>
                               </div>
                             </div>
                             <span className="text-4xl filter drop-shadow-md">{theme.emoji}</span>
@@ -236,13 +241,10 @@ export function ThemedProfileLayout(props: Props) {
                                 </motion.div>
                               );
                             })}
-                            {areaExps.length > 3 && (
-                              <p className="text-[10px] font-black text-slate-400 uppercase text-center">+ {areaExps.length - 3} outros registros</p>
-                            )}
                           </div>
 
-                          <Link href={`/${props.username}/${area.slug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: (area.theme_color || theme.hex) + '15', color: area.theme_color || theme.hex }}>
-                            Ver Currículo Completo
+                          <Link href={`/${props.username}/${areaSlug}`} className="mt-auto w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:gap-4" style={{ backgroundColor: (area.theme_color || theme.hex) + '15', color: area.theme_color || theme.hex }}>
+                            Ver Portfólio da Área
                             <ArrowRight className="w-4 h-4" />
                           </Link>
                         </div>
@@ -252,8 +254,8 @@ export function ThemedProfileLayout(props: Props) {
                 </div>
               ) : (
                 <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                  <p className="text-slate-500 font-bold">Nenhuma área cadastrada ainda.</p>
-                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências ou crie uma nova área manualmente.</p>}
+                  <p className="text-slate-500 font-bold">Nenhuma área profissional definida.</p>
+                  {props.isOwner && <p className="text-xs text-slate-400 mt-2">Adicione experiências para gerar áreas automaticamente.</p>}
                 </div>
               )}
             </section>
@@ -262,21 +264,17 @@ export function ThemedProfileLayout(props: Props) {
               <section>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-4 mb-10">
                   <span className="w-3 h-10 rounded-full inline-block shadow-lg" style={{ backgroundColor: '#3b82f6' }} />
-                  Habilidades
+                  Habilidades & Competências
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex flex-wrap gap-3">
                   {userAreaSkills.map((as) => {
                     const skill = skills.find(s => s.id === as.skill_id);
-                    const theme = getTheme(props.areas.find(a => a.id === as.area_id)?.slug || 'default');
+                    const area = props.areas.find(a => a.id === as.area_id);
+                    const theme = getTheme(slugify(area?.name || 'default'));
                     return (
-                      <div key={as.id} className="bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xl">{theme.emoji}</span>
-                          <span className="text-[10px] font-black uppercase text-slate-400">{skill?.name}</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} whileInView={{ width: `${as.level}%` }} className="h-full" style={{ backgroundColor: theme.hex }} />
-                        </div>
+                      <div key={`${as.area_id}-${as.skill_id}`} className="bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3">
+                        <span className="text-xl">{theme.emoji}</span>
+                        <span className="text-xs font-black uppercase text-slate-600 dark:text-slate-300">{skill?.name}</span>
                       </div>
                     );
                   })}

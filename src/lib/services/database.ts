@@ -1,5 +1,5 @@
 /**
- * @fileOverview Camada de serviço para interações com o Supabase.
+ * @fileOverview Camada de serviço para interações com o Supabase seguindo o schema oficial.
  */
 import { supabase } from '../supabase';
 import { User, ProfessionalArea, Experience, Education, PortfolioItem, AreaSkill } from '../store';
@@ -9,18 +9,18 @@ export type JobVacancy = {
   user_id: string;
   title: string;
   company: string;
-  description: string;
-  requirements: string[];
-  location: string;
-  salary?: string;
-  contact_info: string;
-  area_slug: string;
-  file_url?: string;
+  description: string | null;
+  requirements: string[] | null;
+  location: string | null;
+  salary: string | null;
+  contact_info: string | null;
+  area_slug: string | null;
+  file_url: string | null;
   created_at: string;
 };
 
 export const DatabaseService = {
-  // Usuário - Sincroniza com base no schema avatar_path
+  // Usuário
   async syncUser(userData: Partial<User>) {
     const { id, username, name, headline, summary, avatar_path, location } = userData;
     const { data, error } = await supabase
@@ -47,23 +47,41 @@ export const DatabaseService = {
   async fetchPublicProfiles() {
     const { data, error } = await supabase
       .from('users')
-      .select('*, areas(*)');
+      .select('*, professional_areas(*)');
     if (error) throw error;
     return data;
   },
 
-  // Analytics
+  // Contatos do Usuário
+  async fetchUserContacts(userId: string) {
+    const { data, error } = await supabase
+      .from('user_contacts')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  async upsertUserContacts(contacts: any) {
+    const { error } = await supabase
+      .from('user_contacts')
+      .upsert(contacts);
+    if (error) throw error;
+  },
+
+  // Analytics (Page Views)
   async recordProfileView(userId: string) {
     if (!userId) return;
     const { error } = await supabase
-      .from('profile_views')
+      .from('page_views')
       .insert([{ user_id: userId, viewed_at: new Date().toISOString() }]);
     if (error) console.warn('DatabaseService: Erro ao gravar view:', error.message);
   },
 
   async fetchProfileStats(userId: string) {
     const { data, error } = await supabase
-      .from('profile_views')
+      .from('page_views')
       .select('viewed_at')
       .eq('user_id', userId);
     if (error) throw error;
@@ -111,15 +129,15 @@ export const DatabaseService = {
     return data.publicUrl;
   },
 
-  // Áreas
+  // Áreas Profissionais
   async upsertArea(area: Partial<ProfessionalArea>) {
-    const { data, error } = await supabase.from('areas').upsert(area).select().single();
+    const { data, error } = await supabase.from('professional_areas').upsert(area).select().single();
     if (error) throw error;
     return data as ProfessionalArea;
   },
 
   async deleteArea(id: string) {
-    const { error } = await supabase.from('areas').delete().eq('id', id);
+    const { error } = await supabase.from('professional_areas').delete().eq('id', id);
     if (error) throw error;
   },
 
@@ -149,25 +167,24 @@ export const DatabaseService = {
 
   // Portfólio
   async upsertPortfolioItem(item: Partial<PortfolioItem>) {
-    const { data, error } = await supabase.from('portfolio').upsert(item).select().single();
+    const { data, error } = await supabase.from('portfolio_items').upsert(item).select().single();
     if (error) throw error;
     return data as PortfolioItem;
   },
 
   async deletePortfolioItem(id: string) {
-    const { error } = await supabase.from('portfolio').delete().eq('id', id);
+    const { error } = await supabase.from('portfolio_items').delete().eq('id', id);
     if (error) throw error;
   },
 
   // Habilidades
-  async addAreaSkill(skill: Omit<AreaSkill, 'id'>) {
-    const { data, error } = await supabase.from('area_skills').insert([skill]).select().single();
+  async addAreaSkill(as: AreaSkill) {
+    const { error } = await supabase.from('area_skills').insert([as]);
     if (error) throw error;
-    return data as AreaSkill;
   },
 
-  async deleteAreaSkill(id: string) {
-    const { error } = await supabase.from('area_skills').delete().eq('id', id);
+  async deleteAreaSkill(areaId: string, skillId: string) {
+    const { error } = await supabase.from('area_skills').delete().match({ area_id: areaId, skill_id: skillId });
     if (error) throw error;
   },
 
@@ -175,12 +192,12 @@ export const DatabaseService = {
   async fetchAllData() {
     const queries = [
       supabase.from('users').select('*'),
-      supabase.from('areas').select('*'),
+      supabase.from('professional_areas').select('*').order('order', { ascending: true }),
       supabase.from('experiences').select('*'),
       supabase.from('skills').select('*'),
       supabase.from('area_skills').select('*'),
       supabase.from('education').select('*'),
-      supabase.from('portfolio').select('*'),
+      supabase.from('portfolio_items').select('*'),
     ];
     return await Promise.all(queries);
   }
