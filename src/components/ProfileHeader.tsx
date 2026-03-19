@@ -21,7 +21,7 @@ export default function ProfileHeader({ user, onEdit }: ProfileHeaderProps) {
       )}
       <div className="relative w-32 h-32 rounded-full overflow-hidden shrink-0 border-4 border-white dark:border-slate-800 shadow-md">
         <Image
-          src={user.photo_url || `https://picsum.photos/seed/${user.id}/200/200`}
+          src={user.avatar_path || `https://picsum.photos/seed/${user.id}/200/200`}
           alt={user.name}
           fill
           className="object-cover"

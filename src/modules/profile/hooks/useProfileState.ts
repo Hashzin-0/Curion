@@ -40,7 +40,7 @@ export function useProfileState() {
         headline: store.currentUser.headline, 
         summary: store.currentUser.summary, 
         location: store.currentUser.location, 
-        photo_url: store.currentUser.photo_url 
+        avatar_path: store.currentUser.avatar_path 
       });
     }
   }, [store.currentUser]);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -57,7 +56,7 @@ export default function ExplorePage() {
         <header className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
-              Explorar <span className="text-blue-600">CareerCanvas</span>
+              Explorar <span className="text-blue-600">Curion X</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">Conectando talentos e oportunidades com inteligência.</p>
           </div>
@@ -113,7 +112,7 @@ export default function ExplorePage() {
                   <div className="p-8 flex-1">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-slate-800">
-                        <Image src={user.photo_url || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
+                        <Image src={user.avatar_path || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} fill className="object-cover" />
                       </div>
                       <div>
                         <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{user.name}</h3>
