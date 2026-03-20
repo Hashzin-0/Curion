@@ -3,7 +3,7 @@ export const AI_CONFIG = {
    * Modelo específico para simulação de entrevista em tempo real.
    * Utiliza a capacidade multimodal nativa para áudio.
    */
-  model: 'gemini-2.5-flash-native-audio',
+  model: 'gemini-2.5-flash-native-audio-preview-12-2025',
   voice: 'Algenib',
 
   systemPrompt: `

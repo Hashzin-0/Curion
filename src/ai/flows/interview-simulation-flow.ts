@@ -50,9 +50,9 @@ export async function simulateInterview(input: InterviewInput): Promise<Intervie
     currentPromptParts.push({ text: "Continue a entrevista respondendo ao candidato de forma curta e direta." });
   }
 
-  // 1. Gerar resposta usando o modelo Native Audio do Gemini
+  // 1. Gerar resposta usando o modelo Native Audio do Gemini (versão preview atualizada)
   const response = await ai.generate({
-    model: googleAI.model('gemini-2.5-flash-native-audio'),
+    model: googleAI.model('gemini-2.5-flash-native-audio-preview-12-2025'),
     config: {
       responseModalities: ['TEXT', 'AUDIO'],
     },
