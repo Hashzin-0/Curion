@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -32,22 +31,32 @@ export default function ImportPage() {
   const [rawText, setRawText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [parsingStatus, setParsingStatus] = useState('');
   const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0, label: '' });
   const [parsedData, setParsedData] = useState<any>(null);
 
   const extractText = async (f: File): Promise<string> => {
     if (f.type === 'application/pdf') {
+      setParsingStatus('Iniciando leitura do PDF...');
       const arrayBuffer = await f.arrayBuffer();
       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
+        setParsingStatus(`Lendo PDF: página ${i} de ${pdf.numPages}...`);
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
       }
       return fullText;
     } else if (f.type.startsWith('image/')) {
-      const result = await Tesseract.recognize(f, 'por');
+      setParsingStatus('Iniciando reconhecimento de imagem (OCR)...');
+      const result = await Tesseract.recognize(f, 'por', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setParsingStatus(`Analisando imagem: ${Math.round(m.progress * 100)}%`);
+          }
+        }
+      });
       return result.data.text;
     }
     return '';
@@ -56,6 +65,8 @@ export default function ImportPage() {
   const handleStartParsing = async () => {
     setIsProcessing(true);
     setStep('parsing');
+    setParsingStatus('Preparando documento...');
+    
     try {
       let textToParse = rawText;
       if (inputMode === 'file' && file) {
@@ -66,7 +77,9 @@ export default function ImportPage() {
         throw new Error('Texto insuficiente para análise. Por favor, forneça mais detalhes.');
       }
 
+      setParsingStatus('IA analisando estrutura e organizando dados...');
       const result = await parseResumeText({ text: textToParse });
+      
       setParsedData(result);
       setStep('review');
       toast.success('Currículo analisado com sucesso!');
@@ -75,6 +88,7 @@ export default function ImportPage() {
       setStep('upload');
     } finally {
       setIsProcessing(false);
+      setParsingStatus('');
     }
   };
 
@@ -88,8 +102,7 @@ export default function ImportPage() {
     try {
       let processedCount = 0;
 
-      // Adiciona experiências sequencialmente para evitar race condition na criação de áreas
-      // Mas com feedback visual de progresso para evitar a percepção de "travamento"
+      // Adiciona experiências
       if (parsedData.experiences) {
         for (const exp of parsedData.experiences) {
           processedCount++;
@@ -220,7 +233,10 @@ export default function ImportPage() {
             </div>
             <div>
               <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">A IA está trabalhando</h2>
-              <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">Extraindo experiências, datas e habilidades do seu documento...</p>
+              <p className="text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest text-xs mt-4 animate-pulse">
+                {parsingStatus}
+              </p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 text-sm italic">Extraindo experiências, datas e habilidades do seu documento...</p>
             </div>
           </div>
         )}
