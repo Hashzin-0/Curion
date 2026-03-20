@@ -16,10 +16,6 @@ export function useRealtimeInterview() {
   const [isInterviewing, setIsInterviewing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any[]>([]);
 
-  let isSpeaking = false;
-  let silenceTimer: any = null;
-  let transcriptBuffer = '';
-
   async function start() {
     setIsInterviewing(true);
     setAnalysisResults([]);
@@ -32,88 +28,101 @@ export function useRealtimeInterview() {
       return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let isSpeaking = false;
+    let silenceTimer: any = null;
+    let transcriptBuffer = '';
 
-    const audioCtx = new AudioContext({ sampleRate: 24000 });
-    audioCtxRef.current = audioCtx;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    const source = audioCtx.createMediaStreamSource(stream);
-    const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-    processorRef.current = processor;
+      const audioCtx = new AudioContext({ sampleRate: 24000 });
+      audioCtxRef.current = audioCtx;
 
-    source.connect(processor);
-    processor.connect(audioCtx.destination);
+      const source = audioCtx.createMediaStreamSource(stream);
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
 
-    // Conexão direta com o serviço generativo via WebSocket usando a chave Gemini
-    const ws = new WebSocket(
-      `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`
-    );
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
 
-    wsRef.current = ws;
+      // Conexão direta com o serviço generativo via WebSocket usando a chave Gemini
+      const ws = new WebSocket(
+        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`
+      );
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        setup: {
-          model: `models/${AI_CONFIG.model}`,
-          systemInstruction: {
-            parts: [{ text: AI_CONFIG.systemPrompt }],
-          },
-          generationConfig: {
-            responseModalities: ['AUDIO', 'TEXT'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: {
-                  voiceName: AI_CONFIG.voice,
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          setup: {
+            model: `models/${AI_CONFIG.model}`,
+            systemInstruction: {
+              parts: [{ text: AI_CONFIG.systemPrompt }],
+            },
+            generationConfig: {
+              responseModalities: ['AUDIO', 'TEXT'],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: {
+                    voiceName: AI_CONFIG.voice,
+                  },
                 },
               },
             },
           },
-        },
-      }));
-    };
+        }));
+      };
 
-    processor.onaudioprocess = (e) => {
-      const input = e.inputBuffer.getChannelData(0);
-      const volume = input.reduce((sum, x) => sum + Math.abs(x), 0) / input.length;
+      processor.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        const volume = input.reduce((sum, x) => sum + Math.abs(x), 0) / input.length;
 
-      if (volume > 0.01) {
-        isSpeaking = true;
-        if (silenceTimer) {
-          clearTimeout(silenceTimer);
-          silenceTimer = null;
+        if (volume > 0.01) {
+          isSpeaking = true;
+          if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+          }
+          sendAudio(input);
+        } else if (isSpeaking && !silenceTimer) {
+          silenceTimer = setTimeout(() => {
+            isSpeaking = false;
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ inputAudioEnd: true }));
+            }
+          }, 500);
         }
-        sendAudio(input);
-      } else if (isSpeaking && !silenceTimer) {
-        silenceTimer = setTimeout(() => {
-          isSpeaking = false;
-          ws.send(JSON.stringify({ inputAudioEnd: true }));
-        }, 500);
-      }
-    };
+      };
 
-    ws.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
+      ws.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
 
-      if (msg.text) {
-        transcriptBuffer += msg.text;
-      }
+        if (msg.text) {
+          transcriptBuffer += msg.text;
+        }
 
-      if (msg.audio?.data) {
-        playAudio(msg.audio.data);
-      }
+        if (msg.audio?.data) {
+          playAudio(msg.audio.data);
+        }
 
-      if (msg.turnComplete) {
-        const result = await analyzeAnswer(transcriptBuffer);
-        setAnalysisResults(prev => [...prev, result]);
-        transcriptBuffer = '';
-      }
-    };
+        if (msg.turnComplete) {
+          const result = await analyzeAnswer(transcriptBuffer);
+          setAnalysisResults(prev => [...prev, result]);
+          transcriptBuffer = '';
+        }
+      };
 
-    ws.onerror = () => stop();
-    ws.onclose = () => setIsInterviewing(false);
+      ws.onerror = () => stop();
+      ws.onclose = () => setIsInterviewing(false);
+    } catch (err) {
+      console.error('Falha ao iniciar áudio:', err);
+      setIsInterviewing(false);
+    }
   }
 
   function sendAudio(float32: Float32Array) {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    
     const pcm16 = new Int16Array(float32.length);
     for (let i = 0; i < float32.length; i++) {
       pcm16[i] = float32[i] * 0x7fff;

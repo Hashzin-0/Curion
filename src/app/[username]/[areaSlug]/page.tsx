@@ -1,14 +1,11 @@
-
 'use client';
 
 import { useStore, Experience, Education, ProfessionalArea } from '@/lib/store';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
+import { useEffect, useRef, useState, useMemo, Suspense } from 'react';
+import { Loader2, ArrowLeft, Sparkles, Mail } from 'lucide-react';
 import { getTheme } from '@/styles/themes';
-import ResumeTemplate, { ResumeData } from '@/components/ResumeTemplate';
 import { generateSystemResumeTheme } from '@/lib/premium-themes';
-import { QRCodeSVG } from 'qrcode.react';
 import { calcDuration, slugify } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
@@ -16,15 +13,15 @@ import { Modal } from '@/components/feedback/Modal';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { ExperienceItem, EducationCard } from '@/components/shared/ProfileSections';
-import { RichEditor } from '@/components/RichEditor';
 import { DatabaseService } from '@/lib/services/database';
+import dynamic from 'next/dynamic';
 
-/**
- * @fileOverview Página de currículo específica por área de atuação.
- * Integrado com IA Refiner, Analytics de conversão e Destaque de Sintaxe.
- */
+// Importações dinâmicas para evitar erros de manifesto client-side no SSR
+const ResumeTemplate = dynamic(() => import('@/components/ResumeTemplate'), { ssr: false });
+const RichEditor = dynamic(() => import('@/components/RichEditor').then(mod => mod.RichEditor), { ssr: false });
+const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
 
-export default function AreaResume() {
+function AreaResumeContent() {
   const params = useParams();
   const username = params?.username as string;
   const areaSlug = params?.areaSlug as string;
@@ -42,7 +39,7 @@ export default function AreaResume() {
   const [exporting, setExporting] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [exportTheme, setExportTheme] = useState<any>(null);
-  const [exportData, setExportData] = useState<ResumeData | null>(null);
+  const [exportData, setExportData] = useState<any>(null);
   const [shouldExport, setShouldExport] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
 
@@ -60,7 +57,6 @@ export default function AreaResume() {
     const found = users.find(u => u.username === username);
     if (found) {
       setUser(found);
-      // Analytics: Grava visualização se não for o dono
       if (currentUser?.id !== found.id) {
         DatabaseService.recordProfileView(found.id, 'view_area', { areaSlug });
       }
@@ -79,7 +75,6 @@ export default function AreaResume() {
     if (!area || !user) return;
     setExporting(true);
     
-    // Tracking do evento de conversão
     if (!isOwner) {
       DatabaseService.recordProfileView(user.id, 'download_pdf', { areaName: area.name });
     }
@@ -151,14 +146,14 @@ export default function AreaResume() {
     run();
   }, [shouldExport, areaSlug]);
 
-  if (!isMounted || !user || !area) return <div className="min-h-screen flex items-center justify-center"><LucideIcons.Loader2 className="animate-spin" /></div>;
+  if (!isMounted || !user || !area) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   const theme = getTheme(areaSlug);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b dark:border-slate-800 px-6 py-3 flex items-center justify-between">
-        <Button variant="secondary" onClick={() => router.back()}><LucideIcons.ArrowLeft size={16} /> Voltar</Button>
+        <Button variant="secondary" onClick={() => router.back()}><ArrowLeft size={16} /> Voltar</Button>
         <div className="flex gap-2">
           {isOwner && (
             <>
@@ -169,7 +164,7 @@ export default function AreaResume() {
             </>
           )}
           <Button onClick={handleExportThemed} disabled={exporting}>
-            {exporting ? <LucideIcons.Loader2 className="animate-spin" /> : <LucideIcons.Sparkles />} Exportar PDF
+            {exporting ? <Loader2 className="animate-spin" /> : <Sparkles />} Exportar PDF
           </Button>
         </div>
       </div>
@@ -215,7 +210,7 @@ export default function AreaResume() {
 
         <footer className="mt-20 pt-12 border-t dark:border-slate-800 flex justify-between items-center">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-            <p className="flex items-center gap-2"><LucideIcons.Mail size={12} /> {user.email}</p>
+            <p className="flex items-center gap-2"><Mail size={12} /> {user.email}</p>
             <p className="mt-2 text-[8px] opacity-50 truncate max-w-[200px]">{currentUrl}</p>
           </div>
           <div className="bg-white p-2 rounded-xl shadow-lg border border-slate-100">
@@ -239,7 +234,7 @@ export default function AreaResume() {
                 disabled={isRefining}
                 className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1 hover:underline disabled:opacity-50"
               >
-                {isRefining ? <LucideIcons.Loader2 className="animate-spin" size={12} /> : <LucideIcons.Sparkles size={12} />}
+                {isRefining ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
                 IA Refinar
               </button>
             </div>
@@ -273,5 +268,13 @@ export default function AreaResume() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AreaResumePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
+      <AreaResumeContent />
+    </Suspense>
   );
 }
