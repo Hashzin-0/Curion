@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -24,7 +25,7 @@ const labelCls = "block text-xs font-black text-slate-500 dark:text-slate-400 up
 
 export default function ImportPage() {
   const router = useRouter();
-  const { currentUser, addExperienceWithAutoArea, addEducation } = useStore();
+  const { currentUser, processBackgroundImport } = useStore();
   
   const [step, setStep] = useState<'upload' | 'parsing' | 'review'>('upload');
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
@@ -32,7 +33,6 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsingStatus, setParsingStatus] = useState('');
-  const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0, label: '' });
   const [parsedData, setParsedData] = useState<any>(null);
 
   const extractText = async (f: File): Promise<string> => {
@@ -95,63 +95,13 @@ export default function ImportPage() {
   const handleConfirmImport = async () => {
     if (!currentUser || !parsedData) return;
     
-    setIsProcessing(true);
-    const totalSteps = (parsedData.experiences?.length || 0) + (parsedData.education?.length || 0);
-    setSaveProgress({ current: 0, total: totalSteps, label: 'Iniciando sincronização...' });
-
-    try {
-      let processedCount = 0;
-
-      // Adiciona experiências
-      if (parsedData.experiences) {
-        for (const exp of parsedData.experiences) {
-          processedCount++;
-          setSaveProgress({ 
-            current: processedCount, 
-            total: totalSteps, 
-            label: `Salvando: ${exp.role} na ${exp.company}...` 
-          });
-          
-          await addExperienceWithAutoArea({
-            user_id: currentUser.id,
-            company_name: exp.company,
-            role: exp.role,
-            start_date: new Date().toISOString(),
-            end_date: null,
-            description: '',
-          });
-        }
-      }
-
-      // Adiciona educação
-      if (parsedData.education) {
-        for (const edu of parsedData.education) {
-          processedCount++;
-          setSaveProgress({ 
-            current: processedCount, 
-            total: totalSteps, 
-            label: `Salvando formação: ${edu.course}...` 
-          });
-
-          await addEducation({
-            user_id: currentUser.id,
-            institution: edu.institution,
-            course: edu.course,
-            start_date: new Date().toISOString(),
-            end_date: null,
-          });
-        }
-      }
-
-      toast.success('Perfil atualizado com sucesso!');
-      router.push('/profile');
-    } catch (err) {
-      console.error('Erro no salvamento:', err);
-      toast.error('Erro ao salvar alguns itens. O processo foi interrompido.');
-    } finally {
-      setIsProcessing(false);
-      setSaveProgress({ current: 0, total: 0, label: '' });
-    }
+    // Dispara a ingestão em background na Store Global
+    // Isso permite que o usuário saia desta página e o processo continue.
+    processBackgroundImport(currentUser.id, parsedData);
+    
+    // Redireciona imediatamente para o perfil para ver os dados aparecendo
+    toast.info('Salvando dados em segundo plano. Você já pode ver seu perfil atualizado!');
+    router.push('/profile');
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -286,47 +236,26 @@ export default function ImportPage() {
 
                 <aside className="w-full md:w-72 space-y-6 shrink-0">
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800">
-                    <h4 className="font-black text-blue-600 dark:text-blue-400 text-xs uppercase tracking-widest mb-3">Dica da IA</h4>
+                    <h4 className="font-black text-blue-600 dark:text-blue-400 text-xs uppercase tracking-widest mb-3">Modo Background</h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                      As áreas profissionais serão criadas automaticamente com base nos cargos extraídos.
+                      Ao clicar em salvar, você será levado ao seu perfil enquanto a IA sincroniza tudo em segundo plano.
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <button 
                       onClick={handleConfirmImport}
-                      disabled={isProcessing}
-                      className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex flex-col items-center justify-center gap-1 shadow-xl hover:shadow-2xl transition-all disabled:opacity-50"
+                      className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex flex-col items-center justify-center gap-1 shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
                     >
                       <div className="flex items-center gap-2">
-                        {isProcessing ? <Loader2 className="animate-spin" /> : <Save />}
-                        {isProcessing ? 'Sincronizando...' : 'Confirmar e Salvar'}
+                        <Save />
+                        Confirmar e Sair
                       </div>
-                      {saveProgress.total > 0 && (
-                        <div className="w-full px-6 mt-2">
-                          <div className="h-1 bg-slate-200/20 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-blue-500 transition-all duration-300" 
-                              style={{ width: `${(saveProgress.current / saveProgress.total) * 100}%` }}
-                            />
-                          </div>
-                          <p className="text-[8px] font-black uppercase tracking-widest mt-1 opacity-60 text-center">
-                            {saveProgress.current} de {saveProgress.total} itens
-                          </p>
-                        </div>
-                      )}
                     </button>
-
-                    {isProcessing && (
-                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter text-center animate-pulse">
-                        {saveProgress.label}
-                      </p>
-                    )}
 
                     <button 
                       onClick={() => setStep('upload')}
-                      disabled={isProcessing}
-                      className="w-full py-4 text-slate-400 font-black text-xs uppercase hover:text-slate-900 transition-colors disabled:opacity-30"
+                      className="w-full py-4 text-slate-400 font-black text-xs uppercase hover:text-slate-900 transition-colors"
                     >
                       Recomeçar
                     </button>

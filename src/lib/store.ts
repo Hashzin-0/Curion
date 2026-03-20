@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DatabaseService } from './services/database';
 import { detectAreaFromRole, getRelevantAreaSlugsForSkill, slugify, generateProjectHash } from './utils';
+import { toast } from 'sonner';
 
 export type User = { 
   id: string; 
@@ -98,6 +99,14 @@ interface AppState {
   isAuthReady: boolean;
   isAudioPlaying: boolean;
   
+  // Status de Importação em Background
+  importStatus: {
+    isImporting: boolean;
+    current: number;
+    total: number;
+    label: string;
+  };
+  
   setUser: (user: User | null) => void;
   setAuthReady: (ready: boolean) => void;
   setIsAudioPlaying: (playing: boolean) => void;
@@ -130,6 +139,9 @@ interface AppState {
   removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
   addSkillToRelevantAreas: (skillId: string, skillName: string) => Promise<void>;
   
+  // Ações de Lote e Background
+  processBackgroundImport: (userId: string, data: any) => Promise<void>;
+  
   fetchData: () => Promise<void>;
 }
 
@@ -149,6 +161,8 @@ export const useStore = create<AppState>()(
       isAuthReady: false,
       isAudioPlaying: false,
       
+      importStatus: { isImporting: false, current: 0, total: 0, label: '' },
+      
       setUser: (user) => set({ currentUser: user }),
       setAuthReady: (ready) => set({ isAuthReady: ready }),
       setIsAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
@@ -164,16 +178,8 @@ export const useStore = create<AppState>()(
             userRecord = await DatabaseService.syncUser(userData);
           }
 
-          const contacts = await DatabaseService.fetchUserContacts(userRecord.id);
-          const mergedUser = { 
-            ...userRecord, 
-            email: contacts?.email || userData.email, 
-            phone: contacts?.phone || userData.phone,
-            website: contacts?.website
-          };
-          
-          set({ currentUser: mergedUser });
-          return mergedUser;
+          set({ currentUser: userRecord });
+          return userRecord;
         } catch (error) {
           console.error('Store: syncUserWithDatabase failed', error);
           throw error;
@@ -184,16 +190,6 @@ export const useStore = create<AppState>()(
         const { currentUser } = get();
         if (!currentUser) return;
         const data = await DatabaseService.updateUser(currentUser.id, userData);
-        
-        if (userData.email || userData.phone || userData.website) {
-          await DatabaseService.upsertUserContacts({
-            user_id: currentUser.id,
-            email: userData.email,
-            phone: userData.phone,
-            website: userData.website
-          });
-        }
-
         set({ currentUser: { ...currentUser, ...data } });
       },
 
@@ -341,6 +337,82 @@ export const useStore = create<AppState>()(
           } catch (e) {
             // Ignora duplicatas
           }
+        }
+      },
+
+      processBackgroundImport: async (userId, data) => {
+        const total = (data.experiences?.length || 0) + (data.education?.length || 0);
+        if (total === 0) return;
+
+        set({ importStatus: { isImporting: true, current: 0, total, label: 'Iniciando sincronização...' } });
+        
+        const toastId = toast.loading(`Sincronizando currículo: 0 de ${total}`, {
+          description: 'Você pode navegar normalmente enquanto salvamos seus dados.',
+          duration: Infinity,
+        });
+
+        let currentCount = 0;
+
+        try {
+          // Processa Experiências
+          if (data.experiences) {
+            for (const exp of data.experiences) {
+              currentCount++;
+              set({ 
+                importStatus: { 
+                  isImporting: true, 
+                  current: currentCount, 
+                  total, 
+                  label: `Salvando: ${exp.role} na ${exp.company}...` 
+                } 
+              });
+              toast.loading(`Sincronizando: ${currentCount} de ${total}`, { id: toastId });
+              
+              await get().addExperienceWithAutoArea({
+                user_id: userId,
+                company_name: exp.company,
+                role: exp.role,
+                start_date: new Date().toISOString(),
+                end_date: null,
+                description: '',
+              });
+            }
+          }
+
+          // Processa Educação
+          if (data.education) {
+            for (const edu of data.education) {
+              currentCount++;
+              set({ 
+                importStatus: { 
+                  isImporting: true, 
+                  current: currentCount, 
+                  total, 
+                  label: `Salvando formação: ${edu.course}...` 
+                } 
+              });
+              toast.loading(`Sincronizando: ${currentCount} de ${total}`, { id: toastId });
+
+              await get().addEducation({
+                user_id: userId,
+                institution: edu.institution,
+                course: edu.course,
+                start_date: new Date().toISOString(),
+                end_date: null,
+              });
+            }
+          }
+
+          toast.success('Currículo sincronizado com sucesso!', { 
+            id: toastId, 
+            description: `${total} itens foram adicionados ao seu perfil de forma inteligente.`,
+            duration: 5000 
+          });
+        } catch (err) {
+          console.error('Background Import Error:', err);
+          toast.error('Ocorreu um erro durante a sincronização automática.', { id: toastId });
+        } finally {
+          set({ importStatus: { isImporting: false, current: 0, total: 0, label: '' } });
         }
       },
     }),
