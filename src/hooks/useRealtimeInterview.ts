@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRef, useState } from 'react';
@@ -7,6 +6,7 @@ import { analyzeAnswer } from './useInterviewAnalysis';
 
 /**
  * @fileOverview Hook de Entrevista Realtime atualizado para retornar resultados analíticos.
+ * Utiliza diretamente a chave do Gemini configurada nas variáveis de ambiente públicas.
  */
 
 export function useRealtimeInterview() {
@@ -24,6 +24,14 @@ export function useRealtimeInterview() {
     setIsInterviewing(true);
     setAnalysisResults([]);
     
+    // Verifica se a chave está configurada
+    const geminiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+    if (!geminiKey) {
+      console.error('RealtimeInterview: NEXT_PUBLIC_GOOGLE_API_KEY não configurada.');
+      setIsInterviewing(false);
+      return;
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
     const audioCtx = new AudioContext({ sampleRate: 24000 });
@@ -36,8 +44,9 @@ export function useRealtimeInterview() {
     source.connect(processor);
     processor.connect(audioCtx.destination);
 
+    // Conexão direta com o serviço generativo via WebSocket usando a chave Gemini
     const ws = new WebSocket(
-      `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
+      `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`
     );
 
     wsRef.current = ws;
