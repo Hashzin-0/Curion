@@ -25,13 +25,14 @@ const labelCls = "block text-xs font-black text-slate-500 dark:text-slate-400 up
 
 export default function ImportPage() {
   const router = useRouter();
-  const { currentUser, addExperienceWithAutoArea, addEducation, updateUser } = useStore();
+  const { currentUser, addExperienceWithAutoArea, addEducation } = useStore();
   
   const [step, setStep] = useState<'upload' | 'parsing' | 'review'>('upload');
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
   const [rawText, setRawText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0, label: '' });
   const [parsedData, setParsedData] = useState<any>(null);
 
   const extractText = async (f: File): Promise<string> => {
@@ -58,7 +59,6 @@ export default function ImportPage() {
     try {
       let textToParse = rawText;
       if (inputMode === 'file' && file) {
-        // Para arquivos muito grandes, podemos extrair texto localmente ou usar storage
         textToParse = await extractText(file);
       }
 
@@ -80,22 +80,25 @@ export default function ImportPage() {
 
   const handleConfirmImport = async () => {
     if (!currentUser || !parsedData) return;
+    
     setIsProcessing(true);
-    const toastId = toast.loading('Sincronizando com seu perfil...');
+    const totalSteps = (parsedData.experiences?.length || 0) + (parsedData.education?.length || 0);
+    setSaveProgress({ current: 0, total: totalSteps, label: 'Iniciando sincronização...' });
 
     try {
-      // Atualiza dados básicos se extraídos
-      if (parsedData.name || parsedData.profession) {
-        await updateUser({
-          name: parsedData.name || currentUser.name,
-          headline: parsedData.profession || currentUser.headline,
-          summary: parsedData.summary || currentUser.summary
-        });
-      }
+      let processedCount = 0;
 
-      // Adiciona experiências
+      // Adiciona experiências sequencialmente para evitar race condition na criação de áreas
+      // Mas com feedback visual de progresso para evitar a percepção de "travamento"
       if (parsedData.experiences) {
         for (const exp of parsedData.experiences) {
+          processedCount++;
+          setSaveProgress({ 
+            current: processedCount, 
+            total: totalSteps, 
+            label: `Salvando: ${exp.role} na ${exp.company}...` 
+          });
+          
           await addExperienceWithAutoArea({
             user_id: currentUser.id,
             company_name: exp.company,
@@ -110,6 +113,13 @@ export default function ImportPage() {
       // Adiciona educação
       if (parsedData.education) {
         for (const edu of parsedData.education) {
+          processedCount++;
+          setSaveProgress({ 
+            current: processedCount, 
+            total: totalSteps, 
+            label: `Salvando formação: ${edu.course}...` 
+          });
+
           await addEducation({
             user_id: currentUser.id,
             institution: edu.institution,
@@ -120,12 +130,14 @@ export default function ImportPage() {
         }
       }
 
-      toast.success('Perfil atualizado com sucesso!', { id: toastId });
+      toast.success('Perfil atualizado com sucesso!');
       router.push('/profile');
     } catch (err) {
-      toast.error('Erro ao salvar no perfil.', { id: toastId });
+      console.error('Erro no salvamento:', err);
+      toast.error('Erro ao salvar alguns itens. O processo foi interrompido.');
     } finally {
       setIsProcessing(false);
+      setSaveProgress({ current: 0, total: 0, label: '' });
     }
   };
 
@@ -221,61 +233,88 @@ export default function ImportPage() {
               <div className="flex flex-col md:flex-row gap-10 items-start">
                 <div className="flex-1 space-y-8">
                   <header>
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-6 flex items-center gap-2">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 flex items-center gap-2">
                       <Check className="text-emerald-500" /> Revisar Importação
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label className={labelCls}>Nome Extraído</label><input value={parsedData.name || ''} onChange={e => setParsedData({...parsedData, name: e.target.value})} className={inputCls} /></div>
-                      <div><label className={labelCls}>Profissão</label><input value={parsedData.profession || ''} onChange={e => setParsedData({...parsedData, profession: e.target.value})} className={inputCls} /></div>
-                    </div>
+                    <p className="text-slate-500 font-medium text-sm">Confirme as informações extraídas antes de salvar no seu perfil.</p>
                   </header>
 
                   <section className="space-y-4">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <Briefcase size={14} /> Experiências Encontradas ({parsedData.experiences?.length || 0})
                     </h3>
-                    {parsedData.experiences?.map((exp: any, i: number) => (
-                      <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-                        <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{exp.role}</div>
-                        <div className="text-xs font-bold text-blue-600">{exp.company}</div>
-                      </div>
-                    ))}
+                    <div className="grid grid-cols-1 gap-3">
+                      {parsedData.experiences?.map((exp: any, i: number) => (
+                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                          <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{exp.role}</div>
+                          <div className="text-xs font-bold text-blue-600">{exp.company}</div>
+                        </div>
+                      ))}
+                    </div>
                   </section>
 
                   <section className="space-y-4">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <GraduationCap size={14} /> Educação ({parsedData.education?.length || 0})
                     </h3>
-                    {parsedData.education?.map((edu: any, i: number) => (
-                      <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-                        <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{edu.course}</div>
-                        <div className="text-xs font-bold text-emerald-600">{edu.institution}</div>
-                      </div>
-                    ))}
+                    <div className="grid grid-cols-1 gap-3">
+                      {parsedData.education?.map((edu: any, i: number) => (
+                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                          <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{edu.course}</div>
+                          <div className="text-xs font-bold text-emerald-600">{edu.institution}</div>
+                        </div>
+                      ))}
+                    </div>
                   </section>
                 </div>
 
-                <aside className="w-full md:w-72 space-y-6">
+                <aside className="w-full md:w-72 space-y-6 shrink-0">
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800">
                     <h4 className="font-black text-blue-600 dark:text-blue-400 text-xs uppercase tracking-widest mb-3">Dica da IA</h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                      Revisamos as datas e cargos. Após salvar, você poderá ajustar as cores e emojis de cada área no seu dashboard.
+                      As áreas profissionais serão criadas automaticamente com base nos cargos extraídos.
                     </p>
                   </div>
-                  <button 
-                    onClick={handleConfirmImport}
-                    disabled={isProcessing}
-                    className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex items-center justify-center gap-2 hover:shadow-xl transition-all"
-                  >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Save />}
-                    Salvar no Perfil
-                  </button>
-                  <button 
-                    onClick={() => setStep('upload')}
-                    className="w-full py-4 text-slate-400 font-black text-xs uppercase hover:text-slate-900 transition-colors"
-                  >
-                    Recomeçar
-                  </button>
+
+                  <div className="space-y-4">
+                    <button 
+                      onClick={handleConfirmImport}
+                      disabled={isProcessing}
+                      className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black flex flex-col items-center justify-center gap-1 shadow-xl hover:shadow-2xl transition-all disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isProcessing ? <Loader2 className="animate-spin" /> : <Save />}
+                        {isProcessing ? 'Sincronizando...' : 'Confirmar e Salvar'}
+                      </div>
+                      {saveProgress.total > 0 && (
+                        <div className="w-full px-6 mt-2">
+                          <div className="h-1 bg-slate-200/20 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-300" 
+                              style={{ width: `${(saveProgress.current / saveProgress.total) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-[8px] font-black uppercase tracking-widest mt-1 opacity-60 text-center">
+                            {saveProgress.current} de {saveProgress.total} itens
+                          </p>
+                        </div>
+                      )}
+                    </button>
+
+                    {isProcessing && (
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter text-center animate-pulse">
+                        {saveProgress.label}
+                      </p>
+                    )}
+
+                    <button 
+                      onClick={() => setStep('upload')}
+                      disabled={isProcessing}
+                      className="w-full py-4 text-slate-400 font-black text-xs uppercase hover:text-slate-900 transition-colors disabled:opacity-30"
+                    >
+                      Recomeçar
+                    </button>
+                  </div>
                 </aside>
               </div>
             </div>
