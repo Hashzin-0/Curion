@@ -21,6 +21,7 @@ export type JobVacancy = {
   work_model: string | null; // remoto, hibrido, presencial
   company_type: string | null; // startup, corporativo, agencia, pequena
   created_at: string;
+  similarity?: number;
 };
 
 export const DatabaseService = {
@@ -83,12 +84,12 @@ export const DatabaseService = {
   },
 
   /**
-   * Realiza busca semântica por similaridade de vetores.
+   * Realiza busca semântica por similaridade de vetores para perfis.
    */
   async searchSemanticProfiles(queryVector: number[]) {
     const { data, error } = await supabase.rpc('match_profiles', {
       query_embedding: queryVector,
-      match_threshold: 0.5, // Similaridade mínima de 50%
+      match_threshold: 0.1, // Limiar baixo para garantir o efeito de "degradação"
       match_count: 12,
     });
 
@@ -96,22 +97,18 @@ export const DatabaseService = {
     return data;
   },
 
-  // Contatos do Usuário (Tabela user_contacts)
-  async fetchUserContacts(userId: string) {
-    const { data, error } = await supabase
-      .from('user_contacts')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
-  },
+  /**
+   * Realiza busca semântica por similaridade de vetores para vagas.
+   */
+  async searchSemanticJobs(queryVector: number[]) {
+    const { data, error } = await supabase.rpc('match_jobs', {
+      query_embedding: queryVector,
+      match_threshold: 0.1,
+      match_count: 12,
+    });
 
-  async upsertUserContacts(contacts: any) {
-    const { error } = await supabase
-      .from('user_contacts')
-      .upsert(contacts);
     if (error) throw error;
+    return data;
   },
 
   // Analytics
@@ -157,7 +154,7 @@ export const DatabaseService = {
     return data;
   },
 
-  // Vagas (Tabela jobs)
+  // Vagas
   async fetchJobs() {
     const { data, error } = await supabase
       .from('jobs')
@@ -184,9 +181,6 @@ export const DatabaseService = {
     return (data ? data[0] : null) as JobVacancy;
   },
 
-  /**
-   * Faz upload genérico de arquivos para o storage para evitar envio de base64 via server actions.
-   */
   async uploadFile(file: File | Blob, folder: string = 'general', extension: string = 'bin') {
     const name = file instanceof File ? file.name : `media-${Date.now()}.${extension}`;
     const fileExt = name.split('.').pop() || extension;

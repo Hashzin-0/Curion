@@ -1,22 +1,21 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DatabaseService, JobVacancy } from '@/lib/services/database';
 import { useStore } from '@/lib/store';
-import { slugify, calcDuration } from '@/lib/utils';
+import { calcDuration } from '@/lib/utils';
 import { generateTextEmbedding } from '@/ai/flows/generate-embedding-flow';
+import { parseSearchIntent } from '@/ai/flows/parse-search-intent-flow';
 import { toast } from 'sonner';
 
 /**
- * @fileOverview Hook principal do domínio Explore.
- * Implementa Busca Híbrida (Keywords + Semântica).
+ * @fileOverview Hook principal do domínio Explore com Motor Unificado NER.
+ * Implementa Busca Inteligente com Expansão de Query e Degradamento de Match.
  */
 
 export function useExplore() {
   const { currentUser, experiences, skills, areaSkills, areas } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs' | 'map'>('candidates');
-  const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>('keyword');
   const [searchQuery, setSearchQuery] = useState('');
   const [publicUsers, setPublicUsers] = useState<any[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
@@ -24,9 +23,8 @@ export function useExplore() {
   
   const [activeRegime, setActiveRegime] = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<string | null>(null);
-  const [activeVibe, setActiveVibe] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [profiles, jobs] = await Promise.all([
@@ -43,50 +41,63 @@ export function useExplore() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadInitialData();
+  }, [loadInitialData]);
 
-  // Lógica de Busca Semântica
-  const handleSemanticSearch = useCallback(async () => {
-    if (!searchQuery.trim()) {
-      loadData();
+  /**
+   * Motor Unificado de Busca Inteligente (NER + Vector)
+   */
+  const handleUnifiedSearch = useCallback(async () => {
+    if (!searchQuery.trim() || searchQuery.length < 3) {
+      loadInitialData();
       return;
     }
 
     setIsLoading(true);
     try {
-      // 1. Transformar a pergunta do usuário em um vetor
-      const queryVector = await generateTextEmbedding(searchQuery);
+      // 1. NER: Entender intenção e extrair filtros automáticos
+      const intent = await parseSearchIntent(searchQuery);
       
-      // 2. Buscar no Supabase via RPC (Similaridade de Vetores)
-      const results = await DatabaseService.searchSemanticProfiles(queryVector);
+      // 2. Vector: Gerar embedding da query expandida (melhor precisão)
+      const queryVector = await generateTextEmbedding(intent.expandedQuery);
       
-      // 3. Mapear resultados (o RPC retorna dados básicos, mas precisamos das áreas para o card)
-      // Em um app real, faríamos um JOIN no RPC, aqui vamos filtrar os perfis já carregados
-      const matchedIds = results.map((r: any) => r.id);
-      const filtered = publicUsers.filter(u => matchedIds.includes(u.id));
-      
-      setPublicUsers(filtered);
-      toast.success(`IA encontrou ${results.length} talentos relacionados.`);
+      // 3. Busca Híbrida em Paralelo
+      const [userMatches, jobMatches] = await Promise.all([
+        DatabaseService.searchSemanticProfiles(queryVector),
+        DatabaseService.searchSemanticJobs(queryVector)
+      ]);
+
+      // 4. Mapear resultados (o RPC retorna IDs e similarity)
+      // Cruzamos com os dados completos que já temos ou buscamos no momento
+      const matchedUserIds = userMatches.map((r: any) => r.id);
+      const filteredUsers = publicUsers
+        .filter(u => matchedUserIds.includes(u.id))
+        .sort((a, b) => {
+          const simA = userMatches.find((r: any) => r.id === a.id)?.similarity || 0;
+          const simB = userMatches.find((r: any) => r.id === b.id)?.similarity || 0;
+          return simB - simA;
+        });
+
+      setPublicUsers(filteredUsers);
+      setRealJobs(jobMatches as any[]);
+
+      if (userMatches.length === 0 && jobMatches.length === 0) {
+        toast.info('Nenhum resultado 100% compatível. Tente mudar os termos.');
+      }
     } catch (err) {
-      toast.error('Erro na busca inteligente. Tente por palavra-chave.');
-      console.error(err);
+      console.error('Unified Search Error:', err);
+      toast.error('Falha no motor inteligente. Usando busca local...');
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, publicUsers, loadData]);
+  }, [searchQuery, publicUsers, loadInitialData]);
 
-  // Disparar busca ao mudar modo ou query
+  // Debounce para não sobrecarregar a IA a cada tecla
   useEffect(() => {
-    if (searchMode === 'semantic') {
-      const delay = setTimeout(handleSemanticSearch, 1000);
-      return () => clearTimeout(delay);
-    } else {
-      loadData();
-    }
-  }, [searchMode, searchQuery, handleSemanticSearch, loadData]);
+    const delay = setTimeout(handleUnifiedSearch, 1500);
+    return () => clearTimeout(delay);
+  }, [searchQuery, handleUnifiedSearch]);
 
-  // Contexto do perfil para o Match IA
   const profileContext = useMemo(() => {
     if (!currentUser) return null;
     return {
@@ -133,30 +144,18 @@ export function useExplore() {
     return Object.values(clusters).sort((a, b) => (b.jobs + b.candidates) - (a.jobs + a.candidates));
   }, [realJobs, publicUsers]);
 
-  const filteredCandidates = useMemo(() => {
-    if (searchMode === 'semantic') return publicUsers;
-    return publicUsers.filter(u => 
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      u.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.location?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [publicUsers, searchQuery, searchMode]);
+  const filteredCandidates = useMemo(() => publicUsers, [publicUsers]);
 
   const filteredJobs = useMemo(() => {
     return realJobs.filter(j => {
-      const matchesSearch = j.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           j.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           j.location?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRegime = !activeRegime || j.regime === activeRegime;
       const matchesModel = !activeModel || j.work_model === activeModel;
-      const matchesVibe = !activeVibe || j.company_type === activeVibe;
-      return matchesSearch && matchesRegime && matchesModel && matchesVibe;
+      return matchesRegime && matchesModel;
     });
-  }, [realJobs, searchQuery, activeRegime, activeModel, activeVibe]);
+  }, [realJobs, activeRegime, activeModel]);
 
   return {
     view, setView,
-    searchMode, setSearchMode,
     searchQuery, setSearchQuery,
     isLoading,
     filteredCandidates,
@@ -165,9 +164,8 @@ export function useExplore() {
     geoDistribution,
     activeRegime, setActiveRegime,
     activeModel, setActiveModel,
-    activeVibe, setActiveVibe,
     currentUser,
     profileContext,
-    refresh: loadData
+    refresh: loadInitialData
   };
 }
