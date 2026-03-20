@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -12,11 +11,11 @@ import { User, ProfessionalArea } from '@/lib/store';
 import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
 import { SmartExportModal } from '@/components/SmartExportModal';
 import { CoverLetterModal } from '@/components/CoverLetterModal';
-import { InterviewSimulatorModal } from '@/components/InterviewSimulatorModal';
 import { DigitalWalletPass } from '@/components/profile/DigitalWalletPass';
 import { AudioBioPlayer } from './AudioBioPlayer';
 import { cn } from '@/lib/utils';
 import { AvatarGlow } from '@/components/shared/AvatarGlow';
+import { useRouter } from 'next/navigation';
 
 type Props = {
   user: User;
@@ -52,12 +51,10 @@ function AvailabilityBadge({ status }: { status?: string }) {
 }
 
 export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor, areas = [] }: Props) {
+  const router = useRouter();
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
   const [isCoverLetterOpen, setIsCoverLetterOpen] = useState(false);
-  const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
-
-  const mainArea = areas[0]?.name || "Geral";
 
   return (
     <>
@@ -137,7 +134,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
                 <button onClick={onEdit} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black text-white shadow-xl hover:scale-105 transition-all" style={{ backgroundColor: accentColor }}>
                   <Pencil className="w-4 h-4" /> Editar Perfil
                 </button>
-                <button onClick={() => setIsInterviewOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-xl">
+                <button onClick={() => router.push('/interview')} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-xl">
                   <Headphones className="w-4 h-4" /> Simular Entrevista
                 </button>
                 <button onClick={() => setIsSmartExportOpen(true)} className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xl">
@@ -160,7 +157,6 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
       <CoverLetterModal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} />
-      <InterviewSimulatorModal isOpen={isInterviewOpen} onClose={() => setIsInterviewOpen(false)} areaName={mainArea} />
       <DigitalWalletPass user={user} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} />
     </>
   );

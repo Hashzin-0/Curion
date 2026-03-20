@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRealtimeInterview } from '@/hooks/useRealtimeInterview';
@@ -7,13 +6,22 @@ import { Mic, Square, ArrowLeft, Sparkles, Loader2, BrainCircuit } from 'lucide-
 import Link from 'next/link';
 import { InterviewResults } from '@/components/interview/InterviewResults';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '@/lib/store';
 
 /**
- * @fileOverview Página de Entrevista Realtime atualizada com transição para resultados.
+ * @fileOverview Página de Entrevista Realtime utilizando o motor Client-Side direto.
  */
 
 export default function InterviewPage() {
   const { start, stop, isInterviewing, analysisResults } = useRealtimeInterview();
+  const { currentUser, areas } = useStore();
+  
+  const mainArea = areas[0]?.name || "Geral";
+  const userName = currentUser?.name || "Candidato";
+
+  const handleStart = () => {
+    start(userName, mainArea);
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8">
@@ -22,7 +30,7 @@ export default function InterviewPage() {
           <InterviewResults 
             key="results" 
             results={analysisResults} 
-            onRetry={() => { start(); }} 
+            onRetry={handleStart} 
           />
         ) : (
           <motion.div 
@@ -52,14 +60,14 @@ export default function InterviewPage() {
               <p className="text-slate-400 text-sm font-medium leading-relaxed mt-4">
                 {isInterviewing 
                   ? "O recrutador está ouvindo. Fale naturalmente..." 
-                  : "Prepare-se! O recrutador IA vai analisar sua voz e conhecimento técnico em tempo real."
+                  : `Prepare-se! O recrutador IA na área de ${mainArea} vai analisar sua voz em tempo real.`
                 }
               </p>
             </div>
 
             <div className="flex flex-col gap-4">
               {!isInterviewing ? (
-                <Button onClick={start} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white text-lg">
+                <Button onClick={handleStart} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white text-lg">
                   <Mic size={20} /> Iniciar Entrevista
                 </Button>
               ) : (
@@ -72,7 +80,7 @@ export default function InterviewPage() {
             <div className="pt-4 flex flex-col items-center gap-4">
               <div className="flex items-center justify-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gemini Native Audio Ativo</span>
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Direct WebSocket Mode</span>
               </div>
               
               {isInterviewing && (

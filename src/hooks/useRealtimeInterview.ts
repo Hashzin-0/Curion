@@ -5,8 +5,8 @@ import { AI_CONFIG } from '@/config/ai';
 import { analyzeAnswer } from './useInterviewAnalysis';
 
 /**
- * @fileOverview Hook de Entrevista Realtime atualizado para retornar resultados analíticos.
- * Utiliza diretamente a chave do Gemini configurada nas variáveis de ambiente públicas.
+ * @fileOverview Hook de Entrevista Realtime otimizado para latência zero.
+ * Conecta o cliente diretamente ao Gemini 2.5 Flash Native Audio via WebSocket.
  */
 
 export function useRealtimeInterview() {
@@ -16,11 +16,10 @@ export function useRealtimeInterview() {
   const [isInterviewing, setIsInterviewing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any[]>([]);
 
-  async function start() {
+  async function start(userName: string, areaName: string) {
     setIsInterviewing(true);
     setAnalysisResults([]);
     
-    // Verifica se a chave está configurada
     const geminiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
     if (!geminiKey) {
       console.error('RealtimeInterview: NEXT_PUBLIC_GOOGLE_API_KEY não configurada.');
@@ -45,7 +44,6 @@ export function useRealtimeInterview() {
       source.connect(processor);
       processor.connect(audioCtx.destination);
 
-      // Conexão direta com o serviço generativo via WebSocket usando a chave Gemini
       const ws = new WebSocket(
         `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`
       );
@@ -53,11 +51,15 @@ export function useRealtimeInterview() {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        const systemPrompt = `Você é um recrutador sênior extremamente profissional na área de ${areaName}. 
+        Seu objetivo é entrevistar o candidato ${userName} de forma técnica e direta. 
+        Faça uma pergunta por vez. Use sua capacidade nativa de áudio para soar humano e profissional.`;
+
         ws.send(JSON.stringify({
           setup: {
             model: `models/${AI_CONFIG.model}`,
             systemInstruction: {
-              parts: [{ text: AI_CONFIG.systemPrompt }],
+              parts: [{ text: systemPrompt }],
             },
             generationConfig: {
               responseModalities: ['AUDIO', 'TEXT'],
