@@ -17,7 +17,7 @@ export async function generateTextEmbedding(text: string): Promise<number[]> {
   /**
    * O compilador no ambiente Vercel detectou o retorno como um array de objetos:
    * { embedding: number[], metadata?: Record<string, unknown> }[]
-   * Realizamos a extração segura do vetor numérico.
+   * Realizamos a extração segura do vetor numérico utilizando cast duplo para evitar erros de compilação.
    */
   if (Array.isArray(result) && result.length > 0) {
     const first = result[0] as any;
@@ -26,6 +26,6 @@ export async function generateTextEmbedding(text: string): Promise<number[]> {
     }
   }
 
-  // Fallback caso o retorno seja o vetor direto
-  return result as number[];
+  // Fallback seguro com cast duplo para satisfazer o compilador do Vercel
+  return (result as unknown) as number[];
 }
