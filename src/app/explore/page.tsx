@@ -24,7 +24,6 @@ import { QuickPreview } from '@/modules/explore/components/QuickPreview';
 export default function ExplorePage() {
   const {
     view, setView,
-    searchMode, setSearchMode,
     searchQuery, setSearchQuery,
     isLoading,
     filteredCandidates,
@@ -89,13 +88,13 @@ export default function ExplorePage() {
 
         <ExploreFilters 
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-          searchMode={searchMode} setSearchMode={setSearchMode}
           activeModel={activeModel} setActiveModel={setActiveModel}
           activeRegime={activeRegime} setActiveRegime={setActiveRegime}
           trendingSkills={trendingSkills}
           placeholder={view === 'candidates' ? "Buscar por nome ou habilidade..." : "Buscar vagas, empresas ou locais..."}
           showCreateButton={view === 'jobs' && !!currentUser}
           onCreateClick={() => setIsCreateJobOpen(true)}
+          isLoading={isLoading}
         />
 
         <AnimatePresence mode="wait">
