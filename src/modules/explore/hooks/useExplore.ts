@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -49,7 +50,6 @@ export function useExplore() {
    */
   const handleUnifiedSearch = useCallback(async () => {
     if (!searchQuery.trim() || searchQuery.length < 3) {
-      loadInitialData();
       return;
     }
 
@@ -68,11 +68,13 @@ export function useExplore() {
       ]);
 
       // 4. Mapear resultados (o RPC retorna IDs e similarity)
-      // Cruzamos com os dados completos que já temos ou buscamos no momento
+      // Buscamos os perfis completos para os IDs encontrados
+      const profiles = await DatabaseService.fetchPublicProfiles();
       const matchedUserIds = userMatches.map((r: any) => r.id);
-      const filteredUsers = publicUsers
-        .filter(u => matchedUserIds.includes(u.id))
-        .sort((a, b) => {
+      
+      const filteredUsers = profiles
+        .filter((u: any) => matchedUserIds.includes(u.id))
+        .sort((a: any, b: any) => {
           const simA = userMatches.find((r: any) => r.id === a.id)?.similarity || 0;
           const simB = userMatches.find((r: any) => r.id === b.id)?.similarity || 0;
           return simB - simA;
@@ -90,13 +92,21 @@ export function useExplore() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, publicUsers, loadInitialData]);
+  }, [searchQuery]); // Removidas dependências que causavam loop (publicUsers)
 
   // Debounce para não sobrecarregar a IA a cada tecla
   useEffect(() => {
+    // Se a query estiver vazia, volta ao estado inicial após um pequeno delay
+    if (!searchQuery.trim()) {
+      const delay = setTimeout(loadInitialData, 300);
+      return () => clearTimeout(delay);
+    }
+
+    if (searchQuery.length < 3) return;
+
     const delay = setTimeout(handleUnifiedSearch, 1500);
     return () => clearTimeout(delay);
-  }, [searchQuery, handleUnifiedSearch]);
+  }, [searchQuery, handleUnifiedSearch, loadInitialData]);
 
   const profileContext = useMemo(() => {
     if (!currentUser) return null;
