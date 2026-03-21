@@ -1,9 +1,9 @@
 export const AI_CONFIG = {
   /**
    * Modelo específico para simulação de entrevista em tempo real.
-   * Utiliza a capacidade multimodal nativa para áudio.
+   * Utilizamos o identificador estável para o endpoint Multimodal Live.
    */
-  model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+  model: 'gemini-2.0-flash-exp',
   voice: 'Algenib',
 
   systemPrompt: `

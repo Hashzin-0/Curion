@@ -20,7 +20,6 @@ export function useRealtimeInterview() {
   const [analysisResults, setAnalysisResults] = useState<any[]>([]);
 
   async function start(userName: string, areaName: string) {
-    // Limpeza prévia de qualquer sessão pendente
     stop();
     
     setIsInterviewing(true);
@@ -28,8 +27,8 @@ export function useRealtimeInterview() {
     
     const geminiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
     if (!geminiKey) {
-      console.error('RealtimeInterview: NEXT_PUBLIC_GOOGLE_API_KEY não configurada no .env.local');
-      toast.error('Erro de Configuração: Chave de API do Google não encontrada.');
+      console.error('RealtimeInterview: NEXT_PUBLIC_GOOGLE_API_KEY não encontrada.');
+      toast.error('Erro de Configuração: Verifique a variável NEXT_PUBLIC_GOOGLE_API_KEY.');
       setIsInterviewing(false);
       return;
     }
@@ -39,14 +38,12 @@ export function useRealtimeInterview() {
     let transcriptBuffer = '';
 
     try {
-      console.log('RealtimeInterview: Solicitando acesso ao microfone...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
       const audioCtx = new AudioContext({ sampleRate: 24000 });
       audioCtxRef.current = audioCtx;
 
-      // Retomar contexto se estiver suspenso (regra de segurança do navegador)
       if (audioCtx.state === 'suspended') {
         await audioCtx.resume();
       }
@@ -58,27 +55,24 @@ export function useRealtimeInterview() {
       source.connect(processor);
       processor.connect(audioCtx.destination);
 
-      // URL do serviço Multimodal Live do Gemini
+      // Usando v1beta para Multimodal Live
       const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`;
-      console.log('RealtimeInterview: Conectando ao WebSocket do Gemini...');
+      console.log('RealtimeInterview: Conectando...', wsUrl);
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('RealtimeInterview: Conexão estabelecida. Enviando setup...');
+        console.log('RealtimeInterview: WebSocket aberto.');
         
-        const systemPrompt = `Você é um recrutador sênior extremamente profissional na área de ${areaName}. 
-        Seu objetivo é entrevistar o candidato ${userName} de forma técnica e direta. 
-        Faça uma pergunta por vez. Use sua capacidade nativa de áudio para soar humano e profissional.`;
+        const systemPrompt = `Você é um recrutador sênior profissional na área de ${areaName}. 
+        Seu objetivo é entrevistar o candidato ${userName}. 
+        Faça perguntas diretas e técnicas. Reaja ao tom de voz do candidato.`;
 
-        // O modelo no WebSocket deve seguir o formato models/gemini-2.0-flash-exp ou similar
-        // Se o modelo 2.5 falhar, sugerimos gemini-2.0-flash-exp para maior compatibilidade atual
-        const modelName = AI_CONFIG.model.includes('2.5') ? AI_CONFIG.model : 'gemini-2.0-flash-exp';
-
+        // Payload de setup conforme especificação do Multimodal Live
         ws.send(JSON.stringify({
           setup: {
-            model: `models/${modelName}`,
+            model: `models/${AI_CONFIG.model}`,
             systemInstruction: {
               parts: [{ text: systemPrompt }],
             },
@@ -100,13 +94,11 @@ export function useRealtimeInterview() {
         if (ws.readyState !== WebSocket.OPEN) return;
 
         const input = e.inputBuffer.getChannelData(0);
-        // Cálculo simples de volume para detecção de silêncio/fala
         const volume = input.reduce((sum, x) => sum + Math.abs(x), 0) / input.length;
 
         if (volume > 0.01) {
           if (!isSpeaking) {
             isSpeaking = true;
-            console.log('RealtimeInterview: Usuário começou a falar...');
           }
           if (silenceTimer) {
             clearTimeout(silenceTimer);
@@ -114,14 +106,12 @@ export function useRealtimeInterview() {
           }
           sendAudio(input);
         } else if (isSpeaking && !silenceTimer) {
-          // Detecta fim da fala após 1 segundo de silêncio
           silenceTimer = setTimeout(() => {
             isSpeaking = false;
-            console.log('RealtimeInterview: Silêncio detectado. Encerrando turno de áudio.');
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ inputAudioEnd: true }));
+              wsRef.current.send(JSON.stringify({ realtimeInput: { mediaChunks: [] }, inputAudioEnd: true }));
             }
-          }, 1000);
+          }, 1500);
         }
       };
 
@@ -129,16 +119,14 @@ export function useRealtimeInterview() {
         try {
           const msg = JSON.parse(event.data);
 
-          if (msg.text) {
-            transcriptBuffer += msg.text;
+          if (msg.serverContent?.modelTurn?.parts) {
+            for (const part of msg.serverContent.modelTurn.parts) {
+              if (part.text) transcriptBuffer += part.text;
+              if (part.inlineData?.data) playAudio(part.inlineData.data);
+            }
           }
 
-          if (msg.audio?.data) {
-            playAudio(msg.audio.data);
-          }
-
-          if (msg.turnComplete) {
-            console.log('RealtimeInterview: Turno da IA concluído. Analisando transcrição...');
+          if (msg.serverContent?.turnComplete) {
             if (transcriptBuffer.trim()) {
               const result = await analyzeAnswer(transcriptBuffer);
               setAnalysisResults(prev => [...prev, result]);
@@ -146,29 +134,24 @@ export function useRealtimeInterview() {
             }
           }
         } catch (err) {
-          console.error('RealtimeInterview: Erro ao processar mensagem do servidor:', err);
+          console.error('RealtimeInterview: Erro na mensagem:', err);
         }
       };
 
       ws.onerror = (ev) => {
-        console.error('RealtimeInterview: Erro no WebSocket:', ev);
-        toast.error('Erro na conexão com o servidor de IA.');
+        console.error('RealtimeInterview: Erro no WebSocket. Verifique sua chave e o modelo.', ev);
+        toast.error('Erro na conexão. Verifique se o modelo ' + AI_CONFIG.model + ' está disponível na sua região.');
         stop();
       };
 
       ws.onclose = (ev) => {
-        console.warn('RealtimeInterview: WebSocket fechado:', ev.code, ev.reason);
-        if (isInterviewing) {
-          if (ev.code === 1006) {
-            toast.error('Conexão interrompida. Verifique sua internet ou a chave de API.');
-          }
-          setIsInterviewing(false);
-        }
+        console.warn('RealtimeInterview: WebSocket fechado.', ev.code);
+        setIsInterviewing(false);
       };
 
     } catch (err: any) {
-      console.error('RealtimeInterview: Falha crítica ao iniciar:', err);
-      toast.error(`Não foi possível iniciar o áudio: ${err.message}`);
+      console.error('RealtimeInterview: Falha ao iniciar:', err);
+      toast.error(`Falha no microfone: ${err.message}`);
       setIsInterviewing(false);
     }
   }
@@ -176,7 +159,6 @@ export function useRealtimeInterview() {
   function sendAudio(float32: Float32Array) {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
     
-    // Converte Float32 para PCM 16-bit conforme esperado pelo Gemini
     const pcm16 = new Int16Array(float32.length);
     for (let i = 0; i < float32.length; i++) {
       pcm16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7fff;
@@ -208,37 +190,22 @@ export function useRealtimeInterview() {
         src.buffer = decoded;
         src.connect(audioCtx.destination);
         src.start();
-      }, (err) => {
-        console.error('RealtimeInterview: Erro ao decodificar áudio recebido:', err);
       });
     } catch (err) {
-      console.error('RealtimeInterview: Falha no processamento de áudio base64:', err);
+      console.error('RealtimeInterview: Erro ao tocar áudio.', err);
     }
   }
 
   function stop() {
-    console.log('RealtimeInterview: Encerrando sessão...');
-    
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close().catch(console.error);
-      audioCtxRef.current = null;
-    }
-    
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    if (processorRef.current) processorRef.current.disconnect();
+    if (audioCtxRef.current) audioCtxRef.current.close().catch(() => {});
+    if (wsRef.current) wsRef.current.close();
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
+    wsRef.current = null;
+    audioCtxRef.current = null;
+    processorRef.current = null;
+    streamRef.current = null;
     setIsInterviewing(false);
   }
 
