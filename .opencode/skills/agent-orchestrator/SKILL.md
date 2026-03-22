@@ -130,6 +130,72 @@ The orchestrator can create specialists from these archetypes:
 - **Tools**: Code analysis, pattern application
 - **Output**: Design documents, refactored modules
 
+### AI Flows Specialist
+- **Focus**: AI integration, prompts, structured outputs, LLM flows
+- **Tools**: AI SDKs, prompt engineering, schema validation
+- **Output**: AI flows, prompt templates, validation schemas
+
+### SEO Specialist
+- **Focus**: Meta tags, Open Graph, sitemap, schema.org, analytics
+- **Tools**: SEO best practices, image generation, structured data
+- **Output**: SEO components, OG images, sitemap generation
+
+### UI Components Specialist
+- **Focus**: Reusable UI components, animations, visual patterns
+- **Tools**: Component libraries, Framer Motion, Tailwind
+- **Output**: Section components, galleries, timelines, cards
+
+## Agent Naming Convention
+
+Every sub-agent MUST have a unique, descriptive technical name based on the specific task it performs.
+
+### Naming Format
+
+```
+[task-domain]-[action]
+```
+
+### Examples
+
+| Agent Name | Task Description |
+|------------|-----------------|
+| `ai-flows-implementer` | Implements AI flows (blog metadata, content generation) |
+| `seo-og-generator` | Generates SEO metadata and Open Graph images |
+| `site-sections-builder` | Builds site section components |
+| `timeline-visual-builder` | Creates timeline visualization components |
+| `gallery-interactive-builder` | Creates interactive gallery components |
+| `blog-metadata-generator` | Generates blog titles, excerpts, tags |
+| `services-crud-builder` | Builds service management components |
+| `analytics-dashboard-builder` | Creates analytics dashboard |
+| `theme-customizer-builder` | Builds theme customization UI |
+
+### Naming Rules
+
+1. **Lowercase with hyphens** — `ai-flows-implementer`, not `ai_flows_implementer`
+2. **Reflect specific task** — Name describes what the agent does, not a generic role
+3. **Include action verb** — `[domain]-[what-it-does]`
+4. **Unique per task** — Each distinct task gets a unique name
+5. **Technical and descriptive** — Other developers should understand scope from the name
+
+### Example Prompt with Naming
+
+```
+Spawn an agent named 'timeline-visual-builder' to implement the TimelineSection 
+component for displaying experiences and education.
+
+Task: Create an interactive timeline component with:
+- Vertical layout with year markers
+- Framer Motion animations on scroll
+- Filter by category
+- Expand/collapse items
+
+Deliverables:
+- src/components/site/sections/TimelineSection.tsx
+- Proper TypeScript types
+- Theme integration
+- Responsive design
+```
+
 ## Spawning Sub-Agents
 
 Use the Task tool with detailed prompts:

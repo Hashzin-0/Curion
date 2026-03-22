@@ -1,7 +1,7 @@
 ---
 name: manutenibilidade
 description: |
-  Ativar quando o usuário mencionar "manutenção", "legibilidade", "código limpo", "refatoração", "função pequena", "efeitos colaterais", "testes", ou quando precisar escrever código que outros devs vão manter. Use esta skill SEMPRE que criar funções ou componentes para garantir código legível e testável.
+  Ativar quando o usuário mencionar "manutenção", "legibilidade", "código limpo", "refatoração", "função pequena", "efeitos colaterais", "testes", "placeholder", "TODO", "funcional", "completo", ou quando precisar escrever código que outros devs vão manter. Use esta skill SEMPRE que criar funções ou componentes para garantir código legível, testável e COMPLETO - sem placeholders ou estados vazios não funcionais.
 ---
 
 # Skill: Manutenibilidade
@@ -236,7 +236,11 @@ function calculateProgressiveDiscount(quantity: number, unitPrice: number): numb
 }
 ```
 
-## Checklist de Verificação
+## Completeza do Código
+
+Antes de entregar qualquer código, confirme que está COMPLETO e FUNCIONAL:
+
+### Checklist de Completeza
 
 - [ ] Função faz apenas uma coisa?
 - [ ] Nome da função descreve o que ela faz?
@@ -245,6 +249,64 @@ function calculateProgressiveDiscount(quantity: number, unitPrice: number): numb
 - [ ] Variáveis têm nomes descritivos?
 - [ ] Código é autoexplicativo?
 - [ ] Funções são fáceis de testar?
+- [ ] **NÃO há placeholders ("Em breve", "TODO", "将来")?**
+- [ ] **Empty states estão implementados com estados reais?**
+- [ ] **Código funciona end-to-end, não apenas visualmente?**
+
+### NUNCA Entregue Placeholders
+
+**PROIBIDO:**
+```tsx
+function BlogPostEditor() {
+  return (
+    <div>
+      <h2>Blog</h2>
+      {/* TODO: Implementar depois */}
+    </div>
+  );
+}
+```
+
+**OBRIGATÓRIO:**
+```tsx
+function BlogPostEditor() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
+  
+  // ... lógica completa
+  
+  return (
+    <div>
+      <PostList posts={posts} onEdit={handleEdit} />
+      {isAdding && <PostForm onSave={handleSave} />}
+    </div>
+  );
+}
+```
+
+### Empty States Funcionais
+
+Para cada lista/grid, implemente empty state real:
+
+```tsx
+function ServicesGrid({ services }: { services: Service[] }) {
+  if (!services?.length) {
+    return (
+      <div className="text-center py-12">
+        <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900">
+          Nenhum serviço cadastrado
+        </h3>
+        <p className="text-gray-500 mt-1">
+          Adicione seus serviços para começar
+        </p>
+      </div>
+    );
+  }
+  
+  return <div>{/* renderização real */}</div>;
+}
+```
 
 ## Regras de Ouro
 
@@ -255,3 +317,5 @@ function calculateProgressiveDiscount(quantity: number, unitPrice: number): numb
 5. **INJETA** dependências para facilitar testes
 6. **DOCUMENTE** apenas o "porquê", não o "o quê"
 7. **REFATORE** quando código começar a ficar complexo
+8. **IMPLEMENTE** empty states funcionais - nunca placeholders
+9. **ENTREGUE** código completo - sem TODOs ou "Em breve"

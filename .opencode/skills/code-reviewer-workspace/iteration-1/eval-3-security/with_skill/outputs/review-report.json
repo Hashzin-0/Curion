@@ -1,0 +1,86 @@
+{
+  "review_id": "rev-1742678400",
+  "agent_task": "Create BlogPostEditor component with dangerouslySetInnerHTML",
+  "status": "NEEDS_REVISION",
+  "issues_count": 2,
+  "checks": {
+    "anti_patterns": {
+      "passed": true,
+      "issues": []
+    },
+    "modularization": {
+      "passed": true,
+      "issues": []
+    },
+    "maintainability": {
+      "passed": true,
+      "issues": []
+    },
+    "typescript": {
+      "passed": true,
+      "errors": []
+    },
+    "completeness": {
+      "passed": true,
+      "issues": []
+    },
+    "security": {
+      "passed": false,
+      "issues": [
+        {
+          "severity": "HIGH",
+          "category": "XSS",
+          "file": "src/components/BlogPostEditor.tsx",
+          "line": 13,
+          "description": "dangerouslySetInnerHTML used without sanitization",
+          "code": "dangerouslySetInnerHTML={{ __html: content }}",
+          "risk": "Allows injection of malicious scripts via user-provided HTML content",
+          "fix": "Use DOMPurify.sanitize() or a similar HTML sanitization library before rendering"
+        },
+        {
+          "severity": "MEDIUM",
+          "category": "Input Validation",
+          "file": "src/components/BlogPostEditor.tsx",
+          "line": 10,
+          "description": "No validation of content prop",
+          "code": "content: string",
+          "risk": "Accepts any string without validation",
+          "fix": "Add prop type validation or runtime checks"
+        }
+      ]
+    },
+    "ui_ux": {
+      "passed": true,
+      "issues": []
+    },
+    "performance": {
+      "passed": true,
+      "issues": []
+    },
+    "compatibility": {
+      "passed": true,
+      "issues": []
+    },
+    "hacker_injection": {
+      "passed": false,
+      "issues": [
+        {
+          "severity": "CRITICAL",
+          "category": "XSS Injection",
+          "file": "src/components/BlogPostEditor.tsx",
+          "line": 13,
+          "description": "Direct XSS vulnerability via dangerouslySetInnerHTML",
+          "code": "<div dangerouslySetInnerHTML={{ __html: content }} />",
+          "attack_vector": "User can inject <script> tags or event handlers like <img onerror='...' />",
+          "fix": "Sanitize HTML with DOMPurify: DOMPurify.sanitize(content)"
+        }
+      ]
+    },
+    "conformity": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  "summary": "Component created successfully but contains critical XSS vulnerability. The dangerouslySetInnerHTML is used without any HTML sanitization, allowing attackers to inject malicious scripts through user-provided content.",
+  "action_required": "Add HTML sanitization using DOMPurify or similar library before rendering user content. Example: DOMPurify.sanitize(content)"
+}

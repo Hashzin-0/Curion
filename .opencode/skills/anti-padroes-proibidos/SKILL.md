@@ -1,14 +1,14 @@
 ---
 name: anti-padroes-proibidos
 description: |
-  Ativar quando o usuário mencionar "anti-pattern", "má prática", "código ruim", "problema", ou quando detectar qualquer um dos seguintes: código duplicado, lógica em componente, uso de "any", acesso direto a API no UI, acoplamento entre módulos, dados não validados, ou exposição de segredos. Esta skill é uma verificação final antes de entregar código.
+  Ativar quando o usuário mencionar "anti-pattern", "má prática", "código ruim", "problema", "placeholder", ou quando detectar qualquer um dos seguintes: código duplicado, lógica em componente, uso de "any", acesso direto a API no UI, acoplamento entre módulos, dados não validados, exposição de segredos, ou placeholders/TODOs. Esta skill é uma verificação final antes de entregar código.
 ---
 
 # Skill: Anti-Padrões Proibidos
 
 ## Princípio Fundamental
 
-Proibido terminantemente: código duplicado, lógica em componente, uso de `any`, acesso direto a API no UI, acoplamento entre módulos, dados não validados, e exposição de segredos.
+Proibido terminantemente: código duplicado, lógica em componente, uso de `any`, acesso direto a API no UI, acoplamento entre módulos, dados não validados, exposição de segredos, e placeholders/TODOs não funcionais.
 
 ## Lista de Infrações e Correções
 
@@ -273,6 +273,60 @@ Antes de entregar código, confirme:
 - [ ] Secrets estão em variáveis de ambiente?
 - [ ] Logs não expõem dados sensíveis?
 
+## 8. Placeholders Não Funcionais
+
+**PROIBIDO:**
+```tsx
+// Placeholder vazio ou incompleto
+function ServicesSection() {
+  return <div>Em breve...</div>;
+}
+
+function BlogPostEditor() {
+  return (
+    <div>
+      <h2>Blog</h2>
+      {/* TODO: Implementar depois */}
+    </div>
+  );
+}
+```
+
+**CORREÇÃO:**
+```tsx
+// Componente funcional completo com empty state real
+function ServicesSection({ services }: { services: Service[] }) {
+  if (!services?.length) {
+    return (
+      <EmptyState 
+        icon={Package}
+        title="Nenhum serviço cadastrado"
+        description="Adicione seus serviços para exibir aqui"
+        action={<Button>Adicionar Serviço</Button>}
+      />
+    );
+  }
+  return <ServiceGrid services={services} />;
+}
+
+// Empty state reutilizável
+function EmptyState({ icon: Icon, title, description, action }) {
+  return (
+    <div className="text-center py-12">
+      <Icon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+      <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+      <p className="text-gray-500 mt-1">{description}</p>
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+```
+
+**REGRA:** Nunca entregue código com placeholders. Se a feature não pode ser completa:
+1. Implemente empty state funcional
+2. Documente o que falta em COMMENTários de IMPLEMENTAÇÃO
+3. Comunique o usuário sobre o que foi entregue
+
 ## Regras de Ouro
 
 1. **NUNCA** tolere código duplicado - abstraia imediatamente
@@ -282,3 +336,4 @@ Antes de entregar código, confirme:
 5. **NUNCA** acople features diretamente
 6. **NUNCA** use dados sem validação
 7. **NUNCA** exponha secrets em código ou logs
+8. **NUNCA** entregue placeholders - implemente empty states funcionais
