@@ -1,0 +1,60 @@
+import type { SiteTemplate, ThemeSettings, SectionKey, SectionConfig } from '@/types/site';
+
+const theme: ThemeSettings = {
+  primaryColor: '#6366f1',
+  accentColor: '#22d3ee',
+  fontFamily: 'JetBrains Mono',
+  bgColor: '#0f172a',
+  textColor: '#f1f5f9',
+  cardBgColor: '#1e293b',
+  borderColor: '#334155',
+};
+
+export const devTemplate: SiteTemplate = {
+  key: 'dev',
+  label: 'Tech / Dev',
+  description: 'Template minimalista dark mode para desenvolvedores. Destaque para projetos, skills técnicas e código.',
+  icon: 'Code',
+  theme,
+  suggested_order: [
+    'hero',
+    'skills',
+    'projects',
+    'experiences',
+    'services',
+    'blog',
+    'links',
+  ],
+  default_section_configs: {
+    hero: { is_enabled: true, override_mode: 'auto' },
+    skills: { is_enabled: true, override_mode: 'auto' },
+    projects: { is_enabled: true, override_mode: 'auto' },
+    experiences: { is_enabled: true, override_mode: 'auto' },
+    services: { is_enabled: true, override_mode: 'auto' },
+    blog: { is_enabled: true, override_mode: 'auto' },
+    links: { is_enabled: true, override_mode: 'auto' },
+    services_intro: { is_enabled: false, override_mode: 'auto' },
+    trajectory: { is_enabled: false, override_mode: 'auto' },
+    education: { is_enabled: true, override_mode: 'auto' },
+    certifications: { is_enabled: true, override_mode: 'auto' },
+    languages: { is_enabled: false, override_mode: 'auto' },
+    recommendations: { is_enabled: false, override_mode: 'auto' },
+    volunteer: { is_enabled: false, override_mode: 'auto' },
+    publications: { is_enabled: false, override_mode: 'auto' },
+  } as Partial<Record<SectionKey, Partial<SectionConfig>>>,
+  features: [
+    'Dark mode nativ',
+    'Tags de tecnologias',
+    'Cards de projetos com GitHub',
+    'Timeline vertical',
+    'Syntax highlighting',
+  ],
+  recommended_for: [
+    'Desenvolvedores fullstack',
+    'DevOps e engenheiros',
+    'Data scientists',
+    'Mobile developers',
+    ' QA engineers',
+    'Sysadmins',
+  ],
+};

@@ -1,0 +1,61 @@
+import type { SiteTemplate, ThemeSettings, SectionKey, SectionConfig } from '@/types/site';
+
+const theme: ThemeSettings = {
+  primaryColor: '#3b82f6',
+  accentColor: '#10b981',
+  fontFamily: 'Inter',
+  bgColor: '#ffffff',
+  textColor: '#1f2937',
+  cardBgColor: '#f9fafb',
+  borderColor: '#e5e7eb',
+};
+
+export const freelancerTemplate: SiteTemplate = {
+  key: 'freelancer',
+  label: 'Freelancer / Autônomo',
+  description: 'Template focado em conversão para freelancers e autônomos. Destaque para serviços, preços e CTAs.',
+  icon: 'Briefcase',
+  theme,
+  suggested_order: [
+    'hero',
+    'services_intro',
+    'services',
+    'experiences',
+    'projects',
+    'certifications',
+    'blog',
+    'links',
+  ],
+  default_section_configs: {
+    hero: { is_enabled: true, override_mode: 'auto' },
+    services_intro: { is_enabled: true, override_mode: 'auto' },
+    services: { is_enabled: true, override_mode: 'auto' },
+    experiences: { is_enabled: true, override_mode: 'auto' },
+    projects: { is_enabled: true, override_mode: 'auto' },
+    certifications: { is_enabled: true, override_mode: 'auto' },
+    blog: { is_enabled: true, override_mode: 'auto' },
+    links: { is_enabled: true, override_mode: 'auto' },
+    trajectory: { is_enabled: false, override_mode: 'auto' },
+    education: { is_enabled: false, override_mode: 'auto' },
+    skills: { is_enabled: false, override_mode: 'auto' },
+    languages: { is_enabled: false, override_mode: 'auto' },
+    recommendations: { is_enabled: true, override_mode: 'auto' },
+    volunteer: { is_enabled: false, override_mode: 'auto' },
+    publications: { is_enabled: false, override_mode: 'auto' },
+  } as Partial<Record<SectionKey, Partial<SectionConfig>>>,
+  features: [
+    'Cards de serviços com preço',
+    'Botões de booking/agendamento',
+    'CTAs estratégicos',
+    'Timeline de experiências',
+    'Certificações em destaque',
+  ],
+  recommended_for: [
+    'Desenvolvedores freelance',
+    'Designers autônomos',
+    'Consultores',
+    'Redatores e copywriters',
+    'Fotógrafos',
+    'Professores particulares',
+  ],
+};

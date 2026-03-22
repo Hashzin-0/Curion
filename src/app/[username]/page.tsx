@@ -1,122 +1,91 @@
-
 'use client';
 
 import { useStore } from '@/lib/store';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { ThemedProfileLayout } from '@/components/ThemedProfileLayout';
-import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
-import { supabase } from '@/lib/supabase';
+import { SiteRenderer } from '@/components/site/SiteRenderer';
+import { useSiteBuilderStore } from '@/lib/stores/siteBuilderStore';
 import { DatabaseService } from '@/lib/services/database';
+import { supabase } from '@/lib/supabase';
+import type { User } from '@/lib/store';
 
 export default function PublicProfile() {
   const { username } = useParams();
-  const { users, areas, isLoading, currentUser } = useStore();
-  const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { currentUser } = useStore();
+  const { loadSiteByUsername, isLoading, config } = useSiteBuilderStore();
+  const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
-  const [isLoadingTheme, setIsLoadingTheme] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const fetchUser = useCallback(async () => {
+  useEffect(() => {
     if (!username || !isMounted) return;
-    setLoadingUser(true);
-    
-    // Tenta encontrar na store primeiro
-    let found = users.find(u => u.username === username);
-    
-    // Se não estiver na store, busca no banco
-    if (!found) {
+
+    async function fetchUser() {
+      setLoadingUser(true);
       try {
         const { data } = await supabase
           .from('users')
           .select('*')
           .eq('username', username)
           .single();
-        if (data) found = data;
+        
+        if (data) {
+          setUser(data);
+          
+          if (currentUser?.id !== data.id) {
+            DatabaseService.recordProfileView(data.id);
+          }
+        }
       } catch (e) {
         console.error('Erro ao buscar usuário:', e);
       }
+      setLoadingUser(false);
     }
-    
-    if (found) {
-      setUser(found);
-      
-      // REGRA DE NEGÓCIO: Só grava a visualização se o visitante NÃO for o dono do perfil
-      // Isso evita inflar métricas com visitas do próprio usuário
-      if (currentUser?.id !== found.id) {
-        DatabaseService.recordProfileView(found.id);
-      }
-    }
-    
-    setLoadingUser(false);
-    
-    // Redireciona se não encontrar após carregar
-    if (!found && !isLoading && isMounted) {
-      router.push('/');
-    }
-  }, [username, users, isMounted, isLoading, router, currentUser?.id]);
 
-  useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
-
-  const fetchTheme = useCallback(async () => {
-    if (!user) return;
-    setIsLoadingTheme(true);
-    try {
-      const userAreas = areas.filter(a => a.user_id === user.id);
-      const res = await fetch('/api/profile/theme', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: user.name,
-          headline: user.headline,
-          areas: userAreas.map(a => a.name),
-        }),
-      });
-      if (res.ok) {
-        const theme = await res.json();
-        setProfileTheme(theme);
-      }
-    } catch (e) {
-      console.error('Erro ao gerar tema:', e);
-    } finally {
-      setIsLoadingTheme(false);
-    }
-  }, [user, areas]);
+  }, [username, isMounted, currentUser?.id]);
 
   useEffect(() => {
-    if (user) fetchTheme();
-  }, [user, fetchTheme]);
+    if (user?.id) {
+      loadSiteByUsername(username as string);
+    }
+  }, [user?.id, username, loadSiteByUsername]);
 
-  if (!isMounted || loadingUser || (isLoading && !user)) {
+  if (!isMounted || loadingUser || isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400 font-medium">Carregando perfil público...</p>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Carregando...</p>
       </div>
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Usuário não encontrado</h1>
+        <p className="text-gray-500">Este perfil não existe ou foi removido.</p>
+      </div>
+    );
+  }
 
-  const userAreas = areas.filter(a => a.user_id === user.id);
+  const isOwner = currentUser?.id === user.id;
 
   return (
-    <ThemedProfileLayout
-      user={user}
-      areas={userAreas}
-      isOwner={currentUser?.id === user.id}
-      theme={profileTheme}
-      isLoadingTheme={isLoadingTheme}
-      username={user.username}
+    <SiteRenderer
+      username={username as string}
+      userId={user.id}
+      userName={user.name}
+      userAvatar={user.avatar_path}
+      userHeadline={user.headline}
+      userSummary={user.summary}
+      userLocation={user.location}
+      isOwner={isOwner}
     />
   );
 }

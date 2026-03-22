@@ -1,0 +1,61 @@
+import type { SiteTemplate, ThemeSettings, SectionKey, SectionConfig } from '@/types/site';
+
+const theme: ThemeSettings = {
+  primaryColor: '#ec4899',
+  accentColor: '#f59e0b',
+  fontFamily: 'Poppins',
+  bgColor: '#ffffff',
+  textColor: '#374151',
+  cardBgColor: '#fefce8',
+  borderColor: '#fde68a',
+};
+
+export const designerTemplate: SiteTemplate = {
+  key: 'designer',
+  label: 'Designer',
+  description: 'Template visual-first para designers. Galeria de projetos em destaque e tipografia elegante.',
+  icon: 'Palette',
+  theme,
+  suggested_order: [
+    'hero',
+    'projects',
+    'services',
+    'skills',
+    'experiences',
+    'recommendations',
+    'blog',
+    'links',
+  ],
+  default_section_configs: {
+    hero: { is_enabled: true, override_mode: 'auto' },
+    projects: { is_enabled: true, override_mode: 'auto' },
+    services: { is_enabled: true, override_mode: 'auto' },
+    skills: { is_enabled: true, override_mode: 'auto' },
+    experiences: { is_enabled: true, override_mode: 'auto' },
+    recommendations: { is_enabled: true, override_mode: 'auto' },
+    blog: { is_enabled: true, override_mode: 'auto' },
+    links: { is_enabled: true, override_mode: 'auto' },
+    services_intro: { is_enabled: false, override_mode: 'auto' },
+    trajectory: { is_enabled: false, override_mode: 'auto' },
+    education: { is_enabled: true, override_mode: 'auto' },
+    certifications: { is_enabled: true, override_mode: 'auto' },
+    languages: { is_enabled: false, override_mode: 'auto' },
+    volunteer: { is_enabled: false, override_mode: 'auto' },
+    publications: { is_enabled: false, override_mode: 'auto' },
+  } as Partial<Record<SectionKey, Partial<SectionConfig>>>,
+  features: [
+    'Galeria masonry de projetos',
+    'Lightbox com detalhes',
+    'Filtros por categoria',
+    'Depoimentos em destaque',
+    'Grid assimétrico',
+  ],
+  recommended_for: [
+    'UI/UX designers',
+    'Graphic designers',
+    'Ilustradores',
+    'Motion designers',
+    'Product designers',
+    'Web designers',
+  ],
+};

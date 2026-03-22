@@ -1,0 +1,60 @@
+import type { SiteTemplate, ThemeSettings, SectionKey, SectionConfig } from '@/types/site';
+
+const theme: ThemeSettings = {
+  primaryColor: '#059669',
+  accentColor: '#7c3aed',
+  fontFamily: 'Merriweather',
+  bgColor: '#fefdfb',
+  textColor: '#292524',
+  cardBgColor: '#ffffff',
+  borderColor: '#d6d3d1',
+};
+
+export const writerTemplate: SiteTemplate = {
+  key: 'writer',
+  label: 'Escritor / Blogger',
+  description: 'Template content-heavy para escritores e bloggers. Tipografia forte e foco em artigos.',
+  icon: 'BookOpen',
+  theme,
+  suggested_order: [
+    'hero',
+    'blog',
+    'trajectory',
+    'experiences',
+    'services',
+    'publications',
+    'links',
+  ],
+  default_section_configs: {
+    hero: { is_enabled: true, override_mode: 'auto' },
+    blog: { is_enabled: true, override_mode: 'auto' },
+    trajectory: { is_enabled: true, override_mode: 'auto' },
+    experiences: { is_enabled: true, override_mode: 'auto' },
+    services: { is_enabled: true, override_mode: 'auto' },
+    publications: { is_enabled: true, override_mode: 'auto' },
+    links: { is_enabled: true, override_mode: 'auto' },
+    services_intro: { is_enabled: false, override_mode: 'auto' },
+    projects: { is_enabled: false, override_mode: 'auto' },
+    education: { is_enabled: true, override_mode: 'auto' },
+    skills: { is_enabled: false, override_mode: 'auto' },
+    certifications: { is_enabled: false, override_mode: 'auto' },
+    languages: { is_enabled: true, override_mode: 'auto' },
+    recommendations: { is_enabled: true, override_mode: 'auto' },
+    volunteer: { is_enabled: false, override_mode: 'auto' },
+  } as Partial<Record<SectionKey, Partial<SectionConfig>>>,
+  features: [
+    'Grid de posts em destaque',
+    'Tempo de leitura',
+    'Categorias por cor',
+    'Newsletter signup',
+    'Sidebar com bio',
+  ],
+  recommended_for: [
+    'Escritores',
+    'Blogueiros',
+    'Jornalistas',
+    'Editores',
+    'Redatores',
+    'Content creators',
+  ],
+};
