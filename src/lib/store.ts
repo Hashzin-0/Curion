@@ -99,7 +99,13 @@ interface AppState {
   isAuthReady: boolean;
   isAudioPlaying: boolean;
   
-  // Status de Importação em Background
+  // Status de Telemetria e Importação
+  telemetry: {
+    logs: string[];
+    isAnalyzing: boolean;
+    currentAction: string;
+  };
+  
   importStatus: {
     isImporting: boolean;
     current: number;
@@ -139,6 +145,11 @@ interface AppState {
   removeAreaSkill: (areaId: string, skillId: string) => Promise<void>;
   addSkillToRelevantAreas: (skillId: string, skillName: string) => Promise<void>;
   
+  // Ações de Telemetria
+  addTelemetryLog: (log: string) => void;
+  clearTelemetry: () => void;
+  setAnalyzing: (val: boolean, action?: string) => void;
+  
   // Ações de Lote e Background
   processBackgroundImport: (userId: string, data: any) => Promise<void>;
   
@@ -161,11 +172,22 @@ export const useStore = create<AppState>()(
       isAuthReady: false,
       isAudioPlaying: false,
       
+      telemetry: { logs: [], isAnalyzing: false, currentAction: '' },
       importStatus: { isImporting: false, current: 0, total: 0, label: '' },
       
       setUser: (user) => set({ currentUser: user }),
       setAuthReady: (ready) => set({ isAuthReady: ready }),
       setIsAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
+
+      addTelemetryLog: (log) => set(s => ({ 
+        telemetry: { ...s.telemetry, logs: [...s.telemetry.logs.slice(-49), `[${new Date().toLocaleTimeString()}] ${log}`] } 
+      })),
+      
+      clearTelemetry: () => set({ telemetry: { logs: [], isAnalyzing: false, currentAction: '' } }),
+      
+      setAnalyzing: (val, action = '') => set(s => ({ 
+        telemetry: { ...s.telemetry, isAnalyzing: val, currentAction: action } 
+      })),
 
       syncUserWithDatabase: async (userData) => {
         try {

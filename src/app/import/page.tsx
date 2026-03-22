@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   FileUp, Type, Sparkles, Loader2, FileText, 
   ArrowLeft, Check, AlertCircle, Wand2, Save,
-  Briefcase, GraduationCap, Star, User
+  Briefcase, GraduationCap, Star, User, Activity
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { DatabaseService } from '@/lib/services/database';
 import Link from 'next/link';
 import * as pdfjs from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
+import { IntelligenceTerminal } from '@/components/shared/IntelligenceTerminal';
 
 // Configuração do PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -25,7 +26,7 @@ const labelCls = "block text-xs font-black text-slate-500 dark:text-slate-400 up
 
 export default function ImportPage() {
   const router = useRouter();
-  const { currentUser, processBackgroundImport } = useStore();
+  const { currentUser, processBackgroundImport, addTelemetryLog, clearTelemetry, setAnalyzing } = useStore();
   
   const [step, setStep] = useState<'upload' | 'parsing' | 'review'>('upload');
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
@@ -36,13 +37,16 @@ export default function ImportPage() {
   const [parsedData, setParsedData] = useState<any>(null);
 
   const extractText = async (f: File): Promise<string> => {
+    addTelemetryLog(`Lendo arquivo: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`);
     if (f.type === 'application/pdf') {
       setParsingStatus('Iniciando leitura do PDF...');
       const arrayBuffer = await f.arrayBuffer();
       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       let fullText = '';
+      addTelemetryLog(`PDF detectado: ${pdf.numPages} páginas encontradas.`);
       for (let i = 1; i <= pdf.numPages; i++) {
         setParsingStatus(`Lendo PDF: página ${i} de ${pdf.numPages}...`);
+        addTelemetryLog(`Processando buffer da página ${i}...`);
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
@@ -50,13 +54,17 @@ export default function ImportPage() {
       return fullText;
     } else if (f.type.startsWith('image/')) {
       setParsingStatus('Iniciando reconhecimento de imagem (OCR)...');
+      addTelemetryLog('Iniciando motor de OCR Tesseract.js...');
       const result = await Tesseract.recognize(f, 'por', {
         logger: m => {
           if (m.status === 'recognizing text') {
-            setParsingStatus(`Analisando imagem: ${Math.round(m.progress * 100)}%`);
+            const prog = Math.round(m.progress * 100);
+            setParsingStatus(`Analisando imagem: ${prog}%`);
+            if (prog % 20 === 0) addTelemetryLog(`Visão Computacional: ${prog}% do texto processado.`);
           }
         }
       });
+      addTelemetryLog('OCR concluído com sucesso.');
       return result.data.text;
     }
     return '';
@@ -65,6 +73,8 @@ export default function ImportPage() {
   const handleStartParsing = async () => {
     setIsProcessing(true);
     setStep('parsing');
+    clearTelemetry();
+    setAnalyzing(true, 'Extraindo Texto Bruto');
     setParsingStatus('Preparando documento...');
     
     try {
@@ -77,13 +87,21 @@ export default function ImportPage() {
         throw new Error('Texto insuficiente para análise. Por favor, forneça mais detalhes.');
       }
 
+      addTelemetryLog('Injetando contexto no motor de extração IA...');
+      setAnalyzing(true, 'IA Analisando Estrutura');
       setParsingStatus('IA analisando estrutura e organizando dados...');
+      
+      addTelemetryLog('Iniciando análise semântica de entidades...');
       const result = await parseResumeText({ text: textToParse });
       
+      addTelemetryLog(`Extração concluída: ${result.experiences?.length || 0} experiências e ${result.education?.length || 0} formações.`);
       setParsedData(result);
       setStep('review');
+      setAnalyzing(false);
       toast.success('Currículo analisado com sucesso!');
     } catch (err: any) {
+      addTelemetryLog(`ERRO CRÍTICO: ${err.message}`);
+      setAnalyzing(false);
       toast.error(err.message || 'Erro ao processar currículo.');
       setStep('upload');
     } finally {
@@ -96,7 +114,6 @@ export default function ImportPage() {
     if (!currentUser || !parsedData) return;
     
     // Dispara a ingestão em background na Store Global
-    // Isso permite que o usuário saia desta página e o processo continue.
     processBackgroundImport(currentUser.id, parsedData);
     
     // Redireciona imediatamente para o perfil para ver os dados aparecendo
@@ -112,7 +129,7 @@ export default function ImportPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <header className="flex items-center justify-between mb-12">
           <Link href="/profile" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white font-bold transition-colors">
             <ArrowLeft size={20} /> Voltar ao Perfil
@@ -176,17 +193,26 @@ export default function ImportPage() {
         )}
 
         {step === 'parsing' && (
-          <div className="flex flex-col items-center justify-center py-32 text-center space-y-8">
-            <div className="relative">
-              <div className="w-32 h-32 border-8 border-blue-100 dark:border-slate-800 rounded-full animate-spin border-t-blue-600" />
-              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600 w-12 h-12 animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center py-12">
+            <div className="space-y-8">
+              <div className="relative">
+                <div className="w-32 h-32 border-8 border-blue-100 dark:border-slate-800 rounded-full animate-spin border-t-blue-600" />
+                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600 w-12 h-12 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Processamento Ativo</h2>
+                <p className="text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest text-xs mt-4 animate-pulse flex items-center gap-2">
+                  <Activity size={14} /> {parsingStatus}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400 font-medium mt-4 text-sm leading-relaxed">
+                  Nossa IA está utilizando redes neurais para reconstruir sua trajetória profissional a partir do documento bruto. 
+                  Acompanhe a telemetria ao lado.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">A IA está trabalhando</h2>
-              <p className="text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest text-xs mt-4 animate-pulse">
-                {parsingStatus}
-              </p>
-              <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 text-sm italic">Extraindo experiências, datas e habilidades do seu documento...</p>
+            
+            <div className="h-[450px]">
+              <IntelligenceTerminal />
             </div>
           </div>
         )}
