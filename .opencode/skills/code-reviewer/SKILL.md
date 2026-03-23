@@ -1,26 +1,23 @@
 ---
 name: code-reviewer
 description: |
-  ATIVAR AUTOMATICAMENTE após cada tarefa de agente de código. Use esta skill para revisar código gerado verificando: anti-padrões, modularização, manutenibilidade, TypeScript, completude (sem placeholders), segurança (XSS, injection, secrets), UI/UX (acessibilidade, responsividade), performance, compatibilidades, hacker/injeção (SQL, code injection, CSRF), e conformidade com o pedido original. Esta skill é OBRIGATÓRIA após cada tarefa de código - nunca entregue código sem revisar. Synonyms: "revisar", "review", "verificar código", "checar", "auditar código", "code audit", "code review".
+  Use esta skill para revisar código verificando: anti-padrões, modularização, manutenibilidade, TypeScript, completude (sem placeholders), segurança (XSS, injection, secrets), UI/UX (acessibilidade, responsividade), performance, compatibilidades, hacker/injeção (SQL, code injection, CSRF), e conformidade com o pedido original. Ative quando o agente julgar necessário ou quando solicitado pelo usuário. Synonyms: "revisar", "review", "verificar código", "checar", "auditar código", "code audit", "code review".
 ---
 
 # Skill: Code Reviewer
 
 ## Princípio Fundamental
 
-Esta skill deve ser executada **automaticamente após cada tarefa que gera código**. O objetivo é garantir qualidade, segurança e conformidade antes de entregar.
+Esta skill está disponível como ferramenta opcional para revisar código quando o agente ou usuário julgar necessário. O objetivo é garantir qualidade, segurança e conformidade.
 
-## Quando Ativar
+## Quando Usar
 
-**SEMPRE ative após:**
-- Tarefa de agente que cria/modifica arquivos de código
-- Antes de entregar código ao usuário
-- Após refatorações ou correções
-
-**NÃO ative para:**
-- Perguntas sobre código existente
-- Análise sem modificação
-- Tarefas puramente de documentação
+**Considere usar quando:**
+- O agente sentir necessidade de validar código antes de entregar
+- O usuário solicitar revisão
+- After changes that touch critical areas (segurança, autenticação, etc.)
+- Antes de commits importantes ou pull requests
+- Quando houver dúvida sobre qualidade do código gerado
 
 ## Fluxo de Verificação
 
@@ -215,27 +212,24 @@ return <div>Em breve...</div>
 
 ### Se PASSED
 1. Silêncio
-2. Entregar código diretamente
+2. Continuar normalmente
 
 ### Se NEEDS_REVISION
-1. Gerar relatório JSON + Markdown
-2. Enviar para o agente que gerou o código
-3. Agent deve corrigir e re-enviar
-4. Voltar ao início do fluxo
+1. Gerar relatório com issues encontrados
+2. Oferecer correções sugeridas ao usuário
+3. Aguardar decisão do usuário ou agente sobre aplicar correções
 
 ### Se FAILED
-1. Erros de compilação
-2. Gerar relatório com erros específicos
-3. Enviar para agente com solução sugerida
+1. Reportar erros de compilação específicos
+2. Sugerir correções quando possível
 
-## Regras de Ouro
+## Recomendações
 
-1. **SEMPRE revise** após cada tarefa de código
-2. **NÃO entregue** código com issues conhecidos
-3. **SEJA específico** nos relatórios (file, line, código)
-4. **FORNEÇA correção** junto com cada issue
-5. **MANTENHA silêncio** se tudo passou
-6. **USE outras skills** para verificações específicas
+1. **SEJA específico** nos relatórios (file, line, código)
+2. **FORNEÇA correção** junto com cada issue
+3. **MANTENHA silêncio** se tudo passou
+4. **USE outras skills** para verificações específicas
+5. **USE seu julgamento** sobre quando é valioso revisar
 
 ## Integração com Outras Skills
 
@@ -245,16 +239,16 @@ Para verificações detalhadas, use as skills existentes:
 - `manutenibilidade` - Para funções e empty states
 - `seguranca-zero-confianca` - Para validação e segurança
 
-## Checklist Final
+## Checklist Opcional
 
-Antes de declarar PASSED:
+Use como guia quando julgar necessário:
 
 - [ ] Nenhum placeholder/TODO encontrado
-- [ ] Compilação TypeScript passou
+- [ ] Compilação TypeScript passou (se aplicável)
 - [ ] Empty states funcionais implementados
-- [ ] Sem `any` no código
+- [ ] Sem `any` no código (se TypeScript)
 - [ ] Lógica isolada em hooks/services
-- [ ] Funções max 30 linhas
+- [ ] Funções com tamanho adequado
 - [ ] Segurança validada
 - [ ] Acessibilidade básica (alt, aria)
 - [ ] Código atende pedido original
