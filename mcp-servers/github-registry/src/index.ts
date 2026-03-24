@@ -1,11 +1,13 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { 
   CallToolRequestSchema, 
   ListToolsRequestSchema 
 } from '@modelcontextprotocol/sdk/types.js';
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
+import express from 'express';
 import {
   RegistryType,
   RegistryItem,
@@ -531,5 +533,37 @@ class GitHubRegistryMCP extends Server {
 
 const server = new GitHubRegistryMCP();
 
-const transport = new StdioServerTransport();
-server.connect(transport).catch(console.error);
+const useHttp = process.argv.includes('--http');
+
+async function startServer() {
+  if (useHttp) {
+    const app = express();
+    app.use(express.json());
+
+    const PORT = parseInt(process.env.PORT || '3000', 10);
+
+    app.post('/mcp', async (req, res) => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    });
+
+    app.get('/health', (req, res) => {
+      res.json({ status: 'ok' });
+    });
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`GitHub Registry MCP Server running on http://0.0.0.0:${PORT}`);
+      console.log(`MCP endpoint: http://0.0.0.0:${PORT}/mcp`);
+    });
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error('GitHub Registry MCP Server running in stdio mode');
+  }
+}
+
+startServer().catch(console.error);

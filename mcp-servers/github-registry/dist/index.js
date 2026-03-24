@@ -1,0 +1,488 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Octokit } from '@octokit/rest';
+import express from 'express';
+import { REPOS, OWNER, } from './types.js';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+if (!GITHUB_TOKEN) {
+    console.error('Error: GITHUB_TOKEN environment variable is not set');
+    console.error('Please set your GitHub Personal Access Token:');
+    console.error('  export GITHUB_TOKEN=your_token_here');
+    process.exit(1);
+}
+const octokit = new Octokit({
+    auth: GITHUB_TOKEN,
+});
+class GitHubRegistryMCP extends Server {
+    constructor() {
+        super({
+            name: 'github-registry-mcp',
+            version: '1.0.0',
+        }, {
+            capabilities: {
+                tools: {},
+            },
+        });
+        this.setupTools();
+    }
+    setupTools() {
+        this.setRequestHandler(ListToolsRequestSchema, async () => ({
+            tools: [
+                {
+                    name: 'github_read_file',
+                    description: 'Read a file from a GitHub repository',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            owner: { type: 'string', description: 'Repository owner' },
+                            repo: { type: 'string', description: 'Repository name' },
+                            path: { type: 'string', description: 'File path' },
+                        },
+                        required: ['owner', 'repo', 'path'],
+                    },
+                },
+                {
+                    name: 'github_write_file',
+                    description: 'Create or update a file in a GitHub repository',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            owner: { type: 'string', description: 'Repository owner' },
+                            repo: { type: 'string', description: 'Repository name' },
+                            path: { type: 'string', description: 'File path' },
+                            content: { type: 'string', description: 'File content (base64 or plain text)' },
+                            message: { type: 'string', description: 'Commit message' },
+                        },
+                        required: ['owner', 'repo', 'path', 'content'],
+                    },
+                },
+                {
+                    name: 'github_list_directory',
+                    description: 'List contents of a directory in a GitHub repository',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            owner: { type: 'string', description: 'Repository owner' },
+                            repo: { type: 'string', description: 'Repository name' },
+                            path: { type: 'string', description: 'Directory path (empty for root)' },
+                        },
+                        required: ['owner', 'repo'],
+                    },
+                },
+                {
+                    name: 'registry_init',
+                    description: 'Initialize a registry repository structure (index.json + directories) if not exists',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['skills', 'agents', 'mcp'],
+                                description: 'Registry type'
+                            },
+                        },
+                        required: ['type'],
+                    },
+                },
+                {
+                    name: 'registry_save',
+                    description: 'Save an item to the registry and automatically update index.json',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['skills', 'agents', 'mcp'],
+                                description: 'Registry type'
+                            },
+                            name: { type: 'string', description: 'Item name' },
+                            content: { type: 'string', description: 'File content' },
+                            path: { type: 'string', description: 'Directory path within the repo' },
+                            tags: {
+                                type: 'array',
+                                items: { type: 'string' },
+                                description: 'Tags for searching'
+                            },
+                            description: { type: 'string', description: 'Item description' },
+                        },
+                        required: ['type', 'name', 'content', 'path'],
+                    },
+                },
+                {
+                    name: 'registry_search',
+                    description: 'Search for items in the registry by name or tags',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['skills', 'agents', 'mcp'],
+                                description: 'Registry type'
+                            },
+                            query: { type: 'string', description: 'Search query' },
+                        },
+                        required: ['type', 'query'],
+                    },
+                },
+                {
+                    name: 'registry_list',
+                    description: 'List all items in the registry with optional grouping',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['skills', 'agents', 'mcp'],
+                                description: 'Registry type'
+                            },
+                            groupBy: {
+                                type: 'string',
+                                enum: ['none', 'path', 'tags'],
+                                description: 'How to group items'
+                            },
+                        },
+                        required: ['type'],
+                    },
+                },
+                {
+                    name: 'registry_get_index',
+                    description: 'Get the raw index.json from a registry',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['skills', 'agents', 'mcp'],
+                                description: 'Registry type'
+                            },
+                        },
+                        required: ['type'],
+                    },
+                },
+            ],
+        }));
+        this.setRequestHandler(CallToolRequestSchema, async (request) => {
+            const { name, arguments: args = {} } = request.params;
+            try {
+                switch (name) {
+                    case 'github_read_file':
+                        return await this.githubReadFile(args);
+                    case 'github_write_file':
+                        return await this.githubWriteFile(args);
+                    case 'github_list_directory':
+                        return await this.githubListDirectory(args);
+                    case 'registry_init':
+                        return await this.registryInit(args);
+                    case 'registry_save':
+                        return await this.registrySave(args);
+                    case 'registry_search':
+                        return await this.registrySearch(args);
+                    case 'registry_list':
+                        return await this.registryList(args);
+                    case 'registry_get_index':
+                        return await this.registryGetIndex(args);
+                    default:
+                        throw new Error(`Unknown tool: ${name}`);
+                }
+            }
+            catch (error) {
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+        });
+    }
+    async githubReadFile(args) {
+        const { owner, repo, path } = args;
+        const response = await octokit.repos.getContent({
+            owner,
+            repo,
+            path,
+        });
+        if (Array.isArray(response.data)) {
+            return {
+                content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+            };
+        }
+        const fileContent = response.data.content;
+        if (!fileContent) {
+            return {
+                content: [{ type: 'text', text: 'Error: Not a file or empty content' }],
+                isError: true,
+            };
+        }
+        const content = Buffer.from(fileContent, 'base64').toString('utf-8');
+        return {
+            content: [{ type: 'text', text: content }],
+        };
+    }
+    async githubWriteFile(args) {
+        const { owner, repo, path, content = '', message } = args;
+        const encoded = Buffer.from(content).toString('base64');
+        try {
+            await octokit.repos.createOrUpdateFileContents({
+                owner,
+                repo,
+                path,
+                message: message || `chore: update ${path}`,
+                content: encoded,
+            });
+            return {
+                content: [{ type: 'text', text: `Successfully saved ${path} to ${owner}/${repo}` }],
+            };
+        }
+        catch (error) {
+            if (error.status === 404) {
+                await octokit.repos.createOrUpdateFileContents({
+                    owner,
+                    repo,
+                    path,
+                    message: message || `feat: create ${path}`,
+                    content: encoded,
+                });
+                return {
+                    content: [{ type: 'text', text: `Successfully created ${path} in ${owner}/${repo}` }],
+                };
+            }
+            throw error;
+        }
+    }
+    async githubListDirectory(args) {
+        const { owner, repo, path = '' } = args;
+        const response = await octokit.repos.getContent({
+            owner,
+            repo,
+            path,
+        });
+        const items = Array.isArray(response.data) ? response.data : [response.data];
+        return {
+            content: [{
+                    type: 'text',
+                    text: JSON.stringify(items.map((item) => ({
+                        name: item.name,
+                        path: item.path,
+                        type: item.type,
+                        size: item.size,
+                    })), null, 2),
+                }],
+        };
+    }
+    async registryInit(args) {
+        const { type } = args;
+        const repo = REPOS[type];
+        try {
+            await octokit.repos.getContent({
+                owner: OWNER,
+                repo,
+                path: 'index.json',
+            });
+            return {
+                content: [{ type: 'text', text: `Registry ${type} already initialized` }],
+            };
+        }
+        catch (error) {
+            if (error.status !== 404)
+                throw error;
+        }
+        const initialIndex = {
+            type,
+            items: [],
+            version: '1.0.0',
+            lastUpdated: new Date().toISOString(),
+        };
+        await this.githubWriteFile({
+            owner: OWNER,
+            repo,
+            path: 'index.json',
+            content: JSON.stringify(initialIndex, null, 2),
+            message: `init: create ${type} registry`,
+        });
+        const dirs = ['.', 'agents', 'skills', 'mcp'];
+        for (const dir of dirs) {
+            if (dir === '.')
+                continue;
+            try {
+                await octokit.repos.getContent({
+                    owner: OWNER,
+                    repo,
+                    path: dir,
+                });
+            }
+            catch (error) {
+                if (error.status === 404) {
+                    await this.githubWriteFile({
+                        owner: OWNER,
+                        repo,
+                        path: `${dir}/.gitkeep`,
+                        content: '',
+                        message: `init: create ${dir} directory`,
+                    });
+                }
+            }
+        }
+        return {
+            content: [{ type: 'text', text: `Successfully initialized ${type} registry` }],
+        };
+    }
+    async registrySave(args) {
+        const { type, name, content, path, tags = [], description = '' } = args;
+        const repo = REPOS[type];
+        const fullPath = path ? `${path}/${name}.md` : `${name}.md`;
+        const now = new Date().toISOString();
+        await this.githubWriteFile({
+            owner: OWNER,
+            repo,
+            path: fullPath,
+            content,
+            message: `feat(${type}): add ${name}`,
+        });
+        const index = await this.getIndexInternal(type);
+        const existingIndex = index.items.findIndex(item => item.name === name);
+        const item = {
+            name,
+            path: fullPath,
+            tags,
+            description: description || this.extractDescription(content),
+            createdAt: existingIndex >= 0 ? index.items[existingIndex].createdAt : now,
+            updatedAt: now,
+        };
+        if (existingIndex >= 0) {
+            index.items[existingIndex] = item;
+        }
+        else {
+            index.items.push(item);
+        }
+        index.lastUpdated = now;
+        await this.githubWriteFile({
+            owner: OWNER,
+            repo,
+            path: 'index.json',
+            content: JSON.stringify(index, null, 2),
+            message: `chore(${type}): update index.json`,
+        });
+        return {
+            content: [{
+                    type: 'text',
+                    text: `Successfully saved ${name} to ${type} registry and updated index`,
+                }],
+        };
+    }
+    extractDescription(content) {
+        const lines = content.split('\n');
+        for (const line of lines.slice(0, 10)) {
+            const match = line.match(/^#?\s*(?:description|descrição)[:\s]+(.+)/i);
+            if (match)
+                return match[1].trim();
+        }
+        return content.slice(0, 100).replace(/[#*`]/g, '').trim();
+    }
+    async registrySearch(args) {
+        const { type, query } = args;
+        const index = await this.getIndexInternal(type);
+        const queryLower = query.toLowerCase();
+        const results = index.items.filter(item => item.name.toLowerCase().includes(queryLower) ||
+            item.tags.some(tag => tag.toLowerCase().includes(queryLower)) ||
+            item.description.toLowerCase().includes(queryLower));
+        return {
+            content: [{
+                    type: 'text',
+                    text: JSON.stringify(results, null, 2),
+                }],
+        };
+    }
+    async registryList(args) {
+        const { type, groupBy = 'none' } = args;
+        const index = await this.getIndexInternal(type);
+        if (groupBy === 'none') {
+            return {
+                content: [{
+                        type: 'text',
+                        text: JSON.stringify(index.items, null, 2),
+                    }],
+            };
+        }
+        const grouped = {};
+        for (const item of index.items) {
+            const key = groupBy === 'path'
+                ? item.path.split('/')[0] || 'root'
+                : (item.tags[0] || 'untagged');
+            if (!grouped[key])
+                grouped[key] = [];
+            grouped[key].push(item);
+        }
+        return {
+            content: [{
+                    type: 'text',
+                    text: JSON.stringify(grouped, null, 2),
+                }],
+        };
+    }
+    async registryGetIndex(args) {
+        const index = await this.getIndexInternal(args.type);
+        return {
+            content: [{
+                    type: 'text',
+                    text: JSON.stringify(index, null, 2),
+                }],
+        };
+    }
+    async getIndexInternal(type) {
+        try {
+            const response = await octokit.repos.getContent({
+                owner: OWNER,
+                repo: REPOS[type],
+                path: 'index.json',
+            });
+            if (Array.isArray(response.data)) {
+                throw new Error('index.json is a directory');
+            }
+            const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+            return JSON.parse(content);
+        }
+        catch (error) {
+            if (error.status === 404) {
+                await this.registryInit({ type });
+                return this.getIndexInternal(type);
+            }
+            throw error;
+        }
+    }
+}
+const server = new GitHubRegistryMCP();
+const useHttp = process.argv.includes('--http');
+async function startServer() {
+    if (useHttp) {
+        const app = express();
+        app.use(express.json());
+        const PORT = parseInt(process.env.PORT || '3000', 10);
+        app.post('/mcp', async (req, res) => {
+            const transport = new StreamableHTTPServerTransport({
+                sessionIdGenerator: undefined,
+            });
+            await server.connect(transport);
+            await transport.handleRequest(req, res, req.body);
+        });
+        app.get('/health', (req, res) => {
+            res.json({ status: 'ok' });
+        });
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`GitHub Registry MCP Server running on http://0.0.0.0:${PORT}`);
+            console.log(`MCP endpoint: http://0.0.0.0:${PORT}/mcp`);
+        });
+    }
+    else {
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+        console.error('GitHub Registry MCP Server running in stdio mode');
+    }
+}
+startServer().catch(console.error);
+//# sourceMappingURL=index.js.map

@@ -16,26 +16,42 @@ MCP Server para gerenciar Skills, Agentes e MCPs em repositórios GitHub.
 - `registry_list` - Listar todos os itens com agrupamento opcional
 - `registry_get_index` - Obter o index.json cru
 
-## Configuração no OpenCode
+## Modos de Uso
 
-### 1. Clone o repositório
+### Modo Local (Stdio)
+Para uso local no seu terminal ou IDE:
 
 ```bash
-cd mcp-servers/github-registry
-npm install
-npm run build
+npm run start
 ```
 
-### 2. Configure o MCP no OpenCode
+### Modo HTTP (Nuvem)
+Para deploy em servidor (Render, Railway, etc):
 
-Adicione ao seu arquivo de configuração MCP:
+```bash
+npm run start:http
+```
+
+O servidor vai rodar na porta 3000 (ou na porta definida pela variável PORT).
+
+## Configuração
+
+### Variável de Ambiente
+
+O servidor precisa do token do GitHub. Configure via variável de ambiente:
+
+```bash
+export GITHUB_TOKEN=seu_token_aqui
+```
+
+### Configuração no OpenCode (Local)
 
 ```json
 {
   "mcpServers": {
     "github-registry": {
       "command": "node",
-      "args": ["/workspaces/Curion/mcp-servers/github-registry/dist/index.js"],
+      "args": ["/path/to/mcp-servers/github-registry/dist/index.js"],
       "env": {
         "GITHUB_TOKEN": "seu_token_aqui"
       }
@@ -44,15 +60,38 @@ Adicione ao seu arquivo de configuração MCP:
 }
 ```
 
-Alternativamente, edite o arquivo para incluir o token diretamente:
+### Configuração no OpenCode (Nuvem)
 
-O token já está configurado no código para testes. Para produção, defina a variável de ambiente:
+Após fazer o deploy, use a URL HTTP:
 
-```bash
-export GITHUB_TOKEN=github_pat_xxx
+```json
+{
+  "mcpServers": {
+    "github-registry": {
+      "url": "https://seu-servico.onrender.com/mcp"
+    }
+  }
+}
 ```
 
-## Uso
+## Deploy na Nuvem
+
+### Render
+
+1. Conecte este repo ao Render
+2. Configure as variáveis de ambiente:
+   - `GITHUB_TOKEN` = seu token
+3. Comando de build: `npm run build`
+4. Comando de start: `npm run start:http`
+
+### Railway
+
+1. Conecte este repo ao Railway
+2. Configure as variáveis de ambiente:
+   - `GITHUB_TOKEN` = seu token
+3. O Railway automaticamente detecta Node.js e faz o build
+
+## Uso das Tools
 
 ### Inicializar um Registry
 
@@ -143,14 +182,20 @@ MCPs/
 ## Desenvolvimento
 
 ```bash
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
 # Desenvolvimento com hot reload
 npm run dev
 
-# Build de produção
-npm run build
+# Modo local (stdio)
+npm run start
 
-# Testar localmente
-node dist/index.js
+# Modo HTTP (para deploy)
+npm run start:http
 ```
 
 ## Licença
