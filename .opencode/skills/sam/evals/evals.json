@@ -1,0 +1,23 @@
+{
+  "skill_name": "sam",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "SAM",
+      "expected_output": "Relatório Markdown com status do MCP, contagem de skills/agents/mcps e lista detalhada de cada item",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "SAM iniciar",
+      "expected_output": "Relatório Markdown completo dos 3 registries",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "avaliar repos",
+      "expected_output": "Relatório com tabela contendo nome, descrição, tags e data de atualização",
+      "files": []
+    }
+  ]
+}

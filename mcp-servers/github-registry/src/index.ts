@@ -542,13 +542,21 @@ async function startServer() {
 
     const PORT = parseInt(process.env.PORT || '3000', 10);
 
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+    });
+
+    await server.connect(transport);
+
     app.post('/mcp', async (req, res) => {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
-      
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
+      try {
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        console.error('Error handling MCP request:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      }
     });
 
     app.get('/health', (req, res) => {
