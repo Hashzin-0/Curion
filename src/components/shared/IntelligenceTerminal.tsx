@@ -60,7 +60,7 @@ export function IntelligenceTerminal() {
               animate={{ opacity: 1, x: 0 }}
               className="flex gap-3 text-slate-400 border-l border-white/5 pl-3"
             >
-              <span className="text-blue-500 font-black shrink-0">>></span>
+              <span className="text-blue-500 font-black shrink-0">{'>>'}</span>
               <span className="leading-relaxed whitespace-pre-wrap">{log}</span>
             </motion.div>
           ))}
