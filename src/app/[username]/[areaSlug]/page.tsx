@@ -14,12 +14,13 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { ExperienceItem, EducationCard } from '@/components/shared/ProfileSections';
 import { DatabaseService } from '@/lib/services/database';
+import { SiteService } from '@/lib/services/site';
 import dynamic from 'next/dynamic';
 
 // Importações dinâmicas para evitar erros de manifesto client-side no SSR
 const ResumeTemplate = dynamic(() => import('@/components/ResumeTemplate'), { ssr: false });
 const RichEditor = dynamic(() => import('@/components/RichEditor').then(mod => mod.RichEditor), { ssr: false });
-const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
+const QRCodeWithLogo = dynamic(() => import('@/components/ui/QRCodeWithLogo').then(mod => mod.QRCodeWithLogo), { ssr: false });
 
 function AreaResumeContent() {
   const params = useParams();
@@ -47,6 +48,7 @@ function AreaResumeContent() {
   const [editingEdu, setEditingEdu] = useState<Education | null>(null);
   const [editingArea, setEditingArea] = useState<ProfessionalArea | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [qrCodeLogoUrl, setQrCodeLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -60,6 +62,12 @@ function AreaResumeContent() {
       if (currentUser?.id !== found.id) {
         DatabaseService.recordProfileView(found.id, 'view_area', { areaSlug });
       }
+      
+      SiteService.getSiteConfig(found.id).then(config => {
+        setQrCodeLogoUrl(config?.qr_code_logo_url || '/icon-512.png');
+      }).catch(() => {
+        setQrCodeLogoUrl('/icon-512.png');
+      });
     }
     else if (!isLoading && isMounted) router.push('/');
   }, [username, users, isMounted, isLoading, router, currentUser?.id, areaSlug]);
@@ -214,7 +222,7 @@ function AreaResumeContent() {
             <p className="mt-2 text-[8px] opacity-50 truncate max-w-[200px]">{currentUrl}</p>
           </div>
           <div className="bg-white p-2 rounded-xl shadow-lg border border-slate-100">
-            <QRCodeSVG value={currentUrl} size={64} level="H" />
+            <QRCodeWithLogo value={currentUrl} size={64} level="H" />
           </div>
         </footer>
       </div>
@@ -264,7 +272,7 @@ function AreaResumeContent() {
 
       {exportTheme && exportData && (
         <div className="fixed left-[-9999px] top-[-9999px] invisible">
-          <ResumeTemplate ref={pdfRef} data={exportData} theme={exportTheme} profileUrl={currentUrl} />
+          <ResumeTemplate ref={pdfRef} data={exportData} theme={exportTheme} profileUrl={currentUrl} logoUrl={qrCodeLogoUrl} />
         </div>
       )}
     </div>

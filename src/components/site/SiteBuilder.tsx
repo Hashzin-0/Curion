@@ -362,6 +362,31 @@ export function SiteBuilder({ onClose }: SiteBuilderProps) {
                     <option value="Space Grotesk">Space Grotesk</option>
                   </select>
                 </div>
+
+                <div className="pt-4 border-t">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Logo do QR Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={config.qr_code_logo_url || '/icon-512.png'}
+                      onChange={(e) => setConfig({ qr_code_logo_url: e.target.value })}
+                      placeholder="/icon-512.png"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ qr_code_logo_url: '/icon-512.png' })}
+                      className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Padrão
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL da imagem do logo (padrão: /icon-512.png)
+                  </p>
+                </div>
               </motion.div>
             )}
 

@@ -56,6 +56,7 @@ export default function Dashboard() {
           theme={data.profileTheme} 
           isLoadingTheme={data.isLoadingTheme} 
           username={state.currentUser.username}
+          qrCodeLogoUrl={data.qrCodeLogoUrl}
         />
       ) : (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-12 pt-24">

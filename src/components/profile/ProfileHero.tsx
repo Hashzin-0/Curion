@@ -25,6 +25,7 @@ type Props = {
   accentColor: string;
   darkColor: string;
   areas?: ProfessionalArea[];
+  qrCodeLogoUrl?: string | null;
 };
 
 function AvailabilityBadge({ status }: { status?: string }) {
@@ -50,7 +51,7 @@ function AvailabilityBadge({ status }: { status?: string }) {
   );
 }
 
-export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor, areas = [] }: Props) {
+export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkColor, areas = [], qrCodeLogoUrl }: Props) {
   const router = useRouter();
   const [isSmartExportOpen, setIsSmartExportOpen] = useState(false);
   const [isCoverLetterOpen, setIsCoverLetterOpen] = useState(false);
@@ -157,7 +158,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
       <CoverLetterModal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} />
-      <DigitalWalletPass user={user} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} />
+      <DigitalWalletPass user={user} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} logoUrl={qrCodeLogoUrl} />
     </>
   );
 }

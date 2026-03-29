@@ -4,7 +4,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { ProfileTheme } from '@/ai/flows/generate-profile-theme-flow';
+import { ProfileTheme } from '@/ai/flows/generate-resume-theme-flow';
+import { SiteService } from '@/lib/services/site';
 
 export function useProfileData() {
   const { 
@@ -17,6 +18,7 @@ export function useProfileData() {
   const [profileTheme, setProfileTheme] = useState<ProfileTheme | null>(null);
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qrCodeLogoUrl, setQrCodeLogoUrl] = useState<string | null>(null);
 
   const fetchTheme = useCallback(async () => {
     if (!currentUser) return;
@@ -42,6 +44,20 @@ export function useProfileData() {
   useEffect(() => { 
     if (currentUser) fetchTheme(); 
   }, [currentUser, fetchTheme]);
+
+  useEffect(() => {
+    const fetchQrCodeLogo = async () => {
+      if (!currentUser) return;
+      try {
+        const config = await SiteService.getSiteConfig(currentUser.id);
+        setQrCodeLogoUrl(config?.qr_code_logo_url || '/icon-512.png');
+      } catch (e) {
+        console.error('Erro ao buscar config do QR code:', e);
+        setQrCodeLogoUrl('/icon-512.png');
+      }
+    };
+    fetchQrCodeLogo();
+  }, [currentUser]);
 
   const handleUpdateProfile = async (editedProfile: any, onDone: () => void) => {
     setIsProcessing(true);
@@ -111,7 +127,7 @@ export function useProfileData() {
 
   return {
     currentUser, areas, education, portfolio, experiences,
-    isProcessing, profileTheme, isLoadingTheme, copied,
+    isProcessing, profileTheme, isLoadingTheme, copied, qrCodeLogoUrl,
     handleUpdateProfile, copyProfileLink,
     handleSaveEdu, handleSavePort, handleSaveExp, handleSaveArea,
     handleDeleteArea, handleDeleteEdu, handleDeletePort, handleDeleteExp

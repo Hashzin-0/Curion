@@ -12,8 +12,11 @@ import type { ResumeData } from '@/components/ResumeTemplate';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { calcDuration } from '@/lib/utils';
+import { SiteService } from '@/lib/services/site';
 
 const ResumeTemplate = dynamic(() => import('@/components/ResumeTemplate'), { ssr: false });
+
+const DEFAULT_QR_LOGO = '/icon-512.png';
 
 function ResumeBuilderContent() {
   const router = useRouter();
@@ -36,6 +39,7 @@ function ResumeBuilderContent() {
   const [theme, setTheme] = useState<ResumeTheme | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [qrCodeLogoUrl, setQrCodeLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSmartMode) {
@@ -74,6 +78,20 @@ function ResumeBuilderContent() {
       setSkills(storeSkills.map(s => ({ name: s.name, description: '' })));
     }
   }, [isSmartMode, storeExp, storeEdu, storeSkills]);
+
+  useEffect(() => {
+    const fetchQrCodeLogo = async () => {
+      if (!currentUser) return;
+      try {
+        const config = await SiteService.getSiteConfig(currentUser.id);
+        setQrCodeLogoUrl(config?.qr_code_logo_url || DEFAULT_QR_LOGO);
+      } catch (e) {
+        console.error('Erro ao buscar config do QR code:', e);
+        setQrCodeLogoUrl(DEFAULT_QR_LOGO);
+      }
+    };
+    fetchQrCodeLogo();
+  }, [currentUser]);
 
   const generateTheme = useCallback(async () => {
     if (!name || !profession) return;
@@ -167,7 +185,7 @@ function ResumeBuilderContent() {
       <div className="flex-1 h-screen overflow-y-auto bg-slate-800 p-6 md:p-12 flex justify-center custom-scrollbar">
         <div className="w-full max-w-[794px] h-fit bg-white shadow-2xl relative overflow-hidden origin-top scale-[0.6] sm:scale-[0.8] md:scale-100">
           {theme ? (
-            <ResumeTemplate data={resumeData} theme={theme} />
+            <ResumeTemplate data={resumeData} theme={theme} logoUrl={qrCodeLogoUrl} />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
               <Loader2 className="animate-spin mb-4" />

@@ -52,6 +52,7 @@ type Props = {
   theme: ProfileTheme | null;
   isLoadingTheme: boolean;
   username: string;
+  qrCodeLogoUrl?: string | null;
 };
 
 function Particle({ emoji, x, size, speed, delay }: any) {
@@ -142,6 +143,7 @@ export function ThemedProfileLayout(props: Props) {
               accentColor={accentColor} 
               darkColor={premium.palette.dark} 
               areas={props.areas}
+              qrCodeLogoUrl={props.qrCodeLogoUrl}
             />
           </div>
 

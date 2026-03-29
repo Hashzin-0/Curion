@@ -2,18 +2,28 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
 import { Download, Share2, X, CreditCard, User, Globe } from 'lucide-react';
 import { Modal } from '@/components/feedback/Modal';
 import { SharingService } from '@/lib/services/sharing';
 import { Button } from '@/components/ui/Button';
+import { QRCodeWithLogo } from '@/components/ui/QRCodeWithLogo';
 import Image from 'next/image';
 
-/**
- * @fileOverview Componente de Identidade Digital (Wallet Style).
- */
+interface DigitalWalletPassProps {
+  user: {
+    username: string;
+    name: string;
+    headline?: string;
+    avatar_path?: string;
+    id: string;
+  };
+  isOpen: boolean;
+  onClose: () => void;
+  accentColor: string;
+  logoUrl?: string | null;
+}
 
-export function DigitalWalletPass({ user, isOpen, onClose, accentColor }: any) {
+export function DigitalWalletPass({ user, isOpen, onClose, accentColor, logoUrl }: DigitalWalletPassProps): React.ReactElement {
   const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${user.username}`;
 
   return (
@@ -63,7 +73,7 @@ export function DigitalWalletPass({ user, isOpen, onClose, accentColor }: any) {
         <div className="w-full space-y-6">
           <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
             <div className="bg-white p-2 rounded-xl shadow-sm">
-              <QRCodeSVG value={profileUrl} size={80} level="H" />
+              <QRCodeWithLogo value={profileUrl} size={80} level="H" logoUrl={logoUrl} />
             </div>
             <div className="flex-1">
               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Acesso Rápido</p>

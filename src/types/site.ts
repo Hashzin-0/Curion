@@ -50,6 +50,7 @@ export interface SiteConfig {
   site_title: string | null;
   site_description: string | null;
   og_image_path: string | null;
+  qr_code_logo_url: string | null;
   is_published: boolean;
   auditor_score: number | null;
   auditor_data: AuditResult | null;

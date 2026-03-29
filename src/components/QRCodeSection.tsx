@@ -1,33 +1,33 @@
 
 'use client';
 
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeWithLogo } from '@/components/ui/QRCodeWithLogo';
 import { getTheme } from '@/styles/themes';
 import { Sparkles } from 'lucide-react';
 
-export default function QRCodeSection({ url, areaSlug }: { url: string, areaSlug: string }) {
+interface QRCodeSectionProps {
+  url: string;
+  areaSlug: string;
+  logoUrl?: string | null;
+}
+
+export default function QRCodeSection({ url, areaSlug, logoUrl }: QRCodeSectionProps): React.ReactElement {
   const theme = getTheme(areaSlug);
 
   return (
     <div className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] ${theme.bgLight} border ${theme.border} relative overflow-hidden group`}>
-      {/* Decorative background icon */}
       <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:rotate-12 transition-transform duration-700">
         <Sparkles size={120} className={theme.text} />
       </div>
 
       <div className="bg-white p-5 rounded-[2rem] shadow-xl mb-6 relative z-10 transform group-hover:scale-105 transition-transform duration-500">
-        <QRCodeSVG 
+        <QRCodeWithLogo 
           value={url} 
           size={160} 
           fgColor={theme.hexDark}
-          level="H" // High error correction for logo
+          level="H"
           marginSize={2}
-          imageSettings={{
-            src: "https://picsum.photos/seed/logo/100/100", // Placeholder for app logo
-            height: 30,
-            width: 30,
-            excavate: true,
-          }}
+          logoUrl={logoUrl}
         />
       </div>
       

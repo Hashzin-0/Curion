@@ -1,8 +1,8 @@
 'use client';
 
 import { forwardRef, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { ResumeTheme } from '@/ai/flows/generate-resume-theme-flow';
+import { QRCodeWithLogo } from '@/components/ui/QRCodeWithLogo';
 
 export type ResumeData = {
   name: string;
@@ -25,6 +25,7 @@ type Props = {
   data: ResumeData;
   theme: ResumeTheme & { fontFamily?: string };
   profileUrl?: string;
+  logoUrl?: string | null;
 };
 
 function DottedLine({ color }: { color: string }) {
@@ -48,7 +49,7 @@ function SectionTitle({ emoji, label, primaryColor, secondaryColor }: { emoji: s
   );
 }
 
-function VibrantLayout({ data, theme, profileUrl }: Props) {
+function VibrantLayout({ data, theme, profileUrl, logoUrl }: Props) {
   const nameParts = data.name.toUpperCase().split(' ');
   const firstName = nameParts[0] || '';
   const restName = nameParts.slice(1).join(' ') || '';
@@ -153,7 +154,7 @@ function VibrantLayout({ data, theme, profileUrl }: Props) {
         <div style={{ color: '#fff', fontSize: '14px', fontWeight: '900' }}>{data.email} | {data.phone}</div>
         {profileUrl && (
           <div style={{ backgroundColor: '#fff', padding: '6px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-            <QRCodeSVG value={profileUrl} size={60} level="H" includeMargin />
+            <QRCodeWithLogo value={profileUrl} size={60} level="H" includeMargin logoUrl={logoUrl} />
           </div>
         )}
       </div>
