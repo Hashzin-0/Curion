@@ -158,7 +158,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
 
       <SmartExportModal isOpen={isSmartExportOpen} onClose={() => setIsSmartExportOpen(false)} />
       <CoverLetterModal isOpen={isCoverLetterOpen} onClose={() => setIsCoverLetterOpen(false)} />
-      <DigitalWalletPass user={user} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} logoUrl={qrCodeLogoUrl} />
+      <DigitalWalletPass user={{ ...user, headline: user.headline || undefined }} isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} accentColor={accentColor} logoUrl={qrCodeLogoUrl} />
     </>
   );
 }
