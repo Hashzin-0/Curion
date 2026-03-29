@@ -83,33 +83,33 @@ export const DatabaseService = {
     return data;
   },
 
-  /**
-   * Realiza busca semântica por similaridade de vetores para perfis.
-   */
-  async searchSemanticProfiles(queryVector: number[]) {
-    const { data, error } = await supabase.rpc('match_profiles', {
-      query_embedding: queryVector,
-      match_threshold: 0.1, // Limiar baixo para garantir o efeito de "degradação"
-      match_count: 12,
-    });
+/**
+ * Realiza busca semântica por similaridade de vetores para perfis.
+ */
+async searchSemanticProfiles(queryVector: number[]): Promise<{ id: string; similarity: number }[]> {
+  const { data, error } = await supabase.rpc('match_profiles', {
+    query_embedding: queryVector,
+    match_threshold: 0.1, // Limiar baixo para garantir o efeito de "degradação"
+    match_count: 12,
+  });
 
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+  return data || [];
+},
 
-  /**
-   * Realiza busca semântica por similaridade de vetores para vagas.
-   */
-  async searchSemanticJobs(queryVector: number[]) {
-    const { data, error } = await supabase.rpc('match_jobs', {
-      query_embedding: queryVector,
-      match_threshold: 0.1,
-      match_count: 12,
-    });
+/**
+ * Realiza busca semântica por similaridade de vetores para vagas.
+ */
+async searchSemanticJobs(queryVector: number[]): Promise<JobVacancy[]> {
+  const { data, error } = await supabase.rpc('match_jobs', {
+    query_embedding: queryVector,
+    match_threshold: 0.1,
+    match_count: 12,
+  });
 
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+  return data || [];
+},
 
   // Analytics
   async recordProfileView(userId: string, eventType: string = 'page_view', metadata: any = {}) {

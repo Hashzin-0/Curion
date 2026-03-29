@@ -33,7 +33,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
           >
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{title}</h3>
-              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><LucideIcons.X /></button>
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors" aria-label="Fechar modal"><LucideIcons.X /></button>
             </div>
             {children}
           </motion.div>

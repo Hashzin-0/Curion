@@ -18,6 +18,14 @@ import { useAnalytics } from '@/modules/profile/hooks/useAnalytics';
 
 const COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+type AnalyticsEvent = {
+  id?: string;
+  event_type: string;
+  session_id?: string;
+  viewed_at: string;
+  metadata?: Record<string, unknown>;
+};
+
 /**
  * @fileOverview Dashboard de Analytics granularizado para carregamento progressivo.
  */
@@ -42,18 +50,19 @@ const SkeletonMetric = () => (
 
 // --- Sub-componentes de Visualização ---
 
-function SummaryCards({ data }: { data: any[] }) {
+function SummaryCards({ data }: { data: AnalyticsEvent[] }) {
   const stats = useMemo(() => {
     const pageViews = data.filter(d => d.event_type === 'page_view');
     const interactions = data.filter(d => d.event_type !== 'page_view');
     
     // Tempo Médio
-    const sessions: Record<string, any[]> = {};
+    const sessions: Record<string, Date[]> = {};
     data.forEach(d => { if (d.session_id) { if (!sessions[d.session_id]) sessions[d.session_id] = []; sessions[d.session_id].push(new Date(d.viewed_at)); } });
     let totalDuration = 0; let sessionCount = 0;
     Object.values(sessions).forEach(events => {
       if (events.length > 1) {
         const sorted = events.sort((a, b) => a.getTime() - b.getTime());
+        if (sorted.length < 2) return;
         const diff = differenceInMinutes(sorted[sorted.length - 1], sorted[0]);
         if (diff < 60) { totalDuration += diff; sessionCount++; }
       }
@@ -100,7 +109,7 @@ function SummaryCards({ data }: { data: any[] }) {
   );
 }
 
-function EngagementChart({ data }: { data: any[] }) {
+function EngagementChart({ data }: { data: AnalyticsEvent[] }) {
   const chartData = useMemo(() => {
     const pageViews = data.filter(d => d.event_type === 'page_view');
     const interactions = data.filter(d => d.event_type !== 'page_view');
@@ -135,7 +144,7 @@ function EngagementChart({ data }: { data: any[] }) {
   );
 }
 
-function AreaInterests({ data }: { data: any[] }) {
+function AreaInterests({ data }: { data: AnalyticsEvent[] }) {
   const areaData = useMemo(() => {
     const areaInterests: Record<string, number> = {};
     data.filter(i => i.event_type === 'view_area').forEach(i => {

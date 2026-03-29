@@ -4,6 +4,19 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Briefcase, Map as MapIcon, Loader2 } from 'lucide-react';
 import { CreateJobModal } from '@/components/CreateJobModal';
+import { JobVacancy } from '@/lib/services/database';
+import { User, ProfessionalArea, AreaSkill } from '@/lib/store';
+
+type CandidateData = User & {
+  professional_areas?: (ProfessionalArea & {
+    area_skills?: (AreaSkill & {
+      skills?: { name: string };
+      endorsements_count?: number;
+    })[];
+  })[];
+};
+
+type JobData = JobVacancy;
 
 // Domínio Modularizado
 import { useExplore } from '@/modules/explore/hooks/useExplore';
@@ -40,10 +53,10 @@ export default function ExplorePage() {
   const { apply, isApplying } = useQuickApply(currentUser);
   
   const [isCreateJobOpen, setIsCreateJobOpen] = useState(false);
-  const [previewItem, setPreviewItem] = useState<{ type: 'candidate' | 'job', data: any } | null>(null);
+  const [previewItem, setPreviewItem] = useState<{ type: 'candidate' | 'job', data: CandidateData | JobData } | null>(null);
   const previewTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const handlePreviewEnter = (type: 'candidate' | 'job', data: any) => {
+  const handlePreviewEnter = (type: 'candidate' | 'job', data: CandidateData | JobData) => {
     if (previewTimer.current) clearTimeout(previewTimer.current);
     previewTimer.current = setTimeout(() => setPreviewItem({ type, data }), 400);
   };
@@ -55,7 +68,7 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12 relative">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <main id="main-content" className="max-w-6xl mx-auto space-y-8">
         <header className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
@@ -140,7 +153,7 @@ export default function ExplorePage() {
             <OpportunityMap geoDistribution={geoDistribution} onSelectRegion={(loc: string) => { setSearchQuery(loc); setView('jobs'); }} />
           )}
         </AnimatePresence>
-      </div>
+      </main>
 
       <AnimatePresence>
         {previewItem && <QuickPreview item={previewItem} onClose={() => setPreviewItem(null)} />}

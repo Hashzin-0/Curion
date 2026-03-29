@@ -6,6 +6,7 @@
 import { Education, PortfolioItem } from '@/lib/store';
 import { GraduationCap, Folder, ExternalLink } from 'lucide-react';
 import { CardActions } from '@/components/shared/CardActions';
+import DOMPurify from 'dompurify';
 
 type EducationSectionProps = {
   education: Education[];
@@ -86,7 +87,7 @@ export function PortfolioSection({ portfolio, isOwner, onEditPort, onDeletePort 
             </div>
             <div className="p-8 flex-1 flex flex-col">
               <h4 className="text-xl font-black mb-3 text-slate-900 dark:text-white uppercase tracking-tighter">{item.title}</h4>
-              <div className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: item.description || '' }} />
+              <div className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.description || '') }} />
               {item.external_url && (
                 <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-purple-600 hover:underline">
                   Ver Projeto Externo <ExternalLink size={14} />

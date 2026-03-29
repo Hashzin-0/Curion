@@ -18,6 +18,7 @@ import { getTheme } from '@/styles/themes';
 import { useStore } from '@/lib/store';
 import { useQueryState } from 'nuqs';
 import Link from 'next/link';
+import DOMPurify from 'dompurify';
 import { cn, slugify } from '@/lib/utils';
 import { CardActions } from '@/components/shared/CardActions';
 import { DatabaseService } from '@/lib/services/database';
@@ -55,7 +56,7 @@ type Props = {
   qrCodeLogoUrl?: string | null;
 };
 
-function Particle({ emoji, x, size, speed, delay }: any) {
+function Particle({ emoji, x, size, speed, delay }: { emoji: string; x: number; size: number; speed: number; delay: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: '110%' }}
@@ -306,7 +307,7 @@ export function ThemedProfileLayout(props: Props) {
                                             <div className="px-4 pb-4 pt-2">
                                               <div 
                                                 className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium prose prose-sm dark:prose-invert"
-                                                dangerouslySetInnerHTML={{ __html: exp.description || '' }}
+                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(exp.description || '') }}
                                               />
                                             </div>
                                           </motion.div>

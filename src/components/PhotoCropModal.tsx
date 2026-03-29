@@ -54,7 +54,7 @@ export function PhotoCropModal({ image, isOpen, onClose, onCropComplete }: Props
           >
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="text-xl font-black text-slate-900 dark:text-white">Ajustar Foto</h3>
-              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><X /></button>
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600" aria-label="Fechar"><X /></button>
             </div>
             
             <div className="relative h-80 bg-slate-100 dark:bg-slate-950">

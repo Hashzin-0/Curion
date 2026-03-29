@@ -18,7 +18,7 @@ export function useExplore() {
   const { currentUser, experiences, skills, areaSkills, areas } = useStore();
   const [view, setView] = useState<'candidates' | 'jobs' | 'map'>('candidates');
   const [searchQuery, setSearchQuery] = useState('');
-  const [publicUsers, setPublicUsers] = useState<any[]>([]);
+  const [publicUsers, setPublicUsers] = useState<unknown[]>([]);
   const [realJobs, setRealJobs] = useState<JobVacancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -70,18 +70,18 @@ export function useExplore() {
       // 4. Mapear resultados (o RPC retorna IDs e similarity)
       // Buscamos os perfis completos para os IDs encontrados
       const profiles = await DatabaseService.fetchPublicProfiles();
-      const matchedUserIds = userMatches.map((r: any) => r.id);
+      const matchedUserIds = userMatches.map((r) => r.id);
       
       const filteredUsers = profiles
-        .filter((u: any) => matchedUserIds.includes(u.id))
-        .sort((a: any, b: any) => {
-          const simA = userMatches.find((r: any) => r.id === a.id)?.similarity || 0;
-          const simB = userMatches.find((r: any) => r.id === b.id)?.similarity || 0;
+        .filter((u) => matchedUserIds.includes(u.id))
+        .sort((a, b) => {
+          const simA = userMatches.find((r) => r.id === a.id)?.similarity || 0;
+          const simB = userMatches.find((r) => r.id === b.id)?.similarity || 0;
           return simB - simA;
         });
 
       setPublicUsers(filteredUsers);
-      setRealJobs(jobMatches as any[]);
+      setRealJobs(jobMatches);
 
       if (userMatches.length === 0 && jobMatches.length === 0) {
         toast.info('Nenhum resultado 100% compatível. Tente mudar os termos.');

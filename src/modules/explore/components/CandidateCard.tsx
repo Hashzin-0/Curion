@@ -8,18 +8,32 @@ import { StatusIndicator } from './StatusIndicator';
 import { getTheme } from '@/styles/themes';
 import { slugify } from '@/lib/utils';
 import { AvatarGlow } from '@/components/shared/AvatarGlow';
+import { User, ProfessionalArea, AreaSkill } from '@/lib/store';
+
+interface CandidateCardProps {
+  user: User & {
+    professional_areas?: (ProfessionalArea & {
+      area_skills?: (AreaSkill & {
+        skills?: { name: string };
+        endorsements_count?: number;
+      })[];
+    })[];
+  };
+  onPreviewEnter: (type: 'candidate', data: unknown) => void;
+  onPreviewLeave: () => void;
+}
 
 /**
  * @fileOverview Card de Candidato atualizado com AvatarGlow premium.
  */
 
-export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
-  const topSkills = user.professional_areas?.flatMap((area: any) => 
-    area.area_skills?.map((as: any) => ({
+export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: CandidateCardProps) {
+  const topSkills = user.professional_areas?.flatMap((area) => 
+    area.area_skills?.map((as) => ({
       name: as.skills?.name,
       endorsements: as.endorsements_count || 0
     })) || []
-  ).filter((s: any) => s.name).sort((a: any, b: any) => b.endorsements - a.endorsements).slice(0, 3);
+  ).filter((s) => s.name).sort((a, b) => b.endorsements - a.endorsements).slice(0, 3);
 
   return (
     <div 
@@ -51,7 +65,7 @@ export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
               <Star size={10} className="text-yellow-500" /> Destaques
             </div>
             <div className="flex flex-wrap gap-2">
-              {topSkills.map((skill: any, idx: number) => (
+              {topSkills.map((skill, idx) => (
                 <div key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg">
                   <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase">{skill.name}</span>
                   {skill.endorsements > 0 && (
@@ -66,7 +80,7 @@ export function CandidateCard({ user, onPreviewEnter, onPreviewLeave }: any) {
         )}
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {user.professional_areas?.slice(0, 2).map((area: any) => {
+          {user.professional_areas?.slice(0, 2).map((area) => {
             const theme = getTheme(slugify(area.name));
             return (
               <span key={area.id} className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: theme.hex + '15', color: theme.hex }}>

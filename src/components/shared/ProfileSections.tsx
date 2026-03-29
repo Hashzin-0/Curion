@@ -9,8 +9,16 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 
-export function EducationCard({ edu, isOwner, onEdit, onDelete }: any) {
+interface EducationCardProps {
+  edu: Education;
+  isOwner: boolean;
+  onEdit: (edu: Education) => void;
+  onDelete: (id: string) => void;
+}
+
+export function EducationCard({ edu, isOwner, onEdit, onDelete }: EducationCardProps) {
   return (
     <div className="relative group bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all">
       {isOwner && (
@@ -33,7 +41,14 @@ export function EducationCard({ edu, isOwner, onEdit, onDelete }: any) {
   );
 }
 
-export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
+interface PortfolioCardProps {
+  item: PortfolioItem;
+  isOwner: boolean;
+  onEdit: (item: PortfolioItem) => void;
+  onDelete: (id: string) => void;
+}
+
+export function PortfolioCard({ item, isOwner, onEdit, onDelete }: PortfolioCardProps) {
   return (
     <div className="relative group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all h-full flex flex-col">
       {isOwner && (
@@ -53,7 +68,7 @@ export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
       </div>
       <div className="p-8 flex-1 flex flex-col">
         <h4 className="text-xl font-black mb-3 text-slate-900 dark:text-white tracking-tighter uppercase">{item.title}</h4>
-        <div className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: item.description || '' }} />
+        <div className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.description || '') }} />
         {item.external_url && (
           <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-black text-purple-600 hover:underline uppercase tracking-widest">
             Ver Projeto <ArrowRight size={14} />
@@ -64,7 +79,15 @@ export function PortfolioCard({ item, isOwner, onEdit, onDelete }: any) {
   );
 }
 
-export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#3b82f6" }: any) {
+interface ExperienceItemProps {
+  exp: Experience;
+  isOwner: boolean;
+  onEdit: (exp: Experience) => void;
+  onDelete: (id: string) => void;
+  themeColor?: string;
+}
+
+export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#3b82f6" }: ExperienceItemProps) {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -72,7 +95,7 @@ export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#
 
   const renderDescription = (html: string | null) => {
     if (!html) return null;
-    if (!mounted) return <div dangerouslySetInnerHTML={{ __html: html }} />;
+    if (!mounted) return <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 
     const parts = html.split(/(<pre><code>[\s\S]*?<\/code><\/pre>)/g);
     
@@ -91,7 +114,7 @@ export function ExperienceItem({ exp, isOwner, onEdit, onDelete, themeColor = "#
           </div>
         );
       }
-      return <div key={i} dangerouslySetInnerHTML={{ __html: part }} />;
+      return <div key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(part) }} />;
     });
   };
 

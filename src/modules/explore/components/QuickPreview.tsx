@@ -10,7 +10,12 @@ import { StatusIndicator } from './StatusIndicator';
  * @fileOverview Painel flutuante de preview rápido.
  */
 
-export function QuickPreview({ item, onClose }: any) {
+interface QuickPreviewProps {
+  item: unknown;
+  onClose: () => void;
+}
+
+export function QuickPreview({ item, onClose }: QuickPreviewProps) {
   if (!item) return null;
 
   return (
@@ -26,7 +31,7 @@ export function QuickPreview({ item, onClose }: any) {
             <Info className="text-blue-500" size={20} />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white dark:text-slate-900">Preview Rápido</span>
           </div>
-          <button onClick={onClose} className="text-white/50 dark:text-slate-400 hover:text-white dark:hover:text-slate-900 transition-colors"><X size={16} /></button>
+          <button onClick={onClose} className="text-white/50 dark:text-slate-400 hover:text-white dark:hover:text-slate-900 transition-colors" aria-label="Fechar preview"><X size={16} /></button>
         </div>
 
         <div className="p-8 space-y-6">

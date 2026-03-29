@@ -2,12 +2,13 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 /**
  * @fileOverview Micro-componente de status de disponibilidade.
  */
 
-export function StatusIndicator({ status }: { status?: string }) {
+export const StatusIndicator = memo(function StatusIndicator({ status }: { status?: string }) {
   if (!status || status === 'busy') return null;
   
   const configs = {
@@ -24,4 +25,4 @@ export function StatusIndicator({ status }: { status?: string }) {
       <span className="text-[7px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{config.label}</span>
     </div>
   );
-}
+});

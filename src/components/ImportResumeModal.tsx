@@ -20,6 +20,7 @@ export function ImportResumeModal({ isOpen, onClose }: ImportResumeModalProps) {
   const [activeTab, setActiveTab] = useState('file');
 
   const onDrop = async (acceptedFiles: File[]) => {
+    if (!acceptedFiles.length) return;
     const file = acceptedFiles[0];
     if (file) {
       setFileName(file.name);
@@ -39,7 +40,7 @@ export function ImportResumeModal({ isOpen, onClose }: ImportResumeModalProps) {
               for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
-                fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+                fullText += (textContent.items as { str?: string }[]).map((item) => item.str || '').join(' ') + '\n';
               }
               setText(fullText);
             }

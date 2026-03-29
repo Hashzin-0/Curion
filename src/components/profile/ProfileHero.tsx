@@ -13,6 +13,7 @@ import { SmartExportModal } from '@/components/SmartExportModal';
 import { CoverLetterModal } from '@/components/CoverLetterModal';
 import { DigitalWalletPass } from '@/components/profile/DigitalWalletPass';
 import { AudioBioPlayer } from './AudioBioPlayer';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import { AvatarGlow } from '@/components/shared/AvatarGlow';
 import { useRouter } from 'next/navigation';
@@ -124,7 +125,7 @@ export function ProfileHero({ user, theme, isOwner, onEdit, accentColor, darkCol
               <div
                 className="max-w-xl text-white/80 text-sm leading-relaxed border-l-4 pl-4 font-medium prose prose-sm prose-invert"
                 style={{ borderColor: accentColor }}
-                dangerouslySetInnerHTML={{ __html: user.summary || '' }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(user.summary || '') }}
               />
             )}
           </div>

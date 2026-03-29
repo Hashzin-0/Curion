@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from 'next/navigation';
+
+interface ProfileHeaderProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  copyProfileLink: () => void;
+  copied: boolean;
+  username: string;
+  router: ReturnType<typeof useRouter>;
+}
 
 export function ProfileHeader({ 
   activeTab, 
@@ -12,7 +22,7 @@ export function ProfileHeader({
   copied, 
   username, 
   router 
-}: any) {
+}: ProfileHeaderProps) {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/');

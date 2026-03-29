@@ -24,7 +24,7 @@ const CONTENT_OPTIONS: {
   type: ContentType;
   label: string;
   description: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   color: string;
 }[] = [
   { type: 'experience', label: 'Experiência Profissional', description: 'Empregos anteriores e atuais', icon: LucideIcons.Briefcase, color: 'blue' },
@@ -142,7 +142,7 @@ export function AddContentModal({ isOpen, onClose }: Props) {
                 <div className="pb-4">
                   <div className="flex justify-between items-center mb-8">
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Adicionar Conteúdo</h3>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><LucideIcons.X /></button>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors" aria-label="Fechar"><LucideIcons.X /></button>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     {CONTENT_OPTIONS.map((option) => {

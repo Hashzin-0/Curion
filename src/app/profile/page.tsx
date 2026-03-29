@@ -45,7 +45,7 @@ export default function Dashboard() {
           isOwner={true} 
           onEditProfile={() => state.setIsEditingProfile(true)} 
           onAddContent={() => state.setIsAddingContent(true)}
-          onEditArea={(area: any) => { state.setEditingArea(area); state.setAreaForm(area); }} 
+          onEditArea={(area) => { state.setEditingArea(area); state.setAreaForm(area); }} 
           onDeleteArea={data.handleDeleteArea}
           onEditEducation={state.setEditingEdu} 
           onDeleteEducation={data.handleDeleteEdu} 

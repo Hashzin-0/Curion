@@ -4,6 +4,20 @@ import { Search, Flame, BrainCircuit, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
+interface ExploreFiltersProps {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  activeModel: string | null;
+  setActiveModel: (model: string | null) => void;
+  activeRegime: string | null;
+  setActiveRegime: (regime: string | null) => void;
+  trendingSkills: string[];
+  placeholder?: string;
+  showCreateButton?: boolean;
+  onCreateClick?: () => void;
+  isLoading?: boolean;
+}
+
 /**
  * @fileOverview Barra de filtros simplificada para o Motor Unificado NER.
  */
@@ -17,8 +31,8 @@ export function ExploreFilters({
   showCreateButton,
   onCreateClick,
   isLoading
-}: any) {
-  const FilterPill = ({ label, active, onClick, icon: Icon }: any) => (
+}: ExploreFiltersProps) {
+  const FilterPill = ({ label, active, onClick, icon: Icon }: { label: string; active: boolean; onClick: () => void; icon: React.ComponentType<{ size?: number; className?: string }> }) => (
     <button 
       onClick={onClick}
       className={cn(

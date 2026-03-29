@@ -10,13 +10,14 @@ import * as LucideIcons from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useSummaryGeneration } from '@/modules/profile/hooks/useSummaryGeneration';
 import { PhotoCropModal } from '@/components/PhotoCropModal';
+import { User } from '@/lib/store';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  editedProfile: any;
-  setEditedProfile: (data: any) => void;
-  onSave: (data: any, onDone: () => void) => Promise<void>;
+  editedProfile: Partial<User>;
+  setEditedProfile: (data: Partial<User>) => void;
+  onSave: (data: Partial<User>, onDone: () => void) => Promise<void>;
   isSaving?: boolean;
 }
 
@@ -26,6 +27,7 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
   const { isGeneratingSummary, handleGenerateSummary } = useSummaryGeneration();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (!acceptedFiles.length) return;
     const file = acceptedFiles[0];
     const reader = new FileReader();
     reader.onload = () => { 
@@ -41,7 +43,7 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
     multiple: false 
   });
 
-  const StatusOption = ({ id, label, icon: Icon, color }: any) => (
+  const StatusOption = ({ id, label, icon: Icon, color }: { id: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; color: string }) => (
     <button
       type="button"
       onClick={() => setEditedProfile({ ...editedProfile, availability_status: id })}
@@ -110,7 +112,7 @@ export function EditProfileModal({ isOpen, onClose, editedProfile, setEditedProf
                 {isGeneratingSummary ? 'Gerando...' : 'Gerar com IA'}
               </button>
             </div>
-            <RichEditor content={editedProfile.summary || ''} onChange={(val: any) => setEditedProfile({ ...editedProfile, summary: val })} />
+            <RichEditor content={editedProfile.summary || ''} onChange={(val: string) => setEditedProfile({ ...editedProfile, summary: val })} />
           </div>
 
           <div className="flex gap-4">

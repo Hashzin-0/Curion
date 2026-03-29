@@ -24,6 +24,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 const inputCls = "w-full p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium";
 const labelCls = "block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2";
 
+type ParsedResumeData = {
+  experiences?: { role: string; company: string }[];
+  education?: { course: string; institution: string }[];
+  skills?: string[];
+  summary?: string;
+};
+
 export default function ImportPage() {
   const router = useRouter();
   const { currentUser, processBackgroundImport, addTelemetryLog, clearTelemetry, setAnalyzing } = useStore();
@@ -34,7 +41,7 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsingStatus, setParsingStatus] = useState('');
-  const [parsedData, setParsedData] = useState<any>(null);
+  const [parsedData, setParsedData] = useState<ParsedResumeData | null>(null);
 
   const extractText = async (f: File): Promise<string> => {
     addTelemetryLog(`Lendo arquivo: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`);
@@ -49,7 +56,7 @@ export default function ImportPage() {
         addTelemetryLog(`Processando buffer da página ${i}...`);
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+        fullText += (textContent.items as { str?: string }[]).map((item) => item.str || '').join(' ') + '\n';
       }
       return fullText;
     } else if (f.type.startsWith('image/')) {
@@ -236,7 +243,7 @@ export default function ImportPage() {
                       <Briefcase size={14} /> Experiências Encontradas ({parsedData.experiences?.length || 0})
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
-                      {parsedData.experiences?.map((exp: any, i: number) => (
+                      {parsedData.experiences?.map((exp, i: number) => (
                         <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
                           <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{exp.role}</div>
                           <div className="text-xs font-bold text-blue-600">{exp.company}</div>
@@ -250,7 +257,7 @@ export default function ImportPage() {
                       <GraduationCap size={14} /> Educação ({parsedData.education?.length || 0})
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
-                      {parsedData.education?.map((edu: any, i: number) => (
+                      {parsedData.education?.map((edu, i: number) => (
                         <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
                           <div className="font-black text-slate-900 dark:text-white uppercase text-sm">{edu.course}</div>
                           <div className="text-xs font-bold text-emerald-600">{edu.institution}</div>

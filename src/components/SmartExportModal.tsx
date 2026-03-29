@@ -37,7 +37,7 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+        fullText += (textContent.items as { str?: string }[]).map((item) => item.str || '').join(' ') + '\n';
       }
       return fullText;
     } else if (file.type.startsWith('image/')) {
@@ -102,7 +102,7 @@ export function SmartExportModal({ isOpen, onClose }: Props) {
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (files) => setJobFile(files[0]),
+    onDrop: (files) => { if (files?.length) setJobFile(files[0]); },
     accept: { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg'] },
     multiple: false
   });

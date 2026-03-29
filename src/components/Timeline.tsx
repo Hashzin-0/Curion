@@ -19,7 +19,7 @@ type TimelineItem = {
   date: string;
   description: string;
   sortDate: Date;
-  raw: any;
+  raw: unknown;
 };
 
 const getIcon = (type: TimelineItem['type']) => {
@@ -155,7 +155,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
         toast.success('Registro atualizado!');
       } else {
         if (newItem.type === 'work') {
-          await addExperience({ user_id: currentUser.id, area_id: areas[0]?.id || null, company_name: newItem.organization!, role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
+          await addExperience({ user_id: currentUser.id, area_id: areas?.[0]?.id ?? null, company_name: newItem.organization || '', role: newItem.title, start_date: dateToStore, end_date: null, description: newItem.description || '' });
         } else if (newItem.type === 'education') {
           await addEducation({ user_id: currentUser.id, institution: newItem.organization!, course: newItem.title, start_date: dateToStore, end_date: null });
         } else if (newItem.type === 'project') {
@@ -249,7 +249,7 @@ export function Timeline({ userId, readOnly = false }: { userId?: string, readOn
             <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 z-0 min-w-[1200px]"></div>
             <div ref={parent} className="flex flex-row items-center gap-12 min-w-[1200px] px-12 relative z-10">
               {timelineData.map((item, index) => {
-                const isVerified = item.type === 'project' && !!item.raw.verification_hash;
+                const isVerified = item.type === 'project' && !!(item.raw as { verification_hash?: string })?.verification_hash;
                 return (
                   <motion.div 
                     key={item.id} 

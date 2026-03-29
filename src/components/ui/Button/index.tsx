@@ -2,13 +2,13 @@
 
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import React from 'react';
+import React, { memo } from 'react';
 
 interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'accent';
 }
 
-export function Button({ children, variant = 'primary', className, ...props }: ButtonProps) {
+export const Button = memo(function Button({ children, variant = 'primary', className, ...props }: ButtonProps) {
   const base = "px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer";
   
   const variants: Record<string, string> = {
@@ -28,4 +28,4 @@ export function Button({ children, variant = 'primary', className, ...props }: B
       {children}
     </motion.button>
   );
-}
+});

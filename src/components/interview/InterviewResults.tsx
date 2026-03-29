@@ -15,7 +15,17 @@ import Link from 'next/link';
  * @fileOverview Dashboard de análise comportamental e técnica pós-entrevista.
  */
 
-export function InterviewResults({ results, onRetry }: { results: any[], onRetry: () => void }) {
+type InterviewResult = {
+  communication?: number;
+  technical?: number;
+  confidence?: number;
+  score?: number;
+  strengths?: string[];
+  weaknesses?: string[];
+  feedback?: string;
+};
+
+export function InterviewResults({ results, onRetry }: { results: InterviewResult[], onRetry: () => void }) {
   const metrics = useMemo(() => {
     if (!results.length) return null;
     

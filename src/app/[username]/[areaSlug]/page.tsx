@@ -100,7 +100,7 @@ function AreaResumeContent() {
       availableSince: 'Hoje',
       summary: user.summary || '',
       experiences: areaExperiences.map(e => ({ company: e.company_name, role: e.role, duration: calcDuration(e.start_date, e.end_date) })),
-      skills: currentAreaSkills.map(s => ({ name: s.skill!.name, description: '' }))
+      skills: currentAreaSkills.map(s => ({ name: s.skill?.name ?? '', description: '' }))
     });
     
     setShouldExport(true);

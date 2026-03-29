@@ -5,12 +5,24 @@ import { MapPin, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { JobMatchBadge } from './JobMatchBadge';
 import { getTheme } from '@/styles/themes';
+import { JobVacancy } from '@/lib/services/database';
+
+interface JobCardProps {
+  job: JobVacancy;
+  match?: number;
+  isMatchCalculating?: boolean;
+  onMatch?: () => void;
+  onApply?: () => void;
+  isApplying?: boolean;
+  onPreviewEnter: (type: 'job', data: unknown) => void;
+  onPreviewLeave: () => void;
+}
 
 /**
  * @fileOverview Card de Vaga (UI Pura).
  */
 
-export function JobCard({ job, match, isMatchCalculating, onMatch, onApply, isApplying, onPreviewEnter, onPreviewLeave }: any) {
+export function JobCard({ job, match, isMatchCalculating, onMatch, onApply, isApplying, onPreviewEnter, onPreviewLeave }: JobCardProps) {
   const theme = getTheme(job.area_slug || 'default');
 
   return (

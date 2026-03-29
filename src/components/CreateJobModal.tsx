@@ -38,6 +38,7 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (!acceptedFiles.length) return;
     const selectedFile = acceptedFiles[0];
     if (!selectedFile) return;
 
@@ -140,14 +141,16 @@ export function CreateJobModal({ isOpen, onClose, onRefresh }: { isOpen: boolean
     setFilePreview(null);
   };
 
-  const SelectGroup = ({ label, options, value, onChange, icon: Icon }: any) => (
+  type Option = { id: string; label: string };
+
+const SelectGroup = ({ label, options, value, onChange, icon: Icon }: { label: string; options: Option[]; value: string; onChange: (id: string) => void; icon?: React.ComponentType<{ size?: number; className?: string }> }) => (
     <div className="space-y-2">
       <label className={labelCls + " flex items-center gap-2"}>
         {Icon && <Icon size={14} className="text-blue-500" />}
         {label}
       </label>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {options.map((opt: any) => (
+        {options.map((opt: Option) => (
           <button
             key={opt.id}
             type="button"

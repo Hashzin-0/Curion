@@ -4,11 +4,22 @@
 import { motion } from 'framer-motion';
 import { Globe, MapPin } from 'lucide-react';
 
+interface GeoLocation {
+  jobs: number;
+  candidates: number;
+  display: string;
+}
+
+interface OpportunityMapProps {
+  geoDistribution: GeoLocation[];
+  onSelectRegion: (region: string) => void;
+}
+
 /**
  * @fileOverview Visualização mosaica de oportunidades geográficas.
  */
 
-export function OpportunityMap({ geoDistribution, onSelectRegion }: any) {
+export function OpportunityMap({ geoDistribution, onSelectRegion }: OpportunityMapProps) {
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -24,7 +35,7 @@ export function OpportunityMap({ geoDistribution, onSelectRegion }: any) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {geoDistribution.map((loc: any, idx: number) => {
+          {geoDistribution.map((loc: GeoLocation, idx: number) => {
             const total = loc.jobs + loc.candidates;
             const intensity = Math.min(total * 10, 100);
             

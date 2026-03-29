@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
 import { useRouter, usePathname } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
 
 /**
  * @fileOverview Provedor de autenticação global.
@@ -19,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncInProgress = useRef(false);
 
   useEffect(() => {
-    const handleSync = async (user: any) => {
+    const handleSync = async (user: User | null) => {
       if (syncInProgress.current) return;
       
       if (user) {
