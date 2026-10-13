@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 import { LIVE_MODEL } from '@/lib/gemini/live-config';
 
 export const runtime = 'nodejs';
@@ -46,6 +47,29 @@ function allowIssuance(request: NextRequest): boolean {
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) {
     return NextResponse.json({ error: 'Origem da solicitação não permitida.' }, { status: 403 });
+  }
+
+  const authHeader = request.headers.get('authorization');
+  const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!accessToken || !supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json(
+      { error: 'Entre na sua conta para iniciar uma sessão de voz.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store, private' } },
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: authData, error: authError } = await supabase.auth.getUser(accessToken);
+  if (authError || !authData.user) {
+    return NextResponse.json(
+      { error: 'Sua sessão expirou. Entre novamente para usar o assistente de voz.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store, private' } },
+    );
   }
 
   if (!allowIssuance(request)) {
