@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { GoogleGenAI } from '@google/genai';
 import { Headphones, Mic, MicOff, X, MessageCircle, Loader2, Volume2 } from 'lucide-react';
 import {
@@ -154,10 +155,16 @@ export function SiteVoiceAgent() {
     latestUserTranscriptRef.current = '';
 
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.access_token) throw new Error('Entre na sua conta para iniciar o assistente de voz.');
+
       const response = await fetch('/api/gemini/live-token', {
         method: 'POST',
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authSession.access_token}`,
+        },
       });
       const data = await response.json() as { token?: string; error?: string };
       if (!response.ok || !data.token) throw new Error(data.error || 'Não foi possível obter a sessão Gemini Live.');
