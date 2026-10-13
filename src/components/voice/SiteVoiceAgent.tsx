@@ -133,7 +133,7 @@ export function SiteVoiceAgent() {
       }
 
       return {
-        id: call.id ?? call.name,
+        id: call.id ?? toolName,
         name: toolName,
         response: { result },
       };
