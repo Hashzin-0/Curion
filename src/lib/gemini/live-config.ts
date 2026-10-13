@@ -1,3 +1,5 @@
+import { Type } from '@google/genai';
+
 export const LIVE_MODEL = 'gemini-2.5-flash-native-audio-latest';
 export const LIVE_VOICE = 'Kore';
 
@@ -13,12 +15,12 @@ export type LivePage = keyof typeof LIVE_ALLOWED_ROUTES;
 export const LIVE_TOOL_DECLARATIONS = [
   {
     name: 'navigate_to_page',
-    description: 'Navigate the authenticated user to a supported Curion page. Only use after the user explicitly asks to open or navigate to a page.',
+    description: 'Navigate the user to a supported Curion page. Only use after the user explicitly asks to open or navigate to a page.',
     parameters: {
-      type: 'OBJECT',
+      type: Type.OBJECT,
       properties: {
         page: {
-          type: 'STRING',
+          type: Type.STRING,
           enum: Object.keys(LIVE_ALLOWED_ROUTES),
           description: 'The destination page: home, profile, interview, or explore.',
         },
@@ -30,10 +32,10 @@ export const LIVE_TOOL_DECLARATIONS = [
     name: 'get_site_help',
     description: 'Explain how to use a confirmed Curion feature. This tool does not read or change private user data.',
     parameters: {
-      type: 'OBJECT',
+      type: Type.OBJECT,
       properties: {
         topic: {
-          type: 'STRING',
+          type: Type.STRING,
           enum: ['profile', 'interview', 'explore', 'resume', 'jobs'],
           description: 'The feature the user wants help with.',
         },
