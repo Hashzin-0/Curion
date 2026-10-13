@@ -1,6 +1,6 @@
 import { Type } from '@google/genai';
 
-export const LIVE_MODEL = 'gemini-2.5-flash-native-audio-latest';
+export const LIVE_MODEL = 'gemini-3.8-live';
 export const LIVE_VOICE = 'Kore';
 
 export const LIVE_ALLOWED_ROUTES = {
