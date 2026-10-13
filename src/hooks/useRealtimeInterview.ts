@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 import { LIVE_MODEL, LIVE_VOICE } from '@/lib/gemini/live-config';
 import { analyzeAnswer } from './useInterviewAnalysis';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 type LiveSession = Awaited<ReturnType<GoogleGenAI['live']['connect']>>;
 
@@ -78,10 +79,16 @@ export function useRealtimeInterview() {
     let context: AudioContext | null = null;
 
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession?.access_token) throw new Error('Entre na sua conta para iniciar a entrevista por voz.');
+
       const tokenResponse = await fetch('/api/gemini/live-token', {
         method: 'POST',
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authSession.access_token}`,
+        },
       });
       const tokenData = await tokenResponse.json() as { token?: string; error?: string };
       if (!tokenResponse.ok || !tokenData.token) {
