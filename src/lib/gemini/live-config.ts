@@ -43,7 +43,7 @@ export const LIVE_TOOL_DECLARATIONS = [
       required: ['topic'],
     },
   },
-] as const;
+];
 
 export const LIVE_VOICE_TOOL_GUIDANCE: Record<string, string> = {
   profile: 'O perfil profissional é a área central do Curion para organizar informações profissionais e acessar a experiência de currículo/perfil. Revise os dados antes de compartilhar qualquer perfil público.',
