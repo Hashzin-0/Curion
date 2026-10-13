@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleGenAI } from '@google/genai';
 import { Headphones, Mic, MicOff, X, MessageCircle, Loader2, Volume2 } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
 } from '@/lib/gemini/live-config';
 
 type LiveSession = Awaited<ReturnType<GoogleGenAI['live']['connect']>>;
+type LiveToolCallMessage = { toolCall?: { functionCalls?: Array<{ id?: string; name?: string; args?: unknown }> } };
 
 function encodePcm16(samples: Float32Array): string {
   const bytes = new Uint8Array(samples.length * 2);
@@ -69,7 +70,7 @@ export function SiteVoiceAgent() {
   const playbackSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const latestUserTranscriptRef = useRef('');
 
-  function releaseAudio() {
+  const releaseAudio = useCallback(() => {
     if (processorRef.current) processorRef.current.disconnect();
     if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
     for (const source of playbackSourcesRef.current) {
@@ -81,7 +82,7 @@ export function SiteVoiceAgent() {
     streamRef.current = null;
     audioCtxRef.current = null;
     playbackScheduleRef.current = 0;
-  }
+  }, []);
 
   function stopSession(message = 'Sessão encerrada') {
     const session = sessionRef.current;
@@ -93,16 +94,17 @@ export function SiteVoiceAgent() {
     setStatus(message);
   }
 
-  async function handleToolCalls(message: Parameters<NonNullable<Parameters<GoogleGenAI['live']['connect']>[0]['callbacks']>['onmessage']>[0]) {
+  async function handleToolCalls(message: LiveToolCallMessage) {
     const session = sessionRef.current;
     const calls = message.toolCall?.functionCalls ?? [];
     if (!session || calls.length === 0) return;
 
     const responses = calls.map((call) => {
+      const toolName = call.name ?? 'unknown_tool';
       const args = isRecord(call.args) ? call.args : {};
       let result: Record<string, unknown>;
 
-      if (call.name === 'navigate_to_page') {
+      if (toolName === 'navigate_to_page') {
         const requestedPage = args.page;
         const explicitIntent = /\b(abra|abrir|abre|navegue|navegar|vá para|vai para|ir para|acessar|acesse|quero ir|quero abrir|me leve|mostre)\b/i.test(latestUserTranscriptRef.current);
         const isAllowedPage = typeof requestedPage === 'string'
@@ -118,7 +120,7 @@ export function SiteVoiceAgent() {
           result = { ok: true, message: 'Navegação solicitada iniciada.', page };
           setStatus('Abrindo a página solicitada');
         }
-      } else if (call.name === 'get_site_help') {
+      } else if (toolName === 'get_site_help') {
         const topic = args.topic;
         if (typeof topic === 'string' && Object.prototype.hasOwnProperty.call(LIVE_VOICE_TOOL_GUIDANCE, topic)) {
           result = { ok: true, guidance: LIVE_VOICE_TOOL_GUIDANCE[topic] };
@@ -131,7 +133,7 @@ export function SiteVoiceAgent() {
 
       return {
         id: call.id ?? call.name,
-        name: call.name,
+        name: toolName,
         response: { result },
       };
     });
@@ -276,7 +278,7 @@ export function SiteVoiceAgent() {
     sessionRef.current = null;
     if (session) session.close();
     releaseAudio();
-  }, []);
+  }, [releaseAudio]);
 
   function closePanel() {
     stopSession('Pronto para ajudar');
