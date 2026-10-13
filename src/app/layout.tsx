@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { QueryClientProvider } from '@/components/QueryClientProvider';
 import { StoreInitializer } from '@/components/StoreInitializer';
 import { Toaster } from 'sonner';
+import { SiteVoiceAgent } from '@/components/voice/SiteVoiceAgent';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 export default function RootLayout({
@@ -34,6 +35,7 @@ export default function RootLayout({
               <AuthProvider>
                 <StoreInitializer />
                 {children}
+                <SiteVoiceAgent />
                 <Toaster position="top-center" richColors />
               </AuthProvider>
             </ThemeProvider>

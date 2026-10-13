@@ -13,7 +13,7 @@ import { useStore } from '@/lib/store';
  */
 
 export default function InterviewPage() {
-  const { start, stop, isInterviewing, analysisResults } = useRealtimeInterview();
+  const { start, stop, isInterviewing, analysisResults, transcript } = useRealtimeInterview();
   const { currentUser, areas } = useStore();
   
   const mainArea = areas[0]?.name || "Geral";
@@ -65,6 +65,13 @@ export default function InterviewPage() {
               </p>
             </div>
 
+            {transcript && (
+              <section aria-label="Transcrição da entrevista" className="max-h-40 overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-left">
+                <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Transcrição ao vivo</h2>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">{transcript}</p>
+              </section>
+            )}
+
             <div className="flex flex-col gap-4">
               {!isInterviewing ? (
                 <Button onClick={handleStart} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white text-lg">
@@ -80,7 +87,7 @@ export default function InterviewPage() {
             <div className="pt-4 flex flex-col items-center gap-4">
               <div className="flex items-center justify-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Direct WebSocket Mode</span>
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gemini Live · Áudio bidirecional</span>
               </div>
               
               {isInterviewing && (
