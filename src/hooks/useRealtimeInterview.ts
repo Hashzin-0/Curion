@@ -25,10 +25,15 @@ export function useRealtimeInterview() {
     setIsInterviewing(true);
     setAnalysisResults([]);
     
-    const geminiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-    if (!geminiKey) {
-      console.error('RealtimeInterview: NEXT_PUBLIC_GOOGLE_API_KEY não encontrada.');
-      toast.error('Erro de Configuração: Verifique a variável NEXT_PUBLIC_GOOGLE_API_KEY.');
+    // Credenciais Gemini permanecem no servidor; o navegador recebe token efêmero de uso único.
+    let ephemeralToken: string;
+    try {
+      const tokenResponse = await fetch('/api/gemini/live-token', { method: 'POST', cache: 'no-store' });
+      const tokenData = await tokenResponse.json() as { token?: string; error?: string };
+      if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || 'Token indisponível');
+      ephemeralToken = tokenData.token;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar o Gemini Live.');
       setIsInterviewing(false);
       return;
     }
@@ -56,7 +61,7 @@ export function useRealtimeInterview() {
       processor.connect(audioCtx.destination);
 
       // Usando v1beta para Multimodal Live
-      const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.StreamGenerateContent?key=${geminiKey}`;
+      const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?access_token=${encodeURIComponent(ephemeralToken)}`;
       console.log('RealtimeInterview: Conectando...', wsUrl);
       
       const ws = new WebSocket(wsUrl);
