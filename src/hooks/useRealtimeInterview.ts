@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { AI_CONFIG } from '@/config/ai';
 import { LIVE_MODEL, LIVE_VOICE } from '@/lib/gemini/live-config';
 import { analyzeAnswer } from './useInterviewAnalysis';
 import { toast } from 'sonner';
