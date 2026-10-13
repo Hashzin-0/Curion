@@ -23,11 +23,9 @@ function isSameOrigin(request: NextRequest): boolean {
   }
 }
 
-function allowIssuance(request: NextRequest): boolean {
+function allowIssuance(userId: string): boolean {
   const now = Date.now();
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const ip = request.headers.get('x-real-ip') || forwardedFor?.split(',')[0]?.trim() || 'unknown';
-  const current = issuanceByIp.get(ip);
+  const current = issuanceByIp.get(userId);
 
   if (!current || current.resetAt <= now) {
     if (issuanceByIp.size > 2_000) {
@@ -35,7 +33,7 @@ function allowIssuance(request: NextRequest): boolean {
         if (value.resetAt <= now) issuanceByIp.delete(key);
       }
     }
-    issuanceByIp.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    issuanceByIp.set(userId, { count: 1, resetAt: now + WINDOW_MS });
     return true;
   }
 
@@ -72,7 +70,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!allowIssuance(request)) {
+  if (!allowIssuance(authData.user.id)) {
     return NextResponse.json(
       { error: 'Muitas tentativas de iniciar voz. Aguarde um minuto e tente novamente.' },
       { status: 429, headers: { 'Retry-After': '60', 'Cache-Control': 'no-store, private' } },
