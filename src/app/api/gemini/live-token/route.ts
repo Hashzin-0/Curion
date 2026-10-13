@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const WINDOW_MS = 60_000;
 const MAX_ISSUANCES_PER_WINDOW = 5;
-const issuanceByIp = new Map<string, { count: number; resetAt: number }>();
+const issuanceByUser = new Map<string, { count: number; resetAt: number }>();
 
 function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
@@ -25,15 +25,15 @@ function isSameOrigin(request: NextRequest): boolean {
 
 function allowIssuance(userId: string): boolean {
   const now = Date.now();
-  const current = issuanceByIp.get(userId);
+  const current = issuanceByUser.get(userId);
 
   if (!current || current.resetAt <= now) {
-    if (issuanceByIp.size > 2_000) {
-      for (const [key, value] of issuanceByIp) {
-        if (value.resetAt <= now) issuanceByIp.delete(key);
+    if (issuanceByUser.size > 2_000) {
+      for (const [key, value] of issuanceByUser) {
+        if (value.resetAt <= now) issuanceByUser.delete(key);
       }
     }
-    issuanceByIp.set(userId, { count: 1, resetAt: now + WINDOW_MS });
+    issuanceByUser.set(userId, { count: 1, resetAt: now + WINDOW_MS });
     return true;
   }
 
